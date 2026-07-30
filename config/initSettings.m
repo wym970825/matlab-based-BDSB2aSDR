@@ -166,6 +166,11 @@ settings.truePosition.U = nan;
 %% Plot / I/O ==============================================================
 settings.plotTracking = 1;
 
+%% Multi-SV parallel tracking (par-fast-matlab) ============================
+% Option A: each worker fopen()s the IF file privately. Hard cap 6 cores.
+settings.useParfor     = true;   % parfor when >=2 active SVs
+settings.parMaxWorkers = 6;      % max local workers (also hard-capped in code)
+
 % Project-local result roots (override legacy absolute thesis paths)
 projectRoot = fileparts(fileparts(mfilename('fullpath')));
 settings.resultRoot     = fullfile(projectRoot, 'results');
@@ -186,11 +191,17 @@ if ~isempty(varargin)
     addParameter(p, 'numberOfChannels', settings.numberOfChannels);
     addParameter(p, 'resultRoot',       settings.resultRoot);
     addParameter(p, 'tempdataSvPth',    settings.tempdataSvPth);
+    addParameter(p, 'useParfor',        settings.useParfor);
+    addParameter(p, 'parMaxWorkers',    settings.parMaxWorkers);
     parse(p, varargin{:});
     fn = fieldnames(p.Results);
     for i = 1:numel(fn)
         settings.(fn{i}) = p.Results.(fn{i});
     end
+end
+% Enforce hard cap even if caller passes a larger value
+if isfield(settings, 'parMaxWorkers')
+    settings.parMaxWorkers = max(1, min(6, round(settings.parMaxWorkers)));
 end
 
 if ~exist(settings.tempdataSvPth, 'dir')
