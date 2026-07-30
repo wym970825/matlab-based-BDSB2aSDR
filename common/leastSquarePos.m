@@ -1,7 +1,8 @@
-function [pos,el, az, dop] = leastSquarePos(satpos,obs,settings)
+function [pos,el, az, dop, residual] = leastSquarePos(satpos,obs,settings)
 %Function calculates the Least Square Solution.
 %
 %[pos, el, az, dop] = leastSquarePos(satpos, obs, settings);
+%[pos, el, az, dop, residual] = leastSquarePos(...);
 %
 %   Inputs:
 %       satpos      - Satellites positions (in ECEF system: [X; Y; Z;] -
@@ -17,6 +18,7 @@ function [pos,el, az, dop] = leastSquarePos(satpos,obs,settings)
 %       el          - Satellites elevation angles (degrees)
 %       az          - Satellites azimuth angles (degrees)
 %       dop         - Dilutions Of Precision ([GDOP PDOP HDOP VDOP TDOP])
+%       residual    - post-fit pseudorange residual omc (m), one per SV
 
 %--------------------------------------------------------------------------
 %                           SoftGNSS v3.0
@@ -104,9 +106,14 @@ end % for iter = 1:nmbOfIterations
 
 %--- Fixing resulut -------------------------------------------------------
 pos = pos';
+if nargout >= 5
+    residual = omc(:);  % post-fit residuals from last iteration
+else
+    residual = [];
+end
 
 %=== Calculate Dilution Of Precision ======================================
-if nargout  == 4
+if nargout >= 4
     %--- Initialize output ------------------------------------------------
     dop     = zeros(1, 5);
     
@@ -118,4 +125,4 @@ if nargout  == 4
     dop(3)  = sqrt(Q(1,1) + Q(2,2));                % HDOP
     dop(4)  = sqrt(Q(3,3));                         % VDOP
     dop(5)  = sqrt(Q(4,4));                         % TDOP
-end  % if nargout  == 4
+end  % if nargout >= 4
