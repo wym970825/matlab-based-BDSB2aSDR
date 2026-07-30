@@ -41,9 +41,21 @@ See [docs/architecture.md](docs/architecture.md).
 
 ## Version
 
+**v0.1.3** — post-PVT plots (ENU / sky / geoshow LLA) + Baidu Map JSAPI 4.0 trajectory web UI (WGS84→BD-09).
+
 **v0.1.2** — carrier-aided code NCO (default on, instantaneous `carrFreq`, ±50 Hz code-domain clamp).
 
 Branches: `master` (baseline), `mexBaseFast` (MEX path), `par-fast-matlab` (parfor + trackOneChannel).
+
+### Post-PVT visualization
+
+```matlab
+% After navigation:
+plotNavPost(navSolutions, settings);           % ENU + sky + geoshow + Baidu UI
+launchBaiduMapTrack(navSolutions, settings);   % map only
+```
+
+Put browser AK in `config/BaidumapKey.txt` (gitignored; see `BaidumapKey.example.txt`).
 
 ## Version control
 
