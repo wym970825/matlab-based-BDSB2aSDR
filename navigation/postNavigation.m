@@ -199,6 +199,14 @@ readyChnList = activeChnList;
 % first fix, localTime will be updated by measurement sample step.
 localTime = inf;
 
+% RAIM log pre-alloc
+navSolutions.raim.mode = repmat({''}, 1, max(measNrSum, 1));
+navSolutions.raim.residualRms = nan(1, max(measNrSum, 1));
+navSolutions.raim.maxResidual = nan(1, max(measNrSum, 1));
+navSolutions.raim.nExcluded = zeros(1, max(measNrSum, 1));
+navSolutions.raim.excludedPRN = cell(1, max(measNrSum, 1));
+navSolutions.raim.passed = false(1, max(measNrSum, 1));
+
 %##########################################################################
 %#   Do the satellite and receiver position calculations                  #
 %##########################################################################
@@ -258,15 +266,48 @@ for currMeasNr = 1:measNrSum
         % Correct pseudorange for SV clock error
         clkCorrRawP = navSolutions.rawP(activeChnList, currMeasNr)' + ...
                                                    satClkCorr * settings.c;
+        prnUsed = [trackResults(activeChnList).PRN];
 
-        % Calculate receiver position
+        % Calculate receiver position (optional RAIM 1/2-SV FDE)
+        useRaim = ~isfield(settings, 'raim') || ~isfield(settings.raim, 'enable') ...
+            || logical(settings.raim.enable);
         try
-            [xyzdt,navSolutions.el(activeChnList, currMeasNr), ...
-             navSolutions.az(activeChnList, currMeasNr), ...
-             navSolutions.DOP(:, currMeasNr)] =...
-                                     leastSquarePos(satPositions, clkCorrRawP,settings);
+            if useRaim
+                [xyzdt, elAct, azAct, dopAct, raimInfo] = ...
+                    raimLeastSquarePos(satPositions, clkCorrRawP, settings, prnUsed);
+                navSolutions.el(activeChnList, currMeasNr) = elAct;
+                navSolutions.az(activeChnList, currMeasNr) = azAct;
+                navSolutions.DOP(:, currMeasNr) = dopAct(:);
+                navSolutions.raim.mode{currMeasNr} = raimInfo.mode;
+                navSolutions.raim.residualRms(currMeasNr) = raimInfo.residualRms;
+                navSolutions.raim.maxResidual(currMeasNr) = raimInfo.maxResidual;
+                nEx = 0;
+                if isfield(raimInfo, 'nExcluded')
+                    nEx = raimInfo.nExcluded;
+                elseif isfield(raimInfo, 'excludedPRN')
+                    nEx = numel(raimInfo.excludedPRN);
+                end
+                navSolutions.raim.nExcluded(currMeasNr) = nEx;
+                if isfield(raimInfo, 'excludedPRN')
+                    navSolutions.raim.excludedPRN{currMeasNr} = raimInfo.excludedPRN;
+                end
+                navSolutions.raim.passed(currMeasNr) = raimInfo.passed;
+                if nEx > 0 && (currMeasNr <= 5 || mod(currMeasNr, 20) == 0 ...
+                        || ~raimInfo.passed)
+                    exPrn = [];
+                    if isfield(raimInfo, 'excludedPRN'), exPrn = raimInfo.excludedPRN; end
+                    fprintf('  RAIM fix %d: mode=%s exclude PRN%s rms=%.1fm maxRes=%.1fm passed=%d\n', ...
+                        currMeasNr, raimInfo.mode, mat2str(exPrn), ...
+                        raimInfo.residualRms, raimInfo.maxResidual, raimInfo.passed);
+                end
+            else
+                [xyzdt, navSolutions.el(activeChnList, currMeasNr), ...
+                 navSolutions.az(activeChnList, currMeasNr), ...
+                 navSolutions.DOP(:, currMeasNr)] = ...
+                    leastSquarePos(satPositions, clkCorrRawP, settings);
+            end
         catch ME
-            warning('postNavigation:LS', 'Fix %d LS failed: %s', currMeasNr, ME.message);
+            warning('postNavigation:LS', 'Fix %d LS/RAIM failed: %s', currMeasNr, ME.message);
             xyzdt = [NaN; NaN; NaN; NaN];
             navSolutions.DOP(:, currMeasNr) = zeros(5, 1);
         end

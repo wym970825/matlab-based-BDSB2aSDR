@@ -173,6 +173,15 @@ settings.truePosition.E = nan;
 settings.truePosition.N = nan;
 settings.truePosition.U = nan;
 
+% RAIM: solution-separation FDE (single- and dual-SV exclusion)
+settings.raim = struct();
+settings.raim.enable       = true;   % default ON
+settings.raim.enableFde1   = true;   % single-SV fault
+settings.raim.enableFde2   = true;   % dual-SV fault
+settings.raim.alwaysSearch = false;  % FDE only if all-in-view fails gates
+settings.raim.maxRmsM      = 80;     % residual RMS gate [m]
+settings.raim.maxResM      = 200;    % max |residual| gate [m]
+
 %% Plot / I/O ==============================================================
 settings.plotTracking = 1;
 % Post-PVT: ENU + sky + geoshow LLA; optional Baidu Map JSAPI 4.0 web UI
