@@ -110,8 +110,10 @@ classdef TrackResults2 < handle
         Ppost double % Power after pulse blanker(output) [dBm]
         eta double % pulse blanker duty cycle [demensionless]
 
-        % New: auto save
-        Nsize double % Size of TR
+        % New: auto save / chunking
+        Nsize double         % Valid sample count (equals capacity for full chunk; truncated after partsave)
+        CNoInterval double   % Stored at construct; used by save/copyFROM/partsave (not bare settings)
+        ChunkCapacity double % Original ring-buffer capacity (unchanged by partsave)
 
     end
     properties (Access = private)
@@ -159,14 +161,14 @@ classdef TrackResults2 < handle
                     ' the file path is essential.'])
             end
 
-            cnoInt = 1e3;
-            if isfield(settings,'CNoInterval')
-                if ~isempty(settings.CNoInterval)
-                    cnoInt = settings.CNoInterval;
-                end
+            cnoInt = 200;
+            if isfield(settings,'CNoInterval') && ~isempty(settings.CNoInterval)
+                cnoInt = settings.CNoInterval;
             end
+            obj.CNoInterval = cnoInt;
 
-            nCNo = floor(Nsize / cnoInt);
+            % ceil: allow last partial CNo bin; never undersize vs writeCNo indices
+            nCNo = max(1, ceil(Nsize / cnoInt));
 
             % Preallocate (matching tracking2_v4 defaults as much as possible)
             obj.absoluteSample = nan(1, Nsize);
@@ -242,44 +244,132 @@ classdef TrackResults2 < handle
 
             % for auto save
             obj.Nsize = Nsize;
+            obj.ChunkCapacity = Nsize;
             obj.Svtimes = 0;
         end
 
         function update(obj, loopCnt, varargin)
-            % update - generic writer for per-ms values using name-value pairs.
-            %
-            % Example:
-            %   tr.update(k,'I_P',I_P,'Q_P',Q_P,'codeFreq',codeFreq,'cur_state',true);
-            %
-            if nargin < 4
+            %UPDATE - name-value writer (compat). Prefer writeTick / writeCNo.
+            % Fast path: switch on field name (no isprop reflection).
+            if nargin < 4 || mod(numel(varargin), 2) ~= 0
                 return;
             end
-            if mod(numel(varargin),2) ~= 0
-                error('TrackResults2:update','Name-value pairs required.');
-            end
-
+            k = loopCnt;
             for i = 1:2:numel(varargin)
                 name = varargin{i};
-                value = varargin{i+1};
-
-                if ~(ischar(name) || isstring(name))
-                    error('TrackResults2:update','Property name must be char/string.');
-                end
-                pname = char(name);
-
-                if ~isprop(obj, pname)
-                    warning('TrackResults2:update:UnknownProp','Unknown property "%s" ignored.', pname);
-                    continue;
-                end
-
-                propVal = obj.(pname);
-
-                if (isnumeric(propVal) || islogical(propVal)) && isvector(propVal) && numel(propVal) >= loopCnt
-                    obj.(pname)(loopCnt) = value;
-                else
-                    obj.(pname) = value;
+                if isstring(name), name = char(name); end
+                val = varargin{i+1};
+                switch name
+                    case 'absoluteSample', obj.absoluteSample(k) = val;
+                    case 'codeFreq',       obj.codeFreq(k) = val;
+                    case 'carrFreq',       obj.carrFreq(k) = val;
+                    case 'I_P',            obj.I_P(k) = val;
+                    case 'I_E',            obj.I_E(k) = val;
+                    case 'I_L',            obj.I_L(k) = val;
+                    case 'Q_E',            obj.Q_E(k) = val;
+                    case 'Q_P',            obj.Q_P(k) = val;
+                    case 'Q_L',            obj.Q_L(k) = val;
+                    case 'Pilot_I_P',      obj.Pilot_I_P(k) = val;
+                    case 'Pilot_Q_P',      obj.Pilot_Q_P(k) = val;
+                    case 'Pilot_I_E',      obj.Pilot_I_E(k) = val;
+                    case 'Pilot_Q_E',      obj.Pilot_Q_E(k) = val;
+                    case 'Pilot_I_L',      obj.Pilot_I_L(k) = val;
+                    case 'Pilot_Q_L',      obj.Pilot_Q_L(k) = val;
+                    case 'dllDiscr',       obj.dllDiscr(k) = val;
+                    case 'dllDiscrFilt',   obj.dllDiscrFilt(k) = val;
+                    case 'pllDiscr',       obj.pllDiscr(k) = val;
+                    case 'pllDiscrFilt',   obj.pllDiscrFilt(k) = val;
+                    case 'remCodePhase',   obj.remCodePhase(k) = val;
+                    case 'remCarrPhase',   obj.remCarrPhase(k) = val;
+                    case 'cur_state',      obj.cur_state(k) = logical(val);
+                    case 'trk_state',      obj.trk_state(k) = uint8(val);
+                    case 'fllDiscrHz',     obj.fllDiscrHz(k) = val;
+                    case 'fllDiscrFiltHz', obj.fllDiscrFiltHz(k) = val;
+                    case 'fllCorrHz',      obj.fllCorrHz(k) = val;
+                    case 'fllAided',       obj.fllAided(k) = logical(val);
+                    case 'kf_phiRad',      obj.kf_phiRad(k) = val;
+                    case 'kf_omegaHz',     obj.kf_omegaHz(k) = val;
+                    case 'kf_alphaHzps',   obj.kf_alphaHzps(k) = val;
+                    case 'kf_corrHz',      obj.kf_corrHz(k) = val;
+                    case 'kf_nisPhi',      obj.kf_nisPhi(k) = val;
+                    case 'kf_nisOmega',    obj.kf_nisOmega(k) = val;
+                    case 'kf_rmsNuPhiRad', obj.kf_rmsNuPhiRad(k) = val;
+                    case 'kf_rmsNuOmegaHz',obj.kf_rmsNuOmegaHz(k) = val;
+                    case 'Ppre',           obj.Ppre(k) = val;
+                    case 'Ppost',          obj.Ppost(k) = val;
+                    case 'eta',            obj.eta(k) = val;
+                    case 'DataCNo',        obj.DataCNo(k) = val;
+                    case 'DataPLD',        obj.DataPLD(k) = val;
+                    case 'PilotCNo',       obj.PilotCNo(k) = val;
+                    case 'PilotPLD',       obj.PilotPLD(k) = val;
+                    case 'B2a_CNo',        obj.B2a_CNo(k) = val;
+                    case 'S4_ori',         obj.S4_ori(k) = val;
+                    case 'S4_corr',        obj.S4_corr(k) = val;
+                    case 'S4',             obj.S4(k) = val;
+                    case 'PRN',            obj.PRN = val;
+                    case 'status',         obj.status = val;
+                    otherwise
+                        % ignore unknown (no isprop scan)
                 end
             end
+        end
+
+        function writeTick(obj, k, t)
+            %WRITETICK Fast bulk 1-ms log (P0). Direct property stores, no reflection.
+            % t fields (required subset may be present; missing -> skip if not isfield)
+            % Prefer filling all fields each call for max speed (no isfield).
+            obj.absoluteSample(k) = t.absoluteSample;
+            obj.codeFreq(k)       = t.codeFreq;
+            obj.carrFreq(k)       = t.carrFreq;
+            obj.I_E(k) = t.I_E;  obj.I_P(k) = t.I_P;  obj.I_L(k) = t.I_L;
+            obj.Q_E(k) = t.Q_E;  obj.Q_P(k) = t.Q_P;  obj.Q_L(k) = t.Q_L;
+            obj.Pilot_I_E(k) = t.Pilot_I_E; obj.Pilot_I_P(k) = t.Pilot_I_P; obj.Pilot_I_L(k) = t.Pilot_I_L;
+            obj.Pilot_Q_E(k) = t.Pilot_Q_E; obj.Pilot_Q_P(k) = t.Pilot_Q_P; obj.Pilot_Q_L(k) = t.Pilot_Q_L;
+            obj.dllDiscr(k)     = t.dllDiscr;
+            obj.dllDiscrFilt(k) = t.dllDiscrFilt;
+            obj.pllDiscr(k)     = t.pllDiscr;
+            obj.pllDiscrFilt(k) = t.pllDiscrFilt;
+            obj.remCodePhase(k) = t.remCodePhase;
+            obj.remCarrPhase(k) = t.remCarrPhase;
+            obj.cur_state(k)    = logical(t.cur_state);
+            obj.trk_state(k)    = uint8(t.trk_state);
+            obj.fllDiscrHz(k)     = t.fllDiscrHz;
+            obj.fllDiscrFiltHz(k) = t.fllDiscrFiltHz;
+            obj.fllCorrHz(k)      = t.fllCorrHz;
+            obj.fllAided(k)       = logical(t.fllAided);
+            obj.Ppre(k)  = t.Ppre;
+            obj.Ppost(k) = t.Ppost;
+            obj.eta(k)   = t.eta;
+            obj.kf_phiRad(k)       = t.kf_phiRad;
+            obj.kf_omegaHz(k)      = t.kf_omegaHz;
+            obj.kf_alphaHzps(k)    = t.kf_alphaHzps;
+            obj.kf_corrHz(k)       = t.kf_corrHz;
+            obj.kf_nisPhi(k)       = t.kf_nisPhi;
+            obj.kf_nisOmega(k)     = t.kf_nisOmega;
+            obj.kf_rmsNuPhiRad(k)  = t.kf_rmsNuPhiRad;
+            obj.kf_rmsNuOmegaHz(k) = t.kf_rmsNuOmegaHz;
+        end
+
+        function writeCNo(obj, k, dataCNo, dataPLD, pilotCNo, pilotPLD, b2aCNo)
+            %WRITECNO Fast C/N0 / PLD log at CNo index k (1-based).
+            % Prefer k = ceil(TRii / CNoInterval).
+            k = max(1, round(k));
+            if k > numel(obj.B2a_CNo)
+                warning('TrackResults2:writeCNo', 'CNo index %d > %d — ignored', ...
+                    k, numel(obj.B2a_CNo));
+                return;
+            end
+            obj.DataCNo(k)  = dataCNo;
+            obj.DataPLD(k)  = dataPLD;
+            obj.PilotCNo(k) = pilotCNo;
+            obj.PilotPLD(k) = pilotPLD;
+            obj.B2a_CNo(k)  = b2aCNo;
+        end
+
+        function writeS4(obj, k, s4_ori, s4_corr, s4)
+            obj.S4_ori(k)  = s4_ori;
+            obj.S4_corr(k) = s4_corr;
+            obj.S4(k)      = s4;
         end
 
         function s = toStruct(obj)
@@ -296,153 +386,218 @@ classdef TrackResults2 < handle
         end
 
         function succeed = save(obj)
-            sv_tg = fullfile(obj.SvPth, sprintf('Trk_Prn_%02d_%03d.mat',...
-                obj.PRN, obj.Svtimes+1));
+            %SAVE Persist a FULL chunk (length = ChunkCapacity / Nsize) then reset buffers.
+            % Does not take settings — uses obj.CNoInterval (BUG-2 fix).
+            sv_tg = fullfile(obj.SvPth, sprintf('Trk_Prn_%02d_%03d.mat', ...
+                obj.PRN, obj.Svtimes + 1));
             try
-                save(sv_tg,"obj",'-mat');
+                save(sv_tg, 'obj', '-mat');
                 succeed = true;
             catch
                 succeed = false;
             end
             if succeed
-                obj.Svtimes = obj.Svtimes+1;
-                % auto save and Tres size control
-                % has a maximum size of 60[s] = 6e4ms
-                Nn = obj.Nsize;
-                cnoInt = 1e3;
-                if isfield(settings,'CNoInterval')
-                    if ~isempty(settings.CNoInterval)
-                        cnoInt = settings.CNoInterval;
-                    end
+                obj.Svtimes = obj.Svtimes + 1;
+                % Restore capacity if a previous partsave shrunk Nsize (should not)
+                if ~isempty(obj.ChunkCapacity) && obj.ChunkCapacity > 0
+                    obj.Nsize = obj.ChunkCapacity;
                 end
-                nCNo = floor(Nn / cnoInt);
-                obj.absoluteSample = nan(1, Nn);
-                obj.codeFreq       = nan(1, Nn);
-                obj.carrFreq       = nan(1, Nn);
-                obj.I_P = nan(1, Nn);
-                obj.I_E = nan(1, Nn);
-                obj.I_L = nan(1, Nn);
-                obj.Q_E = nan(1, Nn);
-                obj.Q_P = nan(1, Nn);
-                obj.Q_L = nan(1, Nn);
-                obj.Pilot_I_P = nan(1, Nn);
-                obj.Pilot_Q_P = nan(1, Nn);
-                obj.Pilot_I_E = nan(1, Nn);
-                obj.Pilot_Q_E = nan(1, Nn);
-                obj.Pilot_I_L = nan(1, Nn);
-                obj.Pilot_Q_L = nan(1, Nn);
-                obj.dllDiscr     = inf(1, Nn);
-                obj.dllDiscrFilt = inf(1, Nn);
-                obj.pllDiscr     = inf(1, Nn);
-                obj.pllDiscrFilt = inf(1, Nn);
-                obj.remCodePhase = inf(1, Nn);
-                obj.remCarrPhase = inf(1, Nn);
-                obj.Timestamp    = nan(1, Nn);
-                obj.cur_state    = false(1, Nn);
-                obj.trk_state    = zeros(1, Nn, 'uint8');
-                obj.fllDiscrHz      = nan(1, Nn);
-                obj.fllDiscrFiltHz  = nan(1, Nn);
-                obj.fllCorrHz       = nan(1, Nn);
-                obj.fllAided        = false(1, Nn);
-                obj.kf_phiRad       = nan(1, Nn);
-                obj.kf_omegaHz      = nan(1, Nn);
-                obj.kf_alphaHzps    = nan(1, Nn);
-                obj.kf_corrHz       = nan(1, Nn);
-                obj.kf_nisPhi       = nan(1, Nn);
-                obj.kf_nisOmega     = nan(1, Nn);
-                obj.kf_rmsNuPhiRad  = nan(1, Nn);
-                obj.kf_rmsNuOmegaHz = nan(1, Nn);
-                obj.DataCNo   = nan(1, nCNo);
-                obj.DataPLD   = nan(1, nCNo);
-                obj.PilotCNo  = nan(1, nCNo);
-                obj.PilotPLD  = nan(1, nCNo);
-                obj.B2a_CNo   = nan(1, nCNo);
-                obj.sigma_DLL = nan(1, nCNo);
-                obj.sigma_PLL = nan(1, nCNo);
+                obj.resetBuffers(obj.Nsize);
             end
         end
 
-        function succeed = copyFROM(obj,other_obj,I_start)
-            % copy data from other_obj with a start index I_start otherwise
-            % the copy process will start from 1
-            if isscalar(I_start) && isnumeric(I_start)
-                I_start = min(length(obj.I_P),I_start);
-            else
-                warning('TrackResults2:copyFROM','The third iput should be a numerical scalar!');
+        function succeed = copyFROM(obj, other_obj, I_start)
+            %COPYFROM Merge chunk other_obj into this object starting at I_start (1-ms index).
+            % Classifies fields by name (1-ms vs CNo-rate), NOT by Len_r==Nsize (BUG-1 fix).
+            if ~(isscalar(I_start) && isnumeric(I_start) && isfinite(I_start) && I_start >= 1)
+                warning('TrackResults2:copyFROM', 'I_start invalid — using 1');
                 I_start = 1;
             end
-            % calculate start index of CNo value
-            cnoInt = 1e3;
-            if isfield(settings,'CNoInterval')
-                if ~isempty(settings.CNoInterval)
-                    cnoInt = settings.CNoInterval;
-                end
+            I_start = round(I_start);
+            nDst = numel(obj.I_P);
+            if I_start > nDst
+                warning('TrackResults2:copyFROM', ...
+                    'I_start=%d exceeds destination length %d — skip', I_start, nDst);
+                succeed = 0;
+                return;
             end
-            I_start_CNo = 1 + floor((I_start-1) / cnoInt);
+
+            cnoInt = obj.CNoInterval;
+            if isempty(cnoInt) || cnoInt <= 0
+                cnoInt = 200;
+            end
+            if isprop(other_obj, 'CNoInterval') && ~isempty(other_obj.CNoInterval) ...
+                    && other_obj.CNoInterval > 0
+                cnoIntSrc = other_obj.CNoInterval;
+            else
+                cnoIntSrc = cnoInt;
+            end
+            I_start_CNo = 1 + floor((I_start - 1) / cnoInt);
+
+            msFields = TrackResults2.msFieldNames();
+            slowFields = TrackResults2.slowFieldNames();
+            skipFields = {'PRN', 'status', 'Nsize', 'CNoInterval', 'ChunkCapacity'};
+
             all_properties = properties(obj);
             copied_prop = 0;
-            for p_ii = 1:length(all_properties)
-                % no such prop in 'other_obj';
-                if ~isprop(other_obj,all_properties{p_ii})
-                    warning('TrackResult2:copyFROM',...
-                        'No such property %s', all_properties{p_ii});
+            for p_ii = 1:numel(all_properties)
+                pname = all_properties{p_ii};
+                if ~isprop(other_obj, pname)
                     continue;
                 end
-                if ismember(all_properties{p_ii},{'PRN','status','Nsize'})
+                if ismember(pname, skipFields)
                     copied_prop = copied_prop + 1;
                     continue;
                 end
-                % for display copy info
-                copied_prop = copied_prop + 1;
-                % data length of right value
-                Len_r = length(other_obj.(all_properties{p_ii}));
-                if Len_r == other_obj.Nsize
-                    % values @ 1000Hz
-                    obj.(all_properties{p_ii})(I_start:I_start+Len_r-1) = ...
-                        other_obj.(all_properties{p_ii});
-                else
-                    % values @ 1000/X Hz
-                    obj.(all_properties{p_ii})(I_start_CNo:I_start_CNo+Len_r-1) =...
-                        other_obj.(all_properties{p_ii});
-                end
-            end
-            succeed = copied_prop/length(all_properties);
-            fprintf('TrackingResult2:copyFROM\t%3d%% properties have been copied\n',...
-                round(succeed*100));
-        end
-
-        function succeed = partsave(obj,settings,idx)
-            % calculate start index of CNo value
-            cnoInt = 1e3;
-            if isfield(settings,'CNoInterval')
-                if ~isempty(settings.CNoInterval)
-                    cnoInt = settings.CNoInterval;
-                end
-            end
-            idx = min(idx, obj.Nsize);
-            idxCNo = floor(idx / cnoInt);
-            all_properties = properties(obj);
-            for p_ii = 1:length(all_properties)
-                if ismember(all_properties{p_ii},{'PRN','status','Nsize'})
+                src = other_obj.(pname);
+                Len_r = numel(src);
+                if Len_r == 0
                     continue;
                 end
-                % cut off
-                if length(obj.(all_properties{p_ii})) == obj.Nsize
-                    % values @ 1000Hz
-                    obj.(all_properties{p_ii})(idx+1:obj.Nsize) = [];
-                else
-                    % values @ 1000/X Hz
-                    obj.(all_properties{p_ii})(idxCNo+1:end) = [];
+
+                if ismember(pname, msFields) || (Len_r == numel(other_obj.I_P) && ~ismember(pname, slowFields))
+                    % 1 ms rate: copy by sample length, not stale Nsize
+                    i1 = I_start;
+                    i2 = I_start + Len_r - 1;
+                    if i2 > nDst
+                        Len_r = nDst - i1 + 1;
+                        i2 = nDst;
+                        src = src(1:Len_r);
+                    end
+                    if Len_r > 0
+                        obj.(pname)(i1:i2) = src;
+                    end
+                    copied_prop = copied_prop + 1;
+                elseif ismember(pname, slowFields) || Len_r ~= numel(other_obj.I_P)
+                    % CNo-interval rate
+                    nDstC = numel(obj.(pname));
+                    j1 = I_start_CNo;
+                    j2 = I_start_CNo + Len_r - 1;
+                    if j2 > nDstC
+                        Len_r = nDstC - j1 + 1;
+                        j2 = nDstC;
+                        src = src(1:Len_r);
+                    end
+                    if Len_r > 0 && j1 <= nDstC
+                        obj.(pname)(j1:j2) = src;
+                    end
+                    copied_prop = copied_prop + 1;
                 end
             end
-            sv_tg = fullfile(obj.SvPth, sprintf('Trk_Prn_%02d_%03d.mat',...
-                obj.PRN, obj.Svtimes+1));
+            succeed = copied_prop / max(1, numel(all_properties));
+            fprintf('TrackResults2:copyFROM\t%3d%% properties copied (I_start=%d, srcLen=%d, cnoInt=%g)\n', ...
+                round(succeed * 100), I_start, numel(other_obj.I_P), cnoIntSrc);
+        end
+
+        function succeed = partsave(obj, settings, idx)
+            %PARTSAVE Persist a PARTIAL final chunk: truncate to idx then save.
+            % Updates obj.Nsize = idx so copyFROM treats length correctly (BUG-1).
+            if nargin < 2 || isempty(settings)
+                cnoInt = obj.CNoInterval;
+            elseif isstruct(settings) && isfield(settings, 'CNoInterval') ...
+                    && ~isempty(settings.CNoInterval)
+                cnoInt = settings.CNoInterval;
+            else
+                cnoInt = obj.CNoInterval;
+            end
+            if isempty(cnoInt) || cnoInt <= 0
+                cnoInt = 200;
+            end
+
+            idx = min(max(1, round(idx)), obj.Nsize);
+            idxCNo = max(1, ceil(idx / cnoInt));
+
+            msFields = TrackResults2.msFieldNames();
+            slowFields = TrackResults2.slowFieldNames();
+            all_properties = properties(obj);
+            for p_ii = 1:numel(all_properties)
+                pname = all_properties{p_ii};
+                if ismember(pname, {'PRN', 'status', 'Nsize', 'CNoInterval', 'ChunkCapacity'})
+                    continue;
+                end
+                if ismember(pname, msFields) || numel(obj.(pname)) == obj.ChunkCapacity ...
+                        || numel(obj.(pname)) == obj.Nsize
+                    if numel(obj.(pname)) > idx
+                        obj.(pname) = obj.(pname)(1:idx);
+                    end
+                elseif ismember(pname, slowFields) || true
+                    if numel(obj.(pname)) > idxCNo
+                        obj.(pname) = obj.(pname)(1:idxCNo);
+                    end
+                end
+            end
+            % Critical: Nsize must equal valid 1-ms length for disk object
+            obj.Nsize = idx;
+
+            sv_tg = fullfile(obj.SvPth, sprintf('Trk_Prn_%02d_%03d.mat', ...
+                obj.PRN, obj.Svtimes + 1));
             try
-                save(sv_tg,"obj",'-mat');
+                save(sv_tg, 'obj', '-mat');
                 succeed = true;
+                obj.Svtimes = obj.Svtimes + 1;
             catch
                 succeed = false;
             end
+        end
+
+        function resetBuffers(obj, Nn)
+            %RESETBUFFERS Re-allocate all logged arrays to length Nn (1-ms) / nCNo.
+            if nargin < 2 || isempty(Nn)
+                Nn = obj.ChunkCapacity;
+                if isempty(Nn) || Nn <= 0
+                    Nn = obj.Nsize;
+                end
+            end
+            cnoInt = obj.CNoInterval;
+            if isempty(cnoInt) || cnoInt <= 0
+                cnoInt = 200;
+            end
+            nCNo = max(1, ceil(Nn / cnoInt));
+
+            obj.absoluteSample = nan(1, Nn);
+            obj.codeFreq       = nan(1, Nn);
+            obj.carrFreq       = nan(1, Nn);
+            obj.I_P = nan(1, Nn); obj.I_E = nan(1, Nn); obj.I_L = nan(1, Nn);
+            obj.Q_E = nan(1, Nn); obj.Q_P = nan(1, Nn); obj.Q_L = nan(1, Nn);
+            obj.Pilot_I_P = nan(1, Nn); obj.Pilot_Q_P = nan(1, Nn);
+            obj.Pilot_I_E = nan(1, Nn); obj.Pilot_Q_E = nan(1, Nn);
+            obj.Pilot_I_L = nan(1, Nn); obj.Pilot_Q_L = nan(1, Nn);
+            obj.dllDiscr     = inf(1, Nn);
+            obj.dllDiscrFilt = inf(1, Nn);
+            obj.pllDiscr     = inf(1, Nn);
+            obj.pllDiscrFilt = inf(1, Nn);
+            obj.remCodePhase = inf(1, Nn);
+            obj.remCarrPhase = inf(1, Nn);
+            obj.Timestamp    = nan(1, Nn);
+            obj.cur_state    = false(1, Nn);
+            obj.trk_state    = zeros(1, Nn, 'uint8');
+            obj.fllDiscrHz     = nan(1, Nn);
+            obj.fllDiscrFiltHz = nan(1, Nn);
+            obj.fllCorrHz      = nan(1, Nn);
+            obj.fllAided       = false(1, Nn);
+            obj.kf_phiRad      = nan(1, Nn);
+            obj.kf_omegaHz     = nan(1, Nn);
+            obj.kf_alphaHzps   = nan(1, Nn);
+            obj.kf_corrHz      = nan(1, Nn);
+            obj.kf_nisPhi      = nan(1, Nn);
+            obj.kf_nisOmega    = nan(1, Nn);
+            obj.kf_rmsNuPhiRad = nan(1, Nn);
+            obj.kf_rmsNuOmegaHz= nan(1, Nn);
+            % PB + scint (BUG-4: must clear with rest)
+            obj.Ppre  = nan(1, Nn);
+            obj.Ppost = nan(1, Nn);
+            obj.eta   = nan(1, Nn);
+            obj.DataCNo  = nan(1, nCNo);
+            obj.DataPLD  = nan(1, nCNo);
+            obj.PilotCNo = nan(1, nCNo);
+            obj.PilotPLD = nan(1, nCNo);
+            obj.B2a_CNo  = nan(1, nCNo);
+            obj.sigma_DLL = nan(1, nCNo);
+            obj.sigma_PLL = nan(1, nCNo);
+            obj.S4_ori  = nan(1, nCNo);
+            obj.S4_corr = nan(1, nCNo);
+            obj.S4      = nan(1, nCNo);
+            obj.Nsize = Nn;
         end
 
         function [sigmaDLL, sigmaPLL] = estimateLoopNoise(obj, settings)
@@ -856,6 +1011,28 @@ classdef TrackResults2 < handle
             for k = 1:nChan
                 arr(k) = TrackResults2(settings);
             end
+        end
+
+        function names = msFieldNames()
+            % 1-ms (per-loop) log fields for copyFROM / partsave classification
+            names = { ...
+                'absoluteSample','codeFreq','carrFreq', ...
+                'I_P','I_E','I_L','Q_E','Q_P','Q_L', ...
+                'Pilot_I_P','Pilot_Q_P','Pilot_I_E','Pilot_Q_E','Pilot_I_L','Pilot_Q_L', ...
+                'dllDiscr','dllDiscrFilt','pllDiscr','pllDiscrFilt', ...
+                'remCodePhase','remCarrPhase','Timestamp', ...
+                'cur_state','trk_state', ...
+                'fllDiscrHz','fllDiscrFiltHz','fllCorrHz','fllAided', ...
+                'kf_phiRad','kf_omegaHz','kf_alphaHzps','kf_corrHz', ...
+                'kf_nisPhi','kf_nisOmega','kf_rmsNuPhiRad','kf_rmsNuOmegaHz', ...
+                'Ppre','Ppost','eta'};
+        end
+
+        function names = slowFieldNames()
+            % CNoInterval-rate log fields
+            names = { ...
+                'DataCNo','DataPLD','PilotCNo','PilotPLD','B2a_CNo', ...
+                'sigma_DLL','sigma_PLL','S4_ori','S4_corr','S4'};
         end
 
         function fld = rnxField(val)
