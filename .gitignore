@@ -23,3 +23,6 @@ Thumbs.db
 # Temp
 **/temp/**
 **/tmp/**
+
+# Secrets — Baidu Map browser AK (use BaidumapKey.example.txt as template)
+config/BaidumapKey.txt

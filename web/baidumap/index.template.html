@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{TITLE}}</title>
+  <!-- Baidu Map JSAPI 4.0 — https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/index -->
+  <script src="https://api.map.baidu.com/api?v=4.0&ak={{BAIDU_AK}}"></script>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: system-ui, sans-serif; }
+    #map { width: 100%; height: 100%; }
+    #hud {
+      position: absolute; z-index: 10; top: 12px; left: 12px;
+      background: rgba(255,255,255,0.92); border-radius: 8px;
+      padding: 10px 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      max-width: 360px; font-size: 13px; line-height: 1.45; color: #222;
+    }
+    #hud h1 { margin: 0 0 6px; font-size: 15px; }
+    #hud .muted { color: #666; font-size: 12px; }
+    #hud .err { color: #b00020; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <h1>BDS B2a PVT 轨迹</h1>
+    <div id="status" class="muted">加载中…</div>
+  </div>
+  <div id="map"></div>
+  <!-- Track embedded as JSON so file:// works without a local server -->
+  <script type="application/json" id="b2a-track-data">{{TRACK_JSON_EMBED}}</script>
+  <script src="track.js"></script>
+</body>
+</html>

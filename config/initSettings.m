@@ -175,6 +175,8 @@ settings.truePosition.U = nan;
 
 %% Plot / I/O ==============================================================
 settings.plotTracking = 1;
+% Post-PVT: ENU + sky + geoshow LLA; optional Baidu Map JSAPI 4.0 web UI
+settings.plotBaiduMap = true;
 
 %% Multi-SV parallel tracking (par-fast-matlab) ============================
 % Option A: each worker fopen()s the IF file privately. Hard cap 6 cores.
@@ -186,6 +188,7 @@ projectRoot = fileparts(fileparts(mfilename('fullpath')));
 settings.resultRoot     = fullfile(projectRoot, 'results');
 settings.tempdataSvPth  = fullfile(settings.resultRoot, 'temp', ...
     string(datetime('now'), 'yyMMdd_HHmmss'));
+settings.baiduMapKeyFile = fullfile(projectRoot, 'config', 'BaidumapKey.txt');
 
 %% Apply optional overrides =================================================
 if ~isempty(varargin)
