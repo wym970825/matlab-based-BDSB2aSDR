@@ -86,13 +86,23 @@ for satNr = 1 : numOfSatellites
     tk  = check_t(time - eph(prn).t_oe);
     
     % ---- 2.2 Compute semi-major axis ---------------------------------
-    % Semi-Major Axis at reference time
-    % ** This is different with from NAV in L1 C/A **
-%     if (eph(prn).SatType == 'MEO')
+    % Semi-Major Axis at reference time (BDS-3 B-CNAV2: A = A_ref + deltaA)
+    % A_ref depends on orbit class (MEO vs IGSO/GEO). Using MEO ref for
+    % IGSO/GEO places SV ~14e6 m too low and destroys PVT LS.
+    satType = '';
+    if isfield(eph(prn), 'SatType') && ~isempty(eph(prn).SatType)
+        satType = upper(strtrim(char(string(eph(prn).SatType))));
+    end
+    if strcmp(satType, 'GEO') || strcmp(satType, 'IGSO')
+        A_REF = A_REF_IGSO_GEO;
+    else
+        % Default MEO (also covers missing/unknown SatType)
         A_REF = A_REF_MEO;
-%     elseif (eph(prn).SatType == 'GEO') || (eph(prn).SatType == 'IGSO')
-%         A_REF = A_REF_IGSO_GEO;
-%     end
+        if ~isempty(satType) && ~strcmp(satType, 'MEO')
+            warning('satpos1:UnknownSatType', ...
+                'PRN %d SatType=%s — using MEO A_REF', prn, satType);
+        end
+    end
         
     A_0   = A_REF + eph(prn).deltaA;
     % Semi-Major Axis
