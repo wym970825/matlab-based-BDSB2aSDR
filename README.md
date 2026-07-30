@@ -41,6 +41,8 @@ See [docs/architecture.md](docs/architecture.md).
 
 ## Version
 
+**v0.1.4** — RAIM single/dual-SV FDE in PVT; Baidu Map opens via local HTTP (not `file://`) so basemap tiles load; offline WGS84→BD-09 fallback.
+
 **v0.1.3** — post-PVT plots (ENU / sky / geoshow LLA) + Baidu Map JSAPI 4.0 trajectory web UI (WGS84→BD-09).
 
 **v0.1.2** — carrier-aided code NCO (default on, instantaneous `carrFreq`, ±50 Hz code-domain clamp).
@@ -52,10 +54,11 @@ Branches: `master` (baseline), `mexBaseFast` (MEX path), `par-fast-matlab` (parf
 ```matlab
 % After navigation:
 plotNavPost(navSolutions, settings);           % ENU + sky + geoshow + Baidu UI
-launchBaiduMapTrack(navSolutions, settings);   % map only
+launchBaiduMapTrack(navSolutions, settings);   % map only (starts http://127.0.0.1:8765)
 ```
 
-Put browser AK in `config/BaidumapKey.txt` (gitignored; see `BaidumapKey.example.txt`).
+Put browser AK in `config/BaidumapKey.txt` (gitignored; see `BaidumapKey.example.txt`).  
+Baidu console: enable JavaScript API; Referer whitelist include `127.0.0.1:*` or `*`.
 
 ## Version control
 
