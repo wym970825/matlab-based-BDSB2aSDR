@@ -209,3 +209,27 @@ assert(any(tr.cur_state(60001:min(end,100000))));     % 后段不应全 false
 
 分块架构可保留；**尾块 `Nsize` 契约 + 裸 `settings` + 恒真 `partsave`** 是引入异常的主因。  
 修复后，final 轨迹应覆盖完整 `msToProcess`，60 s 边界不再表现为“假失锁”。
+
+---
+
+## 7. 已落地修改记录
+
+| 分支 | Commit | 内容 |
+|------|--------|------|
+| `mexBaseFast` | `2686445` | TrackResults2 分块修复 + tracking 调用侧 + 本审计文档 |
+| `master` | `b831366` | 同步 TrackResults2 分块修复 + tracking 调用侧 + 本审计文档 |
+
+### 代码改动要点（实现层）
+
+1. **`partsave`**：截断后 `obj.Nsize = idx`；磁盘对象有效长度 = `numel(I_P)`。  
+2. **`copyFROM`**：`msFieldNames` / `slowFieldNames` 分类拷贝；`I_start` 与 `numel(src.I_P)` 对齐。  
+3. **`save` / `resetBuffers`**：用 `obj.CNoInterval`；清空含 Ppre/Ppost/eta/S4*。  
+4. **`ChunkCapacity`**：环缓冲容量与截断后 `Nsize` 分离。  
+5. **tracking**：`rem(..., ChunkCapacity)`；尾块仅 `rem ~= 0` 时 `partsave`；`I_start += numel(I_P)`；`CNoCnt = ceil(TRii/CNoInterval)`。
+
+### 单元测试
+
+```
+60k full save + 40k partsave + merge → I_P(1..100000) 连续正确，cur_state 全 true
+→ CHUNK_UNIT_OK
+```
