@@ -248,7 +248,12 @@ for c_i = 1:settings.numberOfChannels
         for loopCnt =  1 : codePeriods
             
             % Record NH state (update from v5(3 state) to v6 (5-state))
-            TRii = rem(loopCnt-1, trkBuf.Nsize)+1; 
+            % Use ChunkCapacity for ring index (Nsize may shrink after partsave)
+            chunkCap = trkBuf.ChunkCapacity;
+            if isempty(chunkCap) || chunkCap <= 0
+                chunkCap = trkBuf.Nsize;
+            end
+            TRii = rem(loopCnt - 1, chunkCap) + 1; 
             isLongState = strncmpi(nhsm.STATE,'LONG',4); % LONG or LONG_FLL
             logCurState = isLongState;
             logTrkState = nhsm.getStateId();
@@ -307,7 +312,7 @@ for c_i = 1:settings.numberOfChannels
                 % Mark C/No as invalid during REACQ
                 % (so later post-processing can exclude them)
                 if (rem(loopCnt,settings.CNoInterval)==0)
-                    CNoCnt = TRii/settings.CNoInterval;
+                    CNoCnt = max(1, ceil(TRii / settings.CNoInterval));
                     trkBuf.writeCNo(CNoCnt, -1, -1, -1, -1, -1);
                 end
 
@@ -492,7 +497,7 @@ for c_i = 1:settings.numberOfChannels
                 latestScintRes = S4result; % save last
                 latestScintResValid = isstruct(S4result) && isfield(S4result,'valid') && logical(S4result.valid);
                 S4 = sqrt(max(0,S4result.S4_ori.^2 - S4result.S4_corr.^2));
-                CNoCnt = TRii/settings.CNoInterval;
+                CNoCnt = max(1, ceil(TRii / settings.CNoInterval));
                 if ~mod(TRii,settings.CNoInterval)
                     trkBuf.writeS4(CNoCnt, S4result.S4_ori, S4result.S4_corr, S4);
                 end
@@ -672,7 +677,7 @@ for c_i = 1:settings.numberOfChannels
                     [CNoValue, PllDetector] = Calc_CNo_PLD(...
                         trkBuf.toStruct(),settings,TRii);
                 end
-                CNoCnt = TRii/settings.CNoInterval;
+                CNoCnt = max(1, ceil(TRii / settings.CNoInterval));
                 % Save C/No for data channel: a o.5-0.5 filter is used.
                 averageCNo = CNoValue/2 + tempCNoValue/2;
                 trkBuf.writeCNo(CNoCnt, averageCNo(1), PllDetector(1), ...
@@ -823,7 +828,8 @@ for c_i = 1:settings.numberOfChannels
             % reset KF phase-meas flag for next tick
             kf_phiMeasValid = false;
             % save and clear buffer when it is full
-            if rem(loopCnt,trkBuf.Nsize) == 0
+            if rem(loopCnt, trkBuf.ChunkCapacity) == 0
+                % Full chunk only (capacity, not truncated Nsize)
                 succeed = trkBuf.save();
                 if ~succeed
                     warning('Tracking Result didnot saved.');
@@ -831,30 +837,37 @@ for c_i = 1:settings.numberOfChannels
             end
 
         end % for loopCnt
-        if rem(loopCnt,trkBuf.Nsize) >= 0
+        % Tail partial chunk only when last loopCnt is NOT a full-chunk boundary (BUG-5)
+        if rem(loopCnt, trkBuf.ChunkCapacity) ~= 0
             succeed = trkBuf.partsave(settings, TRii);
             if ~succeed
                 warning('Tracking Result didnot saved.');
             end
         end
 
-        %% Gather all tempory TR into 1 variable and save
+        %% Gather all temporary TR chunks into one final object
         targetPRN = Ch(c_i).PRN;
-        FileNum = ceil(codePeriods/trkBuf.Nsize);
-        % Ultimate track result
+        chunkCap = trkBuf.ChunkCapacity;
+        if isempty(chunkCap) || chunkCap <= 0
+            chunkCap = min(codePeriods, 6e4);
+        end
+        FileNum = ceil(codePeriods / chunkCap);
         finalTRes = TrackResults2(settings, codePeriods);
         I_start = 1;
         for file_ii = 1:FileNum
             TRfileName = sprintf('Trk_Prn_%02d_%03d.mat', targetPRN, file_ii);
-            TRfileName = fullfile(settings.tempdataSvPth,TRfileName);
-            if exist(TRfileName,"file")
+            TRfileName = fullfile(settings.tempdataSvPth, TRfileName);
+            if exist(TRfileName, "file")
                 tmpTrk = load(TRfileName);
                 tmpTrk = tmpTrk.obj;
-                succeed = finalTRes.copyFROM(tmpTrk,I_start);
-                I_start = tmpTrk.Nsize + I_start;
-                if succeed>=1
+                succeed = finalTRes.copyFROM(tmpTrk, I_start);
+                % Advance by actual sample length, not stale capacity (BUG-6)
+                I_start = I_start + numel(tmpTrk.I_P);
+                if succeed >= 1
                     disp(TRfileName);
                 end
+            else
+                warning('tracking2_v6_fix2:MissingChunk', 'Missing %s', TRfileName);
             end
         end
         finalTRes.PRN = Ch(c_i).PRN;
