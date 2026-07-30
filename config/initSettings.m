@@ -144,7 +144,9 @@ settings.KF.scintWarmup_ms      = 150e3;
 settings.KF.rmsBeta             = 0.98;
 
 %% Scintillation calculator =================================================
-settings.scint_updateMs = 50;
+% Scintillation index batch interval (ms). push() still 1 ms; heavy
+% filter/stats run only every scint_updateMs. 5000 = 5 s (mexBaseFast).
+settings.scint_updateMs = 5000;
 settings.scint_bufLen   = 60000;
 settings.scint_fCutoff  = 0.1;
 

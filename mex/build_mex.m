@@ -7,8 +7,15 @@ function build_mex()
     cd(mexDir);
 
     % -R2018a: interleaved complex API (mxComplexDouble / mxGetComplexDoubles)
-    fprintf('Building correlateB2aMs_mex ...\n');
-    mex('-O', '-R2018a', 'correlateB2aMs_mex.c', '-output', 'correlateB2aMs_mex');
+    % MSVC: enable SSE2 (default x64) and favor speed
+    fprintf('Building correlateB2aMs_mex (LUT+SSE2) ...\n');
+    if ispc
+        mex('-O', '-R2018a', 'COMPFLAGS="$COMPFLAGS /O2 /arch:SSE2"', ...
+            'correlateB2aMs_mex.c', '-output', 'correlateB2aMs_mex');
+    else
+        mex('-O', '-R2018a', 'CFLAGS="$CFLAGS -O3 -msse2"', ...
+            'correlateB2aMs_mex.c', '-output', 'correlateB2aMs_mex');
+    end
 
     fprintf('Building pulseBlank_core_mex ...\n');
     mex('-O', '-R2018a', 'pulseBlank_core_mex.c', '-output', 'pulseBlank_core_mex');
