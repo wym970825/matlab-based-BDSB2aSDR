@@ -1,4 +1,4 @@
-﻿function [Tres, Ch]= tracking2_v6_fix2(fid, Ch, settings)
+function [Tres, Ch]= tracking2_v6_fix2(fid, Ch, settings)
 % Performs code and carrier tracking for B2a signals of all channels.
 %
 %[trackResults, channel] = tracking(fid, channel, settings)
