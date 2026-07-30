@@ -77,7 +77,7 @@ function [Tres, Ch] = tracking2_v6_fix2(fid, Ch, settings)
                 Tres(c_i) = trCell{c_i};
             end
             if ~isempty(chCell{c_i})
-                Ch(c_i) = chCell{c_i};
+                Ch(c_i) = mergeChannelStruct(Ch(c_i), chCell{c_i});
             end
         end
     else
@@ -91,7 +91,7 @@ function [Tres, Ch] = tracking2_v6_fix2(fid, Ch, settings)
             if Ch(c_i).PRN ~= 0
                 [tr, chOut] = trackOneChannel(Ch(c_i), settings, c_i, TrkedNr);
                 Tres(c_i) = tr;
-                Ch(c_i) = chOut;
+                Ch(c_i) = mergeChannelStruct(Ch(c_i), chOut);
             end
         end
     end
@@ -99,5 +99,20 @@ function [Tres, Ch] = tracking2_v6_fix2(fid, Ch, settings)
     % Parent fid is left open for caller (openIfFile / onCleanup).
     if nargin >= 1 && ~isempty(fid) && fid > 0
         % no-op: tracking uses private handles only
+    end
+end
+
+function chOut = mergeChannelStruct(chBase, chNew)
+%MERGECHANNELSTRUCT Copy only fields already on chBase (avoid dissimilar struct).
+    chOut = chBase;
+    if isempty(chNew)
+        return;
+    end
+    fn = fieldnames(chBase);
+    for i = 1:numel(fn)
+        f = fn{i};
+        if isfield(chNew, f)
+            chOut.(f) = chNew.(f);
+        end
     end
 end

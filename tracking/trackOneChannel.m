@@ -407,33 +407,16 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                     if ~isempty(kf)
                         try, kf.reset(); catch, end %#ok<CTCH>
                     end
-                    % Force NH SM back to INIT (frame/Weil re-sync path)
+                    % Force NH SM back to INIT via public API only
+                    % (NeedACQ=false + update() → STATE=INIT, clear Weil buffer)
                     nhsm.NeedACQ = false;
-                    nhsm.STATE = 'INIT';
-                    nhsm.T_init = 0;
-                    nhsm.T_long = 0;
-                    nhsm.LastCN0 = [-1, -1];
-                    nhsm.fllCntOn = 0;
-                    nhsm.fllCntOff = 0;
-                    % NH Weil / buffer: enter INIT via NeedACQ=false + update below
-                    try
-                        nhsm.NH_estimator.WeilPhase = -1;
-                        nhsm.NH_estimator.Conf = -1;
-                        nhsm.NH_estimator.Anchor = -1;
-                    catch
-                    end
                     % Arm FLL/pull-in window after re-acq (same as first acq)
                     if isfield(settings,'FLLinitT') && ~isempty(settings.FLLinitT) && settings.FLLinitT > 0
                         fllInitRemain_ms = round(settings.FLLinitT);
                     end
-                    prevNhStateStr = "INIT";
-                    % Marker for postNavigation: last successful REACQ loop index
-                    if ~isfield(ch, 'reacqLoopCnt') || isempty(ch.reacqLoopCnt)
-                        ch.reacqLoopCnt = loopCnt;
-                    else
-                        ch.reacqLoopCnt = [ch.reacqLoopCnt, loopCnt]; %#ok<AGROW>
-                    end
-                    ch.needFrameResync = true;
+                    prevNhStateStr = "REACQ";
+                    % Do NOT add fields to ch (breaks parfor Ch(c_i)=ch struct merge).
+                    % postNavigation uses trk_state==9 for frame re-sync.
                 else
                     % acquisition failed, keep state
                     nhsm.NeedACQ = true;
