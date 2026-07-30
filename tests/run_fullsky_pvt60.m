@@ -107,6 +107,15 @@ function report = run_fullsky_pvt60(varargin)
         catch ME
             warning('run_fullsky_pvt60:Plot', '%s', ME.message);
         end
+        if ~isempty(navSolutions)
+            try
+                set(0, 'DefaultFigureVisible', 'on');
+                plotNavPost(navSolutions, settings, ...
+                    'saveDir', figDir, 'doLegacy', false, 'openBaiduMap', true);
+            catch ME
+                warning('run_fullsky_pvt60:PlotNavPost', '%s', ME.message);
+            end
+        end
     end
 
     report = struct();

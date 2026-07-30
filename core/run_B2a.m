@@ -82,9 +82,18 @@ function results = run_B2a(varargin)
         end
         if ~isempty(navSolutions)
             try
-                plotNavigation(navSolutions, settings);
+                figDir = fullfile(settings.resultRoot, sprintf('navfigs_%s', pipe.tag));
+                plotNavPost(navSolutions, settings, ...
+                    'saveDir', figDir, ...
+                    'doLegacy', true, ...
+                    'openBaiduMap', []);  % honor settings.plotBaiduMap
             catch ME
-                warning('run_B2a:PlotNav', 'plotNavigation failed: %s', ME.message);
+                warning('run_B2a:PlotNav', 'plotNavPost failed: %s', ME.message);
+                try
+                    plotNavigation(navSolutions, settings);
+                catch ME2
+                    warning('run_B2a:PlotNavLegacy', '%s', ME2.message);
+                end
             end
         end
     end
