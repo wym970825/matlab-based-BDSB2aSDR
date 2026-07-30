@@ -115,9 +115,10 @@ function outDir = launchBaiduMapTrack(navSolutions, settings, varargin)
 
     fprintf('Baidu Map UI written: %s\n', htmlOut);
     fprintf('  points: %d  mean WGS84 (%.6f, %.6f)\n', numel(lat), mean(lat), mean(lon));
+    fprintf('  NOTE: open via http://127.0.0.1 (not file://) so Baidu tiles load.\n');
 
     if opt.openBrowser
-        openInBrowser(htmlOut);
+        openInBrowser(htmlOut, outDir);
     end
 end
 
@@ -150,9 +151,37 @@ function writeTextFile(path, txt)
     fwrite(fid, txt, 'char');
 end
 
-function openInBrowser(htmlPath)
+function openInBrowser(htmlPath, outDir)
     htmlPath = char(htmlPath);
-    % Prefer MATLAB web; fall back to OS default browser
+    if nargin < 2 || isempty(outDir)
+        outDir = fileparts(htmlPath);
+    end
+    outDir = char(outDir);
+
+    % Baidu basemap tiles usually fail under file:// — serve over localhost HTTP.
+    url = startLocalHttpAndUrl(outDir);
+    if ~isempty(url)
+        fprintf('  Open in browser: %s\n', url);
+        try
+            web(url, '-browser');
+            return;
+        catch
+        end
+        if ispc
+            system(sprintf('start "" "%s"', url));
+        elseif ismac
+            system(sprintf('open "%s"', url));
+        else
+            system(sprintf('xdg-open "%s" &', url));
+        end
+        return;
+    end
+
+    % Fallback: file:// (tiles may be blank — HUD will warn)
+    warning('launchBaiduMapTrack:NoHttpServer', ...
+        ['Could not start local HTTP server (need python/py). ' ...
+         'Opening file:// — Baidu basemap often blank. ' ...
+         'Manually: cd to output folder and run: python -m http.server 8765']);
     try
         web(htmlPath, '-browser');
         return;
@@ -164,5 +193,67 @@ function openInBrowser(htmlPath)
         system(sprintf('open "%s"', htmlPath));
     else
         system(sprintf('xdg-open "%s"', htmlPath));
+    end
+end
+
+function url = startLocalHttpAndUrl(outDir)
+%STARTLOCALHTTPANDURL Serve outDir on 127.0.0.1 and return index URL.
+    url = '';
+    ports = 8765:8775;
+    py = localPythonCmd();
+    if isempty(py)
+        return;
+    end
+    for p = ports
+        % Probe if something already serves our index
+        try
+            t = webread(sprintf('http://127.0.0.1:%d/index.html', p), ...
+                weboptions('Timeout', 0.4)); %#ok<NASGU>
+            url = sprintf('http://127.0.0.1:%d/index.html', p);
+            return;
+        catch
+        end
+        % Start server in background (Windows / Unix)
+        try
+            if ispc
+                cmd = sprintf([ ...
+                    'start "b2a-baidumap-%d" /min cmd /c ' ...
+                    '"cd /d "%s" && %s -m http.server %d"'], ...
+                    p, outDir, py, p);
+                [st, ~] = system(cmd);
+            else
+                cmd = sprintf('cd "%s" && %s -m http.server %d >/dev/null 2>&1 &', ...
+                    outDir, py, p);
+                [st, ~] = system(cmd);
+            end
+            if st ~= 0
+                continue;
+            end
+            pause(0.6);
+            try
+                t = webread(sprintf('http://127.0.0.1:%d/index.html', p), ...
+                    weboptions('Timeout', 1.5)); %#ok<NASGU>
+                url = sprintf('http://127.0.0.1:%d/index.html', p);
+                return;
+            catch
+                % port busy or server not ready — try next
+            end
+        catch
+        end
+    end
+end
+
+function py = localPythonCmd()
+    py = '';
+    cands = {'python', 'py -3', 'py'};
+    for i = 1:numel(cands)
+        try
+            [st, out] = system(sprintf('%s --version', cands{i}));
+            if st == 0 && contains(lower(out), 'python')
+                py = cands{i};
+                return;
+            end
+        catch
+        end
     end
 end
