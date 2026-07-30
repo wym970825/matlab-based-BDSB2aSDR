@@ -80,28 +80,33 @@ settings.skipNumberOfBytes = skipNumberOfSeconds * settings.samplingFreq * ...
     settings.size_per_sample;
 
 %% Tracking loops ==========================================================
-settings.dllDampingRatio      = 0.707;
-settings.dllNoiseBandwidth    = 2;
-settings.dllCorrelatorSpacing = 0.5;
+% DLL: SoftGNSS 2nd-order. Pull-in is looser; switches with PLL at filter_pullinMS.
+settings.dllDampingRatio         = 0.707;
+settings.dllCorrelatorSpacing    = 0.5;
+settings.dllNoiseBandwidth_pull  = 10;   % [Hz] INIT pull-in (was fixed 2 Hz)
+settings.dllNoiseBandwidth_stab  = 2;    % [Hz] after pull-in / LONG
+settings.dllNoiseBandwidth       = settings.dllNoiseBandwidth_stab; % legacy alias
 
-settings.trackInit_MS    = 3000;
-settings.filter_pullinMS = 2000;
+settings.trackInit_MS    = 3000;   % INIT duration before ESTI/Weil
+settings.filter_pullinMS = 2000;   % pull-in window: PLL+DLL use *_pull BW
 settings.reEstimateMS    = 10e3;
 settings.pllOrder        = 3;
 settings.pllDampingRatio = 0.707;
-settings.pllNoiseBandwidth = 30;
 settings.phaseDisType    = 2;
 settings.longCoh_ms      = 1;
 settings.weilEstBuffLen  = 100;
 settings.weilConfTh      = 1.5;
 settings.TrkCN0Th        = 25;
 
-settings.pllDampingRatio_init   = 0.707;
-settings.pllNoiseBandwidth_init = 50;
-settings.pllDampingRatio_pull   = 0.707;
+% PLL noise bandwidths [Hz] — read by NH_stateMachine (not hard-coded there)
+% pull: first filter_pullinMS of INIT; stab: rest of INIT + LONG
 settings.pllNoiseBandwidth_pull = 50;
-settings.pllDampingRatio_stab   = 0.707;
 settings.pllNoiseBandwidth_stab = 30;
+settings.pllNoiseBandwidth      = settings.pllNoiseBandwidth_stab; % legacy alias
+settings.pllDampingRatio_init   = 0.707;
+settings.pllNoiseBandwidth_init = settings.pllNoiseBandwidth_pull; % alias → pull
+settings.pllDampingRatio_pull   = 0.707;
+settings.pllDampingRatio_stab   = 0.707;
 settings.phaseDisType_init      = 2;
 
 settings.intTime      = 0.001;

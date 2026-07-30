@@ -169,30 +169,36 @@ classdef NH_stateMachine < handle
                 obj.NH_estimator.Target = ones(max(64, W),1);
             end
 
-            % --- Initialize PF_arr using calcLoopCoef_NHSM if available, fallback otherwise ---
+            % --- Initialize PF_arr from settings bandwidths (config-driven) ---
+            % pf_pull : INIT while T_init < filter_pullinMS  (wider, e.g. 50 Hz)
+            % pf_init : INIT after pull-in window              (stab BW, e.g. 30 Hz)
+            % pf_long : LONG / LONG_FLL                       (stab BW, longCoh_ms)
             try
                 if isfield(settings, 'pllOrder')
                     K = settings.pllOrder;
                 else
                     K = 3;
                 end
-                if isfield(settings, 'pllNoiseBandwidth_stab')
+                % Defaults match initSettings (50 pull / 30 stab) if fields missing
+                S_BW = 30;
+                if isfield(settings, 'pllNoiseBandwidth_stab') && ~isempty(settings.pllNoiseBandwidth_stab)
                     S_BW = settings.pllNoiseBandwidth_stab;
-                else
-                    S_BW = 15;
+                elseif isfield(settings, 'pllNoiseBandwidth') && ~isempty(settings.pllNoiseBandwidth)
+                    S_BW = settings.pllNoiseBandwidth;
                 end
-                if isfield(settings, 'pllNoiseBandwidth_pull')
+                P_BW = 50;
+                if isfield(settings, 'pllNoiseBandwidth_pull') && ~isempty(settings.pllNoiseBandwidth_pull)
                     P_BW = settings.pllNoiseBandwidth_pull;
-                else
-                    P_BW = 40;
+                elseif isfield(settings, 'pllNoiseBandwidth_init') && ~isempty(settings.pllNoiseBandwidth_init)
+                    P_BW = settings.pllNoiseBandwidth_init;
                 end
                 if isfield(settings, 'longCoh_ms')
                     LT = settings.longCoh_ms;
                 else
-                    LT = 10;
+                    LT = 1;
                 end
 
-                ST = 1; % 1ms update
+                ST = 1; % 1 ms update during INIT
 
                 pf_init = calcLoopCoef_NHSM(K, ST, S_BW);
                 pf_pull = calcLoopCoef_NHSM(K, ST, P_BW);
@@ -428,6 +434,16 @@ classdef NH_stateMachine < handle
                     id = uint8(9);
                 otherwise
                     id = uint8(0);
+            end
+        end
+
+        function tf = usePullinFilters(obj)
+            %USEPULLINFILTERS True while INIT* and still inside filter_pullinMS.
+            % Used to switch PLL pf and DLL Bn together (same timeline).
+            if strcmpi(obj.STATE, 'INIT') || strcmpi(obj.STATE, 'INIT_FLL')
+                tf = obj.T_init < obj.T_th_pullin;
+            else
+                tf = false;
             end
         end
 
