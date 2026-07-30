@@ -627,7 +627,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
         oldCodeNco   = codeNco;
         oldCodeError = codeError;
         % Log the code frequency used for THIS correlation, then update NCO
-        % Carrier-aided: f_code = f0 + sat(carrFreq*f0/fL) - codeNco
+        % Carrier-aided: f_code = f0 + clamp(-carrFreq*f0/fL) - codeNco
         logCodeFreq = codeFreq;
         codeFreq = codeFreqFromCarrierAid(settings, carrFreq, codeNco);
 
