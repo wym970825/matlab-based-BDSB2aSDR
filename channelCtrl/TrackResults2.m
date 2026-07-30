@@ -246,40 +246,120 @@ classdef TrackResults2 < handle
         end
 
         function update(obj, loopCnt, varargin)
-            % update - generic writer for per-ms values using name-value pairs.
-            %
-            % Example:
-            %   tr.update(k,'I_P',I_P,'Q_P',Q_P,'codeFreq',codeFreq,'cur_state',true);
-            %
-            if nargin < 4
+            %UPDATE - name-value writer (compat). Prefer writeTick / writeCNo.
+            % Fast path: switch on field name (no isprop reflection).
+            if nargin < 4 || mod(numel(varargin), 2) ~= 0
                 return;
             end
-            if mod(numel(varargin),2) ~= 0
-                error('TrackResults2:update','Name-value pairs required.');
-            end
-
+            k = loopCnt;
             for i = 1:2:numel(varargin)
                 name = varargin{i};
-                value = varargin{i+1};
-
-                if ~(ischar(name) || isstring(name))
-                    error('TrackResults2:update','Property name must be char/string.');
-                end
-                pname = char(name);
-
-                if ~isprop(obj, pname)
-                    warning('TrackResults2:update:UnknownProp','Unknown property "%s" ignored.', pname);
-                    continue;
-                end
-
-                propVal = obj.(pname);
-
-                if (isnumeric(propVal) || islogical(propVal)) && isvector(propVal) && numel(propVal) >= loopCnt
-                    obj.(pname)(loopCnt) = value;
-                else
-                    obj.(pname) = value;
+                if isstring(name), name = char(name); end
+                val = varargin{i+1};
+                switch name
+                    case 'absoluteSample', obj.absoluteSample(k) = val;
+                    case 'codeFreq',       obj.codeFreq(k) = val;
+                    case 'carrFreq',       obj.carrFreq(k) = val;
+                    case 'I_P',            obj.I_P(k) = val;
+                    case 'I_E',            obj.I_E(k) = val;
+                    case 'I_L',            obj.I_L(k) = val;
+                    case 'Q_E',            obj.Q_E(k) = val;
+                    case 'Q_P',            obj.Q_P(k) = val;
+                    case 'Q_L',            obj.Q_L(k) = val;
+                    case 'Pilot_I_P',      obj.Pilot_I_P(k) = val;
+                    case 'Pilot_Q_P',      obj.Pilot_Q_P(k) = val;
+                    case 'Pilot_I_E',      obj.Pilot_I_E(k) = val;
+                    case 'Pilot_Q_E',      obj.Pilot_Q_E(k) = val;
+                    case 'Pilot_I_L',      obj.Pilot_I_L(k) = val;
+                    case 'Pilot_Q_L',      obj.Pilot_Q_L(k) = val;
+                    case 'dllDiscr',       obj.dllDiscr(k) = val;
+                    case 'dllDiscrFilt',   obj.dllDiscrFilt(k) = val;
+                    case 'pllDiscr',       obj.pllDiscr(k) = val;
+                    case 'pllDiscrFilt',   obj.pllDiscrFilt(k) = val;
+                    case 'remCodePhase',   obj.remCodePhase(k) = val;
+                    case 'remCarrPhase',   obj.remCarrPhase(k) = val;
+                    case 'cur_state',      obj.cur_state(k) = logical(val);
+                    case 'trk_state',      obj.trk_state(k) = uint8(val);
+                    case 'fllDiscrHz',     obj.fllDiscrHz(k) = val;
+                    case 'fllDiscrFiltHz', obj.fllDiscrFiltHz(k) = val;
+                    case 'fllCorrHz',      obj.fllCorrHz(k) = val;
+                    case 'fllAided',       obj.fllAided(k) = logical(val);
+                    case 'kf_phiRad',      obj.kf_phiRad(k) = val;
+                    case 'kf_omegaHz',     obj.kf_omegaHz(k) = val;
+                    case 'kf_alphaHzps',   obj.kf_alphaHzps(k) = val;
+                    case 'kf_corrHz',      obj.kf_corrHz(k) = val;
+                    case 'kf_nisPhi',      obj.kf_nisPhi(k) = val;
+                    case 'kf_nisOmega',    obj.kf_nisOmega(k) = val;
+                    case 'kf_rmsNuPhiRad', obj.kf_rmsNuPhiRad(k) = val;
+                    case 'kf_rmsNuOmegaHz',obj.kf_rmsNuOmegaHz(k) = val;
+                    case 'Ppre',           obj.Ppre(k) = val;
+                    case 'Ppost',          obj.Ppost(k) = val;
+                    case 'eta',            obj.eta(k) = val;
+                    case 'DataCNo',        obj.DataCNo(k) = val;
+                    case 'DataPLD',        obj.DataPLD(k) = val;
+                    case 'PilotCNo',       obj.PilotCNo(k) = val;
+                    case 'PilotPLD',       obj.PilotPLD(k) = val;
+                    case 'B2a_CNo',        obj.B2a_CNo(k) = val;
+                    case 'S4_ori',         obj.S4_ori(k) = val;
+                    case 'S4_corr',        obj.S4_corr(k) = val;
+                    case 'S4',             obj.S4(k) = val;
+                    case 'PRN',            obj.PRN = val;
+                    case 'status',         obj.status = val;
+                    otherwise
+                        % ignore unknown (no isprop scan)
                 end
             end
+        end
+
+        function writeTick(obj, k, t)
+            %WRITETICK Fast bulk 1-ms log (P0). Direct property stores, no reflection.
+            % t fields (required subset may be present; missing -> skip if not isfield)
+            % Prefer filling all fields each call for max speed (no isfield).
+            obj.absoluteSample(k) = t.absoluteSample;
+            obj.codeFreq(k)       = t.codeFreq;
+            obj.carrFreq(k)       = t.carrFreq;
+            obj.I_E(k) = t.I_E;  obj.I_P(k) = t.I_P;  obj.I_L(k) = t.I_L;
+            obj.Q_E(k) = t.Q_E;  obj.Q_P(k) = t.Q_P;  obj.Q_L(k) = t.Q_L;
+            obj.Pilot_I_E(k) = t.Pilot_I_E; obj.Pilot_I_P(k) = t.Pilot_I_P; obj.Pilot_I_L(k) = t.Pilot_I_L;
+            obj.Pilot_Q_E(k) = t.Pilot_Q_E; obj.Pilot_Q_P(k) = t.Pilot_Q_P; obj.Pilot_Q_L(k) = t.Pilot_Q_L;
+            obj.dllDiscr(k)     = t.dllDiscr;
+            obj.dllDiscrFilt(k) = t.dllDiscrFilt;
+            obj.pllDiscr(k)     = t.pllDiscr;
+            obj.pllDiscrFilt(k) = t.pllDiscrFilt;
+            obj.remCodePhase(k) = t.remCodePhase;
+            obj.remCarrPhase(k) = t.remCarrPhase;
+            obj.cur_state(k)    = logical(t.cur_state);
+            obj.trk_state(k)    = uint8(t.trk_state);
+            obj.fllDiscrHz(k)     = t.fllDiscrHz;
+            obj.fllDiscrFiltHz(k) = t.fllDiscrFiltHz;
+            obj.fllCorrHz(k)      = t.fllCorrHz;
+            obj.fllAided(k)       = logical(t.fllAided);
+            obj.Ppre(k)  = t.Ppre;
+            obj.Ppost(k) = t.Ppost;
+            obj.eta(k)   = t.eta;
+            obj.kf_phiRad(k)       = t.kf_phiRad;
+            obj.kf_omegaHz(k)      = t.kf_omegaHz;
+            obj.kf_alphaHzps(k)    = t.kf_alphaHzps;
+            obj.kf_corrHz(k)       = t.kf_corrHz;
+            obj.kf_nisPhi(k)       = t.kf_nisPhi;
+            obj.kf_nisOmega(k)     = t.kf_nisOmega;
+            obj.kf_rmsNuPhiRad(k)  = t.kf_rmsNuPhiRad;
+            obj.kf_rmsNuOmegaHz(k) = t.kf_rmsNuOmegaHz;
+        end
+
+        function writeCNo(obj, k, dataCNo, dataPLD, pilotCNo, pilotPLD, b2aCNo)
+            %WRITECNO Fast C/N0 / PLD log at CNoInterval index k.
+            obj.DataCNo(k)  = dataCNo;
+            obj.DataPLD(k)  = dataPLD;
+            obj.PilotCNo(k) = pilotCNo;
+            obj.PilotPLD(k) = pilotPLD;
+            obj.B2a_CNo(k)  = b2aCNo;
+        end
+
+        function writeS4(obj, k, s4_ori, s4_corr, s4)
+            obj.S4_ori(k)  = s4_ori;
+            obj.S4_corr(k) = s4_corr;
+            obj.S4(k)      = s4;
         end
 
         function s = toStruct(obj)

@@ -234,14 +234,17 @@ for c_i = 1:settings.numberOfChannels
         for loopCnt =  1 : codePeriods
             
             % Record NH state (update from v5(3 state) to v6 (5-state))
-            % Record tracking state at current 1ms tick
             TRii = rem(loopCnt-1, trkBuf.Nsize)+1; 
             isLongState = strncmpi(nhsm.STATE,'LONG',4); % LONG or LONG_FLL
-            % record state from state machine
-            % try method update(obj, loopCnt, varargin)
-            trkBuf.update(TRii, 'cur_state', isLongState, 'trk_state', nhsm.getStateId(),...
-                'fllAided', (strcmpi(nhsm.STATE,'INIT_FLL') ||...
-                strcmpi(nhsm.STATE,'LONG_FLL') || forceInitAiding));
+            logCurState = isLongState;
+            logTrkState = nhsm.getStateId();
+            logFllAided = (strcmpi(nhsm.STATE,'INIT_FLL') || ...
+                strcmpi(nhsm.STATE,'LONG_FLL') || forceInitAiding);
+            % KF log defaults for this tick
+            logKf_phi = NaN; logKf_omega = NaN; logKf_alpha = NaN;
+            logKf_corr = NaN; logKf_nisPhi = NaN; logKf_nisOmega = NaN;
+            logKf_rmsPhi = NaN; logKf_rmsOmega = NaN;
+            logFllCorr = 0;
             %% UI update -------------------------------------------------
             % The GUI is updated every 200ms. This way Matlab GUI is still
             % responsive enough. At the same time Matlab is not occupied
@@ -291,8 +294,7 @@ for c_i = 1:settings.numberOfChannels
                 % (so later post-processing can exclude them)
                 if (rem(loopCnt,settings.CNoInterval)==0)
                     CNoCnt = TRii/settings.CNoInterval;
-                    trkBuf.update(CNoCnt,'DataCNo',-1,'DataPLD',-1,...
-                        'PilotCNo',-1,'PilotPLD',-1,'B2a_CNo',-1);
+                    trkBuf.writeCNo(CNoCnt, -1, -1, -1, -1, -1);
                 end
 
                 % load buffer in this step
@@ -410,127 +412,57 @@ for c_i = 1:settings.numberOfChannels
             scintWarmReady = (scintTrackAge_ms >= scintWarmup_ms); 
 
             %% Read next block of data 
-            % Record sample number (based on 8bit samples) 
-            % this index start from 0
-            trkBuf.update(TRii,'absoluteSample', (ftell(fid))/settings.size_per_sample);
-            % Update the phasestep based on code freq (variable) and
-            % sampling frequency (fixed)
-            % Identifies how much symbol time a sampling point occupies:
-            codePhaseStep = codeFreq/settings.samplingFreq;
-            % Find the size of a "block" or code period in whole samples
-            blksize = ceil((settings.codeLength-remCodePhase) / codePhaseStep);
-            % Read in the appropriate number of samples to process this
-            % interation
+            % Sample index at start of this code period (before fread)
+            logAbsSample = (ftell(fid)) / settings.size_per_sample;
+            logPpre = NaN; logPpost = NaN; logEta = NaN;
+            logRemCode = remCodePhase;
+            logRemCarr = remCarrPhase;
+
+            codePhaseStep = codeFreq / settings.samplingFreq;
+            blksize = ceil((settings.codeLength - remCodePhase) / codePhaseStep);
             [rawSignal, samplesRead] = fread(fid, ...
                 dataAdaptCoeff*blksize, settings.dataType);
             rawSignal = rawSignal.';
-            % For IQ data, the real and imaginary parts of the
-            % data are interleaved.Therefore, it is necessary
-            % to split the data read directly in the program
             if (dataAdaptCoeff==2)
-                rawSignalIdat=rawSignal(1:2:end);
-                rawSignalQdat=rawSignal(2:2:end);
+                rawSignalIdat = rawSignal(1:2:end);
+                rawSignalQdat = rawSignal(2:2:end);
                 rawSignal = rawSignalIdat + 1j * rawSignalQdat;
             end
-            % If did not read in enough samples, then could be out of
-            % data - better exit
             if (samplesRead ~= dataAdaptCoeff*blksize)
                 warning('Not able to read the specified number of samples for tracking, exiting!')
                 fclose(fid);
                 return
             end
             if settings.EnablePB
-                rawSignal = pb.mitigate(rawSignalIdat+1j*rawSignalQdat);
-                Ppre = pb.Ppre + PwrK;
-                Ppost = pb.Ppost + PwrK;
-                eta = pb.PDC;
-                trkBuf.update(TRii, 'Ppre', Ppre, 'Ppost', Ppost, 'eta', eta);
+                rawSignal = pb.mitigate(rawSignal);
+                logPpre  = pb.Ppre + PwrK;
+                logPpost = pb.Ppost + PwrK;
+                logEta   = pb.PDC;
             end
             %-------------------------------------------------------------%
-            % PLL Loop Filter Setting from state-machine
             pf = nhsm.pf;
 
-            %% Set up all the code phase tracking information
-            % Save remCodePhase for current correlation
-            
-            
-            % Define index into early code vector
-            tcode       = (remCodePhase-el_Spc) : codePhaseStep : ...
-                ((blksize-1)*codePhaseStep+remCodePhase-el_Spc);
-            tcode2      = ceil(tcode) + 1;
-            earlyCode   = B2aData(tcode2);
-            % For pilot channel signal tracking (always enabled)
-            earlyCodeQ = B2aPliot(tcode2);
-            % Define index into late code vector
-            tcode       = (remCodePhase+el_Spc) : ...
-                codePhaseStep : ...
-                ((blksize-1)*codePhaseStep+remCodePhase+el_Spc);
-            tcode2      = ceil(tcode) + 1;
-            lateCode    = B2aData(tcode2);
-            % For pilot channel signal tracking (always enabled)
-            lateCodeQ = B2aPliot(tcode2);
-            % Define index into prompt code vector
-            tcode       = remCodePhase : ...
-                codePhaseStep : ...
-                ((blksize-1)*codePhaseStep+remCodePhase);
-            tcode2      = ceil(tcode) + 1;
-            promptCode  = B2aData(tcode2);
-            % Apply known B2a data subcode (5ms period) per-ms sign to stabilize data prompt
-            % dataNh = dataNH5(mod(loopCnt-1, 5) + 1);
-            % earlyCode  = dataNh * earlyCode;
-            % promptCode = dataNh * promptCode;
-            % lateCode   = dataNh * lateCode;
-            % For pilot channel signal tracking (always enabled)
-            promptCodeQ = B2aPliot(tcode2);
-
-            % Apply Weil(100) NH chip for this 1ms (remove subcode on pilot)
+            % Weil(100) NH wipe-off on pilot when LONG*
             if strncmpi(nhsm.STATE,'LONG',4)
-                weilIdx = mod(nhsm.NH_estimator.WeilPhase +...
-                    (loopCnt-nhsm.NH_estimator.Anchor),100);
-                nh = weil100(weilIdx+1);
+                weilIdx = mod(nhsm.NH_estimator.WeilPhase + ...
+                    (loopCnt - nhsm.NH_estimator.Anchor), 100);
+                nh = weil100(weilIdx + 1);
             else
                 nh = 1;
             end
-            earlyCodeQ  = nh * earlyCodeQ;
-            promptCodeQ = nh * promptCodeQ;
-            lateCodeQ   = nh * lateCodeQ;
-            trkBuf.update(TRii, 'remCodePhase', remCodePhase, 'remCarrPhase', remCarrPhase);
-            remCodePhase = tcode(blksize)+codePhaseStep-settings.codeLength;
-            %% Generate the carrier frequency to mix the signal to baseband -----------
-            % Save remCarrPhase for current correlation
-            % Get the argument to sin/cos functions
-            timetick    = (0:blksize) ./ settings.samplingFreq;
-            trigarg = ((carrFreq * 2*pi) .* timetick) + remCarrPhase;
-            remCarrPhase = rem(trigarg(blksize+1), (2*pi));
 
-            % Finally compute the signal to mix the collected data to
-            % bandband
-            % carrsig = exp(1j*trigarg(1:blksize));
-            % complexLocalSig = cos(...) + 1j*sin(...)
-            if (dataAdaptCoeff==2)
-                carrsig = exp(1i * trigarg(1:blksize));
-            end
-            %% Generate the six standard accumulated values ---------------------------
-            % First mix to baseband
-            baseBandSignal = rawSignal .* carrsig;
-            qBasebandSignal = real(baseBandSignal);
-            iBasebandSignal = imag(baseBandSignal);
-
-            % Now get early, late, and prompt values for each
-            I_E = sum(earlyCode  .* iBasebandSignal);
-            Q_E = sum(earlyCode  .* qBasebandSignal);
-            I_P = sum(promptCode .* iBasebandSignal);
-            Q_P = sum(promptCode .* qBasebandSignal);
-            I_L = sum(lateCode   .* iBasebandSignal);
-            Q_L = sum(lateCode   .* qBasebandSignal);
-
-            % For pilot channel signal tracking (always enabled)
-            pilot_I_E = sum(earlyCodeQ  .* iBasebandSignal);
-            pilot_Q_E = sum(earlyCodeQ  .* qBasebandSignal);
-            pilot_I_P = sum(promptCodeQ .* iBasebandSignal);
-            pilot_Q_P = sum(promptCodeQ .* qBasebandSignal);
-            pilot_I_L = sum(lateCodeQ   .* iBasebandSignal);
-            pilot_Q_L = sum(lateCodeQ   .* qBasebandSignal);
+            % P2: dual-channel E/P/L correlator (MEX when available)
+            [corr, remCodePhase, remCarrPhase] = correlateB2aMs( ...
+                rawSignal, B2aData, B2aPliot, ...
+                remCodePhase, remCarrPhase, ...
+                codeFreq, carrFreq, settings.samplingFreq, ...
+                settings.codeLength, el_Spc, nh);
+            I_E = corr.I_E; Q_E = corr.Q_E;
+            I_P = corr.I_P; Q_P = corr.Q_P;
+            I_L = corr.I_L; Q_L = corr.Q_L;
+            pilot_I_E = corr.Pilot_I_E; pilot_Q_E = corr.Pilot_Q_E;
+            pilot_I_P = corr.Pilot_I_P; pilot_Q_P = corr.Pilot_Q_P;
+            pilot_I_L = corr.Pilot_I_L; pilot_Q_L = corr.Pilot_Q_L;
 
             % Pilot prompt complex (rotate -pi/2 so pilot aligns to data-phase)
             Pp = (pilot_I_P + 1i * pilot_Q_P) * exp(-1i * pi/2);
@@ -548,9 +480,7 @@ for c_i = 1:settings.numberOfChannels
                 S4 = sqrt(max(0,S4result.S4_ori.^2 - S4result.S4_corr.^2));
                 CNoCnt = TRii/settings.CNoInterval;
                 if ~mod(TRii,settings.CNoInterval)
-                trkBuf.update(CNoCnt, 'S4_ori',S4result.S4_ori,...
-                    'S4_corr',S4result.S4_corr,...
-                    'S4',S4);
+                    trkBuf.writeS4(CNoCnt, S4result.S4_ori, S4result.S4_corr, S4);
                 end
             end
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -599,7 +529,6 @@ for c_i = 1:settings.numberOfChannels
                 fllErrHz = 0;
                 fllErrHz_filt = 0;
             end
-            trkBuf.update(TRii, 'fllDiscrHz', fllErrHz, 'fllDiscrFiltHz', fllErrHz_filt);
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % Carrier loop driving signal:
@@ -613,8 +542,6 @@ for c_i = 1:settings.numberOfChannels
                 % Coherent accumulate pilot for carrier discriminator
                 PsumPilot = PsumPilot + Pp;
                 pdiCnt = pdiCnt + 1;
-                % Save carrier frequency for current correlation (hold within PDI)
-                trkBuf.update(TRii, 'carrFreq', carrFreq);
                 % Only update PLL every PDIcarr_ms
                 if pdiCnt >= PDIcarr_ms
                     carrError = costasPhaseErrCycles(PsumPilot);
@@ -676,14 +603,10 @@ for c_i = 1:settings.numberOfChannels
                 lastCarrNco = carrNco;
                 carrFreq = carrFreqBasis + carrNco;
 
-                trkBuf.update(TRii, 'carrFreq', carrFreq);
                 % reset coherent accumulator
                 PsumPilot = 0 + 1i*0;
                 pdiCnt = 0;
             end
-
-            % Record discriminators (held constant between PLL updates)
-            trkBuf.update(TRii, 'pllDiscr', lastCarrError, 'pllDiscrFilt', lastCarrNco);
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %% Find DLL error and update code NCO -------------------------
@@ -700,14 +623,29 @@ for c_i = 1:settings.numberOfChannels
                 (codeError - oldCodeError) + codeError * (PDIcode/tau1code);
             oldCodeNco   = codeNco;
             oldCodeError = codeError;
-            %% Record various measures to show in postprocessing ----------------------
-            trkBuf.update(TRii, 'codeFreq', codeFreq, 'dllDiscr', codeError, 'dllDiscrFilt', codeNco,...
-                'I_E',I_E, 'I_P',I_P, 'I_L',I_L, 'Q_E',Q_E, 'Q_P',Q_P, 'Q_L',Q_L,...
-                'Pilot_I_E',pilot_I_E, 'Pilot_I_P',pilot_I_P, 'Pilot_I_L',pilot_I_L,...
-                'Pilot_Q_E',pilot_Q_E, 'Pilot_Q_P',pilot_Q_P, 'Pilot_Q_L',pilot_Q_L);
-
-            % Modify code freq based on NCO command
+            % Log the code frequency used for THIS correlation, then update NCO
+            logCodeFreq = codeFreq;
             codeFreq = Ch(c_i).codeFreq - codeNco;
+
+            % P0: bulk 1-ms log before C/N0 (Calc_CNo_PLD reads I/Q history)
+            tick = struct( ...
+                'absoluteSample', logAbsSample, ...
+                'codeFreq', logCodeFreq, 'carrFreq', carrFreq, ...
+                'I_E', I_E, 'I_P', I_P, 'I_L', I_L, ...
+                'Q_E', Q_E, 'Q_P', Q_P, 'Q_L', Q_L, ...
+                'Pilot_I_E', pilot_I_E, 'Pilot_I_P', pilot_I_P, 'Pilot_I_L', pilot_I_L, ...
+                'Pilot_Q_E', pilot_Q_E, 'Pilot_Q_P', pilot_Q_P, 'Pilot_Q_L', pilot_Q_L, ...
+                'dllDiscr', codeError, 'dllDiscrFilt', codeNco, ...
+                'pllDiscr', lastCarrError, 'pllDiscrFilt', lastCarrNco, ...
+                'remCodePhase', logRemCode, 'remCarrPhase', logRemCarr, ...
+                'cur_state', logCurState, 'trk_state', logTrkState, ...
+                'fllDiscrHz', fllErrHz, 'fllDiscrFiltHz', fllErrHz_filt, ...
+                'fllCorrHz', 0, 'fllAided', logFllAided, ...
+                'Ppre', logPpre, 'Ppost', logPpost, 'eta', logEta, ...
+                'kf_phiRad', NaN, 'kf_omegaHz', NaN, 'kf_alphaHzps', NaN, ...
+                'kf_corrHz', NaN, 'kf_nisPhi', NaN, 'kf_nisOmega', NaN, ...
+                'kf_rmsNuPhiRad', NaN, 'kf_rmsNuOmegaHz', NaN);
+            trkBuf.writeTick(TRii, tick);
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %% CNo calculation -------------------------------------------
@@ -723,10 +661,9 @@ for c_i = 1:settings.numberOfChannels
                 end
                 CNoCnt = TRii/settings.CNoInterval;
                 % Save C/No for data channel: a o.5-0.5 filter is used.
-                % Save PLL lock detector output for data channel
                 averageCNo = CNoValue/2 + tempCNoValue/2;
-                trkBuf.update(CNoCnt,'DataCNo',averageCNo(1),'DataPLD',PllDetector(1),...
-                        'PilotCNo',averageCNo(2),'PilotPLD',PllDetector(2),'B2a_CNo',averageCNo(3));
+                trkBuf.writeCNo(CNoCnt, averageCNo(1), PllDetector(1), ...
+                    averageCNo(2), PllDetector(2), averageCNo(3));
 
                 tempCNoValue = CNoValue;
                 % update KF CN0 cache (use total CN0)
@@ -824,9 +761,11 @@ for c_i = 1:settings.numberOfChannels
                     % fprintf('%.2f,%.2f,%.2f,%.2f\n',omegaMeas, Romega, kf_phiMeasRad, Rphi);
                 end
 
-                % log KF states (phi[rad], omega[Hz], alpha[Hz/s])
-                trkBuf.update(TRii, 'kf_phiRad',kf.x(1),'kf_omegaHz',kf.x(2)/(2*pi),...
-                    'kf_alphaHzps',kf.x(3)/(2*pi),'kf_corrHz',0);
+                % log KF states (phi[rad], omega[Hz], alpha[Hz/s]) — patch into tick
+                trkBuf.kf_phiRad(TRii)    = kf.x(1);
+                trkBuf.kf_omegaHz(TRii)   = kf.x(2)/(2*pi);
+                trkBuf.kf_alphaHzps(TRii) = kf.x(3)/(2*pi);
+                trkBuf.kf_corrHz(TRii)    = 0;
             end
 
             % --- Apply aiding correction for NEXT tick (either KF feedback or direct FLL injection) ---
@@ -842,8 +781,11 @@ for c_i = 1:settings.numberOfChannels
                 carrFreq = carrFreqBasis + lastCarrNco;
                 % --- NEW: KF consistency metrics ---
                 kfm = kf.getMetrics();
-                trkBuf.update(TRii,'kf_corrHz',deltaHz,'kf_nisPhi',kfm.NIS_phi,'kf_nisOmega',kfm.NIS_omega,...
-                    'kf_rmsNuPhiRad',kfm.RMS_nu_phi_rad,'kf_rmsNuOmegaHz',kfm.RMS_nu_omega_rads/(2*pi));
+                trkBuf.kf_corrHz(TRii)       = deltaHz;
+                trkBuf.kf_nisPhi(TRii)       = kfm.NIS_phi;
+                trkBuf.kf_nisOmega(TRii)     = kfm.NIS_omega;
+                trkBuf.kf_rmsNuPhiRad(TRii)  = kfm.RMS_nu_phi_rad;
+                trkBuf.kf_rmsNuOmegaHz(TRii) = kfm.RMS_nu_omega_rads/(2*pi);
 
             else % tradional aiding
                 doTraditionalAid = isFllAidedNext &&...
@@ -864,7 +806,7 @@ for c_i = 1:settings.numberOfChannels
                     carrFreq = carrFreqBasis + lastCarrNco;
                 end
             end
-            trkBuf.update(TRii, 'fllCorrHz', fllCorrHz);
+            trkBuf.fllCorrHz(TRii) = fllCorrHz;
             % reset KF phase-meas flag for next tick
             kf_phiMeasValid = false;
             % save and clear buffer when it is full

@@ -79,43 +79,65 @@ classdef pulseBlanker < handle
 
 
         function signal = mitigate(obj, signal)
-            % update
-            % signal: IF complex data or IF
-            %% signal in complex,
-            % use rayleigh model
+            %MITIGATE Pulse blanking (P1 optimized).
+            % Prefer pulseBlank_core_mex when available (complex static/adaptive).
             if isempty(signal)
                 return;
             end
-            %------------Pulse blnking-----------------------%
+
+            % Resolve threshold (adaptive or static)
             if ~obj.UseStatic
                 if ~isreal(signal)
-                    if ~ obj.PwrEstTime
-                        obj.EPWR_th = mean(abs(signal)) * obj.mean2Sigma *...
+                    if ~obj.PwrEstTime
+                        obj.EPWR_th = mean(abs(signal)) * obj.mean2Sigma * ...
                             obj.sigma2Th_complex;
                     end
-                    obj.PwrEstTime = obj.PwrEstTime + 1;
-                    if obj.PwrEstTime >= obj.EPWR_ttl
-                        obj.PwrEstTime = 0;
-                    end
                 else
-                    if ~ obj.PwrEstTime
+                    if ~obj.PwrEstTime
                         obj.EPWR_th = std(signal) * obj.sigma2Th_real;
                     end
-                    obj.PwrEstTime = obj.PwrEstTime + 1;
-                    if obj.PwrEstTime >= obj.EPWR_ttl
-                        obj.PwrEstTime = 0;
-                    end
                 end
-                BlankIdx = (abs(signal)>obj.EPWR_th);
+                obj.PwrEstTime = obj.PwrEstTime + 1;
+                if obj.PwrEstTime >= obj.EPWR_ttl
+                    obj.PwrEstTime = 0;
+                end
+                th = obj.EPWR_th;
             else
-                BlankIdx = (abs(signal)>obj.Th_static);
+                th = obj.Th_static;
             end
-            obj.Ppre = 10*log10(mean(abs(signal).^2));
-            obj.PDC = mean(BlankIdx);
-            signal(BlankIdx) = 0;
-            obj.Ppre = 10*log10(mean(abs(signal).^2));
-            % if
-        end % update
+
+            persistent useMex
+            if isempty(useMex)
+                useMex = (exist('pulseBlank_core_mex', 'file') == 3);
+            end
+
+            if useMex && ~isreal(signal)
+                [signal, obj.Ppre, obj.Ppost, obj.PDC] = ...
+                    pulseBlank_core_mex(complex(signal), double(th));
+                return;
+            end
+
+            % Fast MATLAB path: single |x|^2 pass
+            if ~isreal(signal)
+                re = real(signal);
+                im = imag(signal);
+                a2 = re.*re + im.*im;
+            else
+                a2 = signal.*signal;
+            end
+            th2 = th * th;
+            blank = a2 > th2;
+            n = numel(signal);
+            obj.Ppre = 10*log10(sum(a2)/n + 1e-30);
+            obj.PDC  = sum(blank) / n;
+            signal(blank) = 0;
+            if ~isreal(signal)
+                a2(blank) = 0;
+                obj.Ppost = 10*log10(sum(a2)/n + 1e-30);
+            else
+                obj.Ppost = 10*log10(mean(signal.*signal) + 1e-30);
+            end
+        end
         function varargout = f_mitigate(obj, signal, k, gain, fs)
             % mitigation with a debug figure
             % signal, pre-blanking signal
