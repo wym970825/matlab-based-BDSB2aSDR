@@ -136,7 +136,7 @@ for c_i = 1:settings.numberOfChannels
         end
 
         %--- Perform various initializations ------------------------------
-        codeFreq      = Ch(c_i).codeFreq;   % define initial code frequency basis of NCO
+        codeFreq = codeFreqFromCarrierAid(settings, Ch(c_i).acquiredFreq, 0); % define initial (+carrier aid) code frequency basis of NCO
         remCodePhase  = 0.0;                % Define residual code phase (in chips)
         carrFreq      = Ch(c_i).acquiredFreq ; % Define carrier frequency which is used over whole tracking period
         carrFreqBasis = Ch(c_i).acquiredFreq ;
@@ -396,8 +396,8 @@ for c_i = 1:settings.numberOfChannels
                             warning('REACQ fseek failed -> handover likely wrong.');
                         end
                         % 4) Reset loop states using the re-acquired baselines
-                        codeFreq      = Ch(c_i).codeFreq;
-                        remCodePhase  = 0.0;
+                        codeFreq = codeFreqFromCarrierAid(settings, Ch(c_i).acquiredFreq, 0);
+        remCodePhase  = 0.0;
                         carrFreq      = Ch(c_i).acquiredFreq;
                         carrFreqBasis = Ch(c_i).acquiredFreq;
                         remCarrPhase  = (Ch(c_i).polarityRef < 0) * pi;
@@ -667,7 +667,7 @@ for c_i = 1:settings.numberOfChannels
             oldCodeError = codeError;
             % Log the code frequency used for THIS correlation, then update NCO
             logCodeFreq = codeFreq;
-            codeFreq = Ch(c_i).codeFreq - codeNco;
+            codeFreq = codeFreqFromCarrierAid(settings, carrFreq, codeNco);
 
             % P0: bulk 1-ms log (mutate reusable tick — no struct alloc)
             tick.absoluteSample = logAbsSample;
