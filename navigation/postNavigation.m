@@ -354,9 +354,9 @@ for currMeasNr = 1:measNrSum
 
         %=== Correct pseudorange measurements for clocks errors ===========
         if fixValid
+            rp = navSolutions.rawP(validPr, currMeasNr);
             navSolutions.correctedP(validPr, currMeasNr) = ...
-                    navSolutions.rawP(validPr, currMeasNr) + ...
-                    satClkCorr(:).' * settings.c - xyzdt(4);
+                    rp(:) + satClkCorr(:) * settings.c - xyzdt(4);
         else
             navSolutions.correctedP(validPr, currMeasNr) = NaN;
         end
