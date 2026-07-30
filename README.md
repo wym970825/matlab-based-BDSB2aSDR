@@ -39,6 +39,12 @@ See [docs/architecture.md](docs/architecture.md).
 - [Module audit](docs/module_audit.md)
 - [Optimization plan](docs/optimization_plan.md) (parallel + MEX — plan only)
 
+## Version
+
+**v0.1.2** — carrier-aided code NCO (default on, instantaneous `carrFreq`, ±50 Hz code-domain clamp).
+
+Branches: `master` (baseline), `mexBaseFast` (MEX path), `par-fast-matlab` (parfor + trackOneChannel).
+
 ## Version control
 
 Iterate only under this tree. Commit after each successful smoke.
