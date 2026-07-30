@@ -313,10 +313,17 @@ for c_i = 1:settings.numberOfChannels
                     fseek(fid,round(rand(1)*Nin1ms)*settings.size_per_sample,'cof');
                 end
                 if REACQbuff_pointer >= REACQbuff_size
-                    % do acquisition
-                    acqResults = acquisition_robust_v2(REACQbuff, settings,...
-                        'STA', 'sing', 'PRN', Ch(c_i).PRN);
-                    if any(isfinite(acqResults.carrFreq))
+                    % do acquisition (use v2fft; legacy acquisition_robust_v2 not required)
+                    try
+                        acqResults = acquisition_robust_v2fft(REACQbuff, settings, ...
+                            'STA', 'SING', 'PRN', Ch(c_i).PRN, 'ISSILENT', true);
+                    catch ME
+                        warning('tracking2_v6_fix2:REACQ', ...
+                            'REACQ acquisition failed for PRN %d: %s', Ch(c_i).PRN, ME.message);
+                        acqResults = struct('carrFreq', NaN);
+                    end
+                    if isfield(acqResults, 'carrFreq') && any(isfinite(acqResults.carrFreq(:))) ...
+                            && any(acqResults.carrFreq(:) ~= 0)
                         % --- Minimal-intrusion REACQ->tracking handover fix ---
                         % 1) Ensure preRun2 PRN mapping is correct in STA='SING'
                         tmpSettings = settings;

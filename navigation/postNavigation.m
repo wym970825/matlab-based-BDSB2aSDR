@@ -252,7 +252,7 @@ for currMeasNr = 1:measNrSum
 %% Find receiver position =================================================
     % 3D receiver position can be found only if signals from more than 3
     % satellites are available  
-    if size(activeChnList, 2) > 3
+    if numel(activeChnList) > 3
 
         %=== Calculate receiver position ==================================
         % Correct pseudorange for SV clock error
@@ -260,58 +260,105 @@ for currMeasNr = 1:measNrSum
                                                    satClkCorr * settings.c;
 
         % Calculate receiver position
-        [xyzdt,navSolutions.el(activeChnList, currMeasNr), ...
-         navSolutions.az(activeChnList, currMeasNr), ...
-         navSolutions.DOP(:, currMeasNr)] =...
-                                 leastSquarePos(satPositions, clkCorrRawP,settings);
+        try
+            [xyzdt,navSolutions.el(activeChnList, currMeasNr), ...
+             navSolutions.az(activeChnList, currMeasNr), ...
+             navSolutions.DOP(:, currMeasNr)] =...
+                                     leastSquarePos(satPositions, clkCorrRawP,settings);
+        catch ME
+            warning('postNavigation:LS', 'Fix %d LS failed: %s', currMeasNr, ME.message);
+            xyzdt = [NaN; NaN; NaN; NaN];
+            navSolutions.DOP(:, currMeasNr) = zeros(5, 1);
+        end
 
         %=== Save results ===========================================================
         % Receiver position in ECEF
         navSolutions.X(currMeasNr)  = xyzdt(1);
         navSolutions.Y(currMeasNr)  = xyzdt(2);
-        navSolutions.Z(currMeasNr)  = xyzdt(3);       
+        navSolutions.Z(currMeasNr)  = xyzdt(3);
+        earthR = norm(xyzdt(1:3));
+        fixValid = all(isfinite(xyzdt(1:3))) && earthR > 5.5e6 && earthR < 7.5e6;
 		% For first calculation of solution, clock error will be set 
         % to be zero
         if (currMeasNr == 1)
-        navSolutions.dt(currMeasNr) = 0;  % in unit of (m)
+            navSolutions.dt(currMeasNr) = 0;  % in unit of (m)
         else
             navSolutions.dt(currMeasNr) = xyzdt(4);  
         end
 		%=== Correct local time by clock error estimation =================
-        localTime = localTime - xyzdt(4)/settings.c;       
+        if fixValid && isfinite(xyzdt(4))
+            localTime = localTime - xyzdt(4)/settings.c;
+        end
         navSolutions.localTime(currMeasNr) = localTime;
         
         % Save current measurement sample location 
         navSolutions.currMeasSample(currMeasNr) = currMeasSample;
         % Update the satellites elevations vector
-        satElev = abs(navSolutions.el(:, currMeasNr)');
+        if fixValid
+            satElev = abs(navSolutions.el(:, currMeasNr)');
+        end
 
         %=== Correct pseudorange measurements for clocks errors ===========
-        navSolutions.correctedP(activeChnList, currMeasNr) = ...
-                navSolutions.rawP(activeChnList, currMeasNr) + ...
-                satClkCorr' * settings.c - xyzdt(4);
+        if fixValid
+            navSolutions.correctedP(activeChnList, currMeasNr) = ...
+                    navSolutions.rawP(activeChnList, currMeasNr) + ...
+                    satClkCorr' * settings.c - xyzdt(4);
+        else
+            navSolutions.correctedP(activeChnList, currMeasNr) = NaN;
+        end
             
 %% Coordinate conversion ==================================================
+        if fixValid
+            %=== Convert to geodetic coordinates ==============================
+            try
+                [navSolutions.latitude(currMeasNr), ...
+                 navSolutions.longitude(currMeasNr), ...
+                 navSolutions.height(currMeasNr)] = cart2geo(...
+                                                    navSolutions.X(currMeasNr), ...
+                                                    navSolutions.Y(currMeasNr), ...
+                                                    navSolutions.Z(currMeasNr), ...
+                                                    5);
+            catch
+                navSolutions.latitude(currMeasNr)  = NaN;
+                navSolutions.longitude(currMeasNr) = NaN;
+                navSolutions.height(currMeasNr)    = NaN;
+            end
 
-        %=== Convert to geodetic coordinates ==============================
-        [navSolutions.latitude(currMeasNr), ...
-         navSolutions.longitude(currMeasNr), ...
-         navSolutions.height(currMeasNr)] = cart2geo(...
-                                            navSolutions.X(currMeasNr), ...
-                                            navSolutions.Y(currMeasNr), ...
-                                            navSolutions.Z(currMeasNr), ...
-                                            5);
-      
-        %=== Convert to UTM coordinate system =============================
-        navSolutions.utmZone = findUtmZone(navSolutions.latitude(currMeasNr), ...
-                                           navSolutions.longitude(currMeasNr));
-        
-        % Position in ENU
-        [navSolutions.E(currMeasNr), ...
-         navSolutions.N(currMeasNr), ...
-         navSolutions.U(currMeasNr)] = cart2utm(xyzdt(1), xyzdt(2), ...
-                                                xyzdt(3), ...
-                                                navSolutions.utmZone);
+            lat = navSolutions.latitude(currMeasNr);
+            lon = navSolutions.longitude(currMeasNr);
+            if isfinite(lat) && isfinite(lon) && lat >= -80 && lat <= 84 ...
+                    && lon >= -180 && lon <= 180
+                %=== Convert to UTM coordinate system =============================
+                navSolutions.utmZone = findUtmZone(lat, lon);
+                [navSolutions.E(currMeasNr), ...
+                 navSolutions.N(currMeasNr), ...
+                 navSolutions.U(currMeasNr)] = cart2utm(xyzdt(1), xyzdt(2), ...
+                                                        xyzdt(3), ...
+                                                        navSolutions.utmZone);
+            else
+                % Invalid geodetic (bad geometry / PR alignment) — keep ECEF only
+                navSolutions.latitude(currMeasNr)  = NaN;
+                navSolutions.longitude(currMeasNr) = NaN;
+                navSolutions.height(currMeasNr)    = NaN;
+                navSolutions.E(currMeasNr) = NaN;
+                navSolutions.N(currMeasNr) = NaN;
+                navSolutions.U(currMeasNr) = NaN;
+                if currMeasNr <= 3 || mod(currMeasNr, 20) == 0
+                    fprintf('  Fix %d: invalid LLA (ECEF r=%.1f km) — skipped UTM\n', ...
+                        currMeasNr, earthR/1e3);
+                end
+            end
+        else
+            navSolutions.latitude(currMeasNr)  = NaN;
+            navSolutions.longitude(currMeasNr) = NaN;
+            navSolutions.height(currMeasNr)    = NaN;
+            navSolutions.E(currMeasNr) = NaN;
+            navSolutions.N(currMeasNr) = NaN;
+            navSolutions.U(currMeasNr) = NaN;
+            if currMeasNr <= 3
+                fprintf('  Fix %d: invalid ECEF r=%.1f km\n', currMeasNr, earthR/1e3);
+            end
+        end
         
     else
         %--- There are not enough satellites to find 3D position ----------
