@@ -66,10 +66,25 @@ end
 el_Spc = settings.dllCorrelatorSpacing;% 0.5 chips
 % Summation interval
 PDIcode = settings.intTime;
-% Calculate filter coefficient values
-[tau1code, tau2code] = calcLoopCoef(settings.dllNoiseBandwidth, ...
-    settings.dllDampingRatio, ...
-    1.0);
+% DLL: pull-in vs stable (switch with PLL at filter_pullinMS via nhsm)
+dllZeta = 0.707;
+if isfield(settings, 'dllDampingRatio') && ~isempty(settings.dllDampingRatio)
+    dllZeta = settings.dllDampingRatio;
+end
+dllBwPull = 10;
+if isfield(settings, 'dllNoiseBandwidth_pull') && ~isempty(settings.dllNoiseBandwidth_pull)
+    dllBwPull = settings.dllNoiseBandwidth_pull;
+end
+dllBwStab = 2;
+if isfield(settings, 'dllNoiseBandwidth_stab') && ~isempty(settings.dllNoiseBandwidth_stab)
+    dllBwStab = settings.dllNoiseBandwidth_stab;
+elseif isfield(settings, 'dllNoiseBandwidth') && ~isempty(settings.dllNoiseBandwidth)
+    dllBwStab = settings.dllNoiseBandwidth;
+end
+[tau1code_pull, tau2code_pull] = calcLoopCoef(dllBwPull, dllZeta, 1.0);
+[tau1code_stab, tau2code_stab] = calcLoopCoef(dllBwStab, dllZeta, 1.0);
+tau1code = tau1code_pull;
+tau2code = tau2code_pull;
 
 % ---------- PLL variables ---------- %
 % Long coherent carrier update length (ms)
@@ -691,6 +706,14 @@ for c_i = 1:settings.numberOfChannels
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %% Find DLL error and update code NCO -------------------------
+            % Sync DLL BW with PLL pull-in window (same nhsm.usePullinFilters)
+            if nhsm.usePullinFilters()
+                tau1code = tau1code_pull;
+                tau2code = tau2code_pull;
+            else
+                tau1code = tau1code_stab;
+                tau2code = tau2code_stab;
+            end
             % Pilot-only DLL discriminator (E-L / E+L)
             E = sqrt(pilot_I_E * pilot_I_E + pilot_Q_E * pilot_Q_E);
             L = sqrt(pilot_I_L * pilot_I_L + pilot_Q_L * pilot_Q_L);
