@@ -293,6 +293,11 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                 trkBuf.writeCNo(CNoCnt, -1, -1, -1, -1, -1);
             end
 
+            % --- absoluteSample MUST be logged during REACQ ---
+            % Previously continue'd without writeTick → NaN holes and broken
+            % postNavigation TOW/index ↔ sample mapping after re-acq.
+            logAbsSampleReacq = (ftell(fid)) / settings.size_per_sample;
+
             % load buffer in this step
             % ensure that only one ms data read in one step
             temp_data = fread(fid, dataAdaptCoeff*Nin1ms, settings.dataType);
@@ -310,6 +315,29 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
             if REACQbuff_pointer == 0 
                 fseek(fid,round(rand(1)*Nin1ms)*settings.size_per_sample,'cof');
             end
+
+            % Log REACQ 1-ms slot (invalid correlators; keep sample timeline)
+            tick.absoluteSample = logAbsSampleReacq;
+            tick.codeFreq = codeFreq; tick.carrFreq = carrFreq;
+            tick.I_E = 0; tick.I_P = 0; tick.I_L = 0;
+            tick.Q_E = 0; tick.Q_P = 0; tick.Q_L = 0;
+            tick.Pilot_I_E = 0; tick.Pilot_I_P = 0; tick.Pilot_I_L = 0;
+            tick.Pilot_Q_E = 0; tick.Pilot_Q_P = 0; tick.Pilot_Q_L = 0;
+            tick.dllDiscr = 0; tick.dllDiscrFilt = 0;
+            tick.pllDiscr = 0; tick.pllDiscrFilt = 0;
+            tick.remCodePhase = remCodePhase; tick.remCarrPhase = remCarrPhase;
+            tick.cur_state = false; tick.trk_state = uint8(9); % REACQ
+            tick.fllDiscrHz = 0; tick.fllDiscrFiltHz = 0;
+            tick.fllCorrHz = 0; tick.fllAided = false;
+            tick.Ppre = NaN; tick.Ppost = NaN; tick.eta = NaN;
+            tick.kf_phiRad = NaN; tick.kf_omegaHz = NaN; tick.kf_alphaHzps = NaN;
+            tick.kf_corrHz = NaN; tick.kf_nisPhi = NaN; tick.kf_nisOmega = NaN;
+            tick.kf_rmsNuPhiRad = NaN; tick.kf_rmsNuOmegaHz = NaN;
+            trkBuf.writeTick(TRii, tick);
+            if rem(loopCnt, trkBuf.ChunkCapacity) == 0
+                try, trkBuf.save(); catch, end %#ok<CTCH>
+            end
+
             if REACQbuff_pointer >= REACQbuff_size
                 % do acquisition (use v2fft; legacy acquisition_robust_v2 not required)
                 try
@@ -322,7 +350,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                 end
                 if isfield(acqResults, 'carrFreq') && any(isfinite(acqResults.carrFreq(:))) ...
                         && any(acqResults.carrFreq(:) ~= 0)
-                    % --- Minimal-intrusion REACQ->tracking handover fix ---
+                    % --- REACQ -> tracking handover ---
                     % 1) Ensure preRun2 PRN mapping is correct in STA='SING'
                     tmpSettings = settings;
                     tmpSettings.numberOfChannels = 1;
@@ -339,25 +367,22 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                     ch.weilPhase    = cur_channel.weilPhase;
                     ch.polarityRef  = cur_channel.polarityRef;
 
-                    % 3) Rewind file pointer to align stream to the detected code boundary
-                    %    (avoid remCodePhase mismatch after REACQ)
-                    % 3) Align file pointer to the detected code start within the *latest* 1ms.
-                    % acquisition_robust_fix_tail returns codePhase within the tail 1ms (1..samplesIn1Ms).
+                    % 3) Align file pointer to detected code start (tail 1 ms)
                     st = round(cur_channel.codePhase);
                     st = max(1, min(st, Nin1ms));
                     rewindComplexSamples = Nin1ms - (st - 1);
-
-                    % bytes per raw sample element
                     rewindBytes = - rewindComplexSamples * settings.size_per_sample;
                     pos0 = ftell(fid);
                     ret = fseek(fid, rewindBytes, 'cof');
                     pos1 = ftell(fid);
-                    fprintf(['\tREACQ fseek ret=%d, pos %d -> %d,' ...
-                        ' rewindSamples=%d\n'], ret, pos0, pos1, rewindComplexSamples);
+                    fprintf(['\tREACQ OK PRN%02d @loop %d fseek %d->%d' ...
+                        ' rewindSamples=%d (post-REACQ re-INIT + frame re-sync in nav)\n'], ...
+                        ch.PRN, loopCnt, pos0, pos1, rewindComplexSamples);
                     if ret ~= 0
                         warning('REACQ fseek failed -> handover likely wrong.');
                     end
-                    % 4) Reset loop states using the re-acquired baselines
+
+                    % 4) Full tracking re-init (same as cold start after acq)
                     carrFreq      = ch.acquiredFreq;
                     carrFreqBasis = ch.acquiredFreq;
                     remCodePhase  = 0.0;
@@ -373,16 +398,42 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                     lastCarrNco = 0.0;
                     CNoValue = zeros(1,3);
                     tempCNoValue = -ones(1,3);
-                    % new in fix 2
-                    % reset scintillation warm-up age after successful
-                    % REACQ handover, so S4-based adaptation will re-warm
                     scintTrackAge_ms = 0;
                     scintWarmReady = false;
                     latestScintResValid = false;
                     if ~isempty(scCal)
                         scCal.reset();
                     end
+                    if ~isempty(kf)
+                        try, kf.reset(); catch, end %#ok<CTCH>
+                    end
+                    % Force NH SM back to INIT (frame/Weil re-sync path)
                     nhsm.NeedACQ = false;
+                    nhsm.STATE = 'INIT';
+                    nhsm.T_init = 0;
+                    nhsm.T_long = 0;
+                    nhsm.LastCN0 = [-1, -1];
+                    nhsm.fllCntOn = 0;
+                    nhsm.fllCntOff = 0;
+                    % NH Weil / buffer: enter INIT via NeedACQ=false + update below
+                    try
+                        nhsm.NH_estimator.WeilPhase = -1;
+                        nhsm.NH_estimator.Conf = -1;
+                        nhsm.NH_estimator.Anchor = -1;
+                    catch
+                    end
+                    % Arm FLL/pull-in window after re-acq (same as first acq)
+                    if isfield(settings,'FLLinitT') && ~isempty(settings.FLLinitT) && settings.FLLinitT > 0
+                        fllInitRemain_ms = round(settings.FLLinitT);
+                    end
+                    prevNhStateStr = "INIT";
+                    % Marker for postNavigation: last successful REACQ loop index
+                    if ~isfield(ch, 'reacqLoopCnt') || isempty(ch.reacqLoopCnt)
+                        ch.reacqLoopCnt = loopCnt;
+                    else
+                        ch.reacqLoopCnt = [ch.reacqLoopCnt, loopCnt]; %#ok<AGROW>
+                    end
+                    ch.needFrameResync = true;
                 else
                     % acquisition failed, keep state
                     nhsm.NeedACQ = true;

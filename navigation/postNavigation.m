@@ -109,10 +109,13 @@ for channelNr = activeChnList
     
     fprintf('Decoding B-CNAV2 for PRN %02d of BDS-3 B2a signals -------------------- \n', PRN);
 
-    %=== Decode ephemerides and TOW of the first sub-frame ================
+    %=== Decode ephemerides + TOW; re-frame-sync after last REACQ =========
+    % First-preamble-only TOW is wrong if the channel REACQ'd mid-stream:
+    % each SV re-locks at a different loopCnt, so re-decode I_P *after*
+    % the last REACQ and map subFrameStart back into the full index.
     try
         [eph(PRN), subFrameStart(channelNr), TOW(channelNr)] = ...
-                                      BCNAV2decoding(trackResults(channelNr).I_P);
+            decodeEphWithReacqResync(trackResults(channelNr));
     catch ME
         warning('postNavigation:DecodeFail', 'PRN %02d decode failed: %s', PRN, ME.message);
         activeChnList = setdiff(activeChnList, channelNr);
@@ -250,23 +253,33 @@ for currMeasNr = 1:measNrSum
     navSolutions.transmitTime(activeChnList, currMeasNr) = ...
                                         transmitTime(activeChnList);
 
+    % Drop REACQ / invalid-PR channels this epoch (tt=inf from calculatePseudoranges)
+    validPr = activeChnList(isfinite(transmitTime(activeChnList)));
+    if numel(validPr) < numel(activeChnList) && (currMeasNr <= 3 || mod(currMeasNr, 50) == 0)
+        fprintf('  Fix %d: %d/%d channels valid for PR (excluded REACQ/NaN-as)\n', ...
+            currMeasNr, numel(validPr), numel(activeChnList));
+    end
+
 %% Find satellites positions and clocks corrections =======================
-    % Outputs are all colume vectors corresponding to activeChnList
-    [satPositions, satClkCorr] = satpos1(transmitTime(activeChnList), ...
-                                        [trackResults(activeChnList).PRN], eph); 
-                                                                      
-    % Save satClkCorr
-    navSolutions.satClkCorr(activeChnList, currMeasNr) = satClkCorr;
+    if numel(validPr) > 3
+        [satPositions, satClkCorr] = satpos1(transmitTime(validPr), ...
+                                            [trackResults(validPr).PRN], eph);
+        navSolutions.satClkCorr(validPr, currMeasNr) = satClkCorr;
+    else
+        satPositions = [];
+        satClkCorr = [];
+    end
+
 %% Find receiver position =================================================
     % 3D receiver position can be found only if signals from more than 3
     % satellites are available  
-    if numel(activeChnList) > 3
+    if numel(validPr) > 3
 
         %=== Calculate receiver position ==================================
         % Correct pseudorange for SV clock error
-        clkCorrRawP = navSolutions.rawP(activeChnList, currMeasNr)' + ...
+        clkCorrRawP = navSolutions.rawP(validPr, currMeasNr)' + ...
                                                    satClkCorr * settings.c;
-        prnUsed = [trackResults(activeChnList).PRN];
+        prnUsed = [trackResults(validPr).PRN];
 
         % Calculate receiver position (optional RAIM 1/2-SV FDE)
         useRaim = ~isfield(settings, 'raim') || ~isfield(settings.raim, 'enable') ...
@@ -275,8 +288,8 @@ for currMeasNr = 1:measNrSum
             if useRaim
                 [xyzdt, elAct, azAct, dopAct, raimInfo] = ...
                     raimLeastSquarePos(satPositions, clkCorrRawP, settings, prnUsed);
-                navSolutions.el(activeChnList, currMeasNr) = elAct;
-                navSolutions.az(activeChnList, currMeasNr) = azAct;
+                navSolutions.el(validPr, currMeasNr) = elAct;
+                navSolutions.az(validPr, currMeasNr) = azAct;
                 navSolutions.DOP(:, currMeasNr) = dopAct(:);
                 navSolutions.raim.mode{currMeasNr} = raimInfo.mode;
                 navSolutions.raim.residualRms(currMeasNr) = raimInfo.residualRms;
@@ -301,8 +314,8 @@ for currMeasNr = 1:measNrSum
                         raimInfo.residualRms, raimInfo.maxResidual, raimInfo.passed);
                 end
             else
-                [xyzdt, navSolutions.el(activeChnList, currMeasNr), ...
-                 navSolutions.az(activeChnList, currMeasNr), ...
+                [xyzdt, navSolutions.el(validPr, currMeasNr), ...
+                 navSolutions.az(validPr, currMeasNr), ...
                  navSolutions.DOP(:, currMeasNr)] = ...
                     leastSquarePos(satPositions, clkCorrRawP, settings);
             end
@@ -341,11 +354,11 @@ for currMeasNr = 1:measNrSum
 
         %=== Correct pseudorange measurements for clocks errors ===========
         if fixValid
-            navSolutions.correctedP(activeChnList, currMeasNr) = ...
-                    navSolutions.rawP(activeChnList, currMeasNr) + ...
-                    satClkCorr' * settings.c - xyzdt(4);
+            navSolutions.correctedP(validPr, currMeasNr) = ...
+                    navSolutions.rawP(validPr, currMeasNr) + ...
+                    satClkCorr(:).' * settings.c - xyzdt(4);
         else
-            navSolutions.correctedP(activeChnList, currMeasNr) = NaN;
+            navSolutions.correctedP(validPr, currMeasNr) = NaN;
         end
             
 %% Coordinate conversion ==================================================

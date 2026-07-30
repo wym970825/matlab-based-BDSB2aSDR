@@ -70,31 +70,59 @@ if isempty(searchIndex) || (localTime == inf)
 end
 %--- For all channels in the list ... 
 for channelNr = channelList
-    
-    % Find index of I_P stream whose integration contains current 
-    % measurment point location 
-    for index = searchIndex(channelNr): length(trackResults(channelNr).absoluteSample)
-        if(trackResults(channelNr).absoluteSample(index) > currMeasSample )
-            break
-        end 
+    absS = trackResults(channelNr).absoluteSample;
+    nAbs = numel(absS);
+    if nAbs < 2 || ~isfinite(subFrameStart(channelNr)) || ~isfinite(TOW(channelNr))
+        transmitTime(channelNr) = inf;
+        continue;
     end
-    searchIndex(channelNr) = index;
-    index = index - 1;
-        
-    % Update the phasestep based on code freq and sampling frequency
-    codePhaseStep = trackResults(channelNr).codeFreq(index) / settings.samplingFreq;
-    
-    % Code phase from start of a PRN code to current measement sample location  
-    codePhase     = trackResults(channelNr).remCodePhase(index) +  ...
-                          codePhaseStep * (currMeasSample - ...
-                          trackResults(channelNr).absoluteSample(index) );
-    
-    % Transmitting Time (in unite of s)at current measurement sample location
-    % codePhase/settings.codeLength: fraction part of a PRN code
-    % index - subFrameStart(channelNr): integer number of PRN code
-    transmitTime(channelNr) =  (codePhase/settings.codeLength + index - ...
-                          subFrameStart(channelNr)) * settings.codeLength/...
-                          settings.codeFreqBasis + TOW(channelNr);
+    % Clamp search start into range (ring/chunk edges + REACQ recovery)
+    i0 = searchIndex(channelNr);
+    if ~isfinite(i0) || i0 < 1
+        i0 = 1;
+    end
+    i0 = min(i0, nAbs);
+
+    % Find last index with finite absoluteSample <= currMeasSample
+    index = i0;
+    for ii = i0:nAbs
+        a = absS(ii);
+        if ~isfinite(a)
+            continue; % skip REACQ holes that still slipped through
+        end
+        if a > currMeasSample
+            break
+        end
+        index = ii;
+    end
+    searchIndex(channelNr) = max(1, index);
+
+    if index < 1 || index > nAbs || ~isfinite(absS(index))
+        transmitTime(channelNr) = inf;
+        continue;
+    end
+    % Exclude REACQ / no-correlation ticks from PR (trk_state==9)
+    if isfield(trackResults, 'trk_state') ...
+            && numel(trackResults(channelNr).trk_state) >= index ...
+            && trackResults(channelNr).trk_state(index) == 9
+        transmitTime(channelNr) = inf;
+        continue;
+    end
+
+    cf = trackResults(channelNr).codeFreq(index);
+    if ~isfinite(cf) || cf <= 0
+        cf = settings.codeFreqBasis;
+    end
+    codePhaseStep = cf / settings.samplingFreq;
+
+    % Code phase from start of a PRN code to current measurement sample
+    codePhase = trackResults(channelNr).remCodePhase(index) +  ...
+        codePhaseStep * (currMeasSample - absS(index));
+
+    % Transmit time: TOW anchors subFrameStart (post-REACQ re-synced in nav)
+    transmitTime(channelNr) = (codePhase/settings.codeLength + index - ...
+        subFrameStart(channelNr)) * settings.codeLength / ...
+        settings.codeFreqBasis + TOW(channelNr);
 end
 
 % At first time of fix, local time is initialized by transmitTime and 
@@ -105,6 +133,8 @@ if (localTime == inf)
 end
 
 %--- Convert travel time to a distance ------------------------------------
-% The speed of light must be converted from meters per second to meters
-% per millisecond. 
-pseudoranges    = (localTime - transmitTime) * settings.c; 
+pseudoranges = (localTime - transmitTime) * settings.c;
+% Invalid / REACQ channels keep NaN (not Inf) for downstream LS masks
+badTt = ~isfinite(transmitTime);
+pseudoranges(badTt) = NaN;
+
