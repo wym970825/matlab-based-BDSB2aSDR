@@ -1,0 +1,25 @@
+# MATLAB
+*.asv
+*.m~
+*.mex*
+*.pdb
+slprj/
+codegen/
+
+# Results / large binaries
+results/**
+!results/.gitkeep
+*.bin
+*.dat
+*.mat
+!docs/**
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# Temp
+**/temp/**
+**/tmp/**
