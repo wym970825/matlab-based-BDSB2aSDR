@@ -114,6 +114,11 @@ settings.pilotTRKflag = 1;
 settings.CNoInterval  = 200;
 settings.CNo_Th       = 30;
 
+% Carrier-aided code NCO: f_code = f0 + carrFreq*(f0/fL) - codeNco
+% Aid is limited in *code-domain* Hz (50 Hz ≈ 5.75 kHz carrier Doppler).
+settings.carrierAidCode       = true;
+settings.carrierAidCodeMaxHz  = 50;
+
 %% FLL-aided PLL ===========================================================
 settings.FLL = struct();
 settings.FLL.enable          = true;

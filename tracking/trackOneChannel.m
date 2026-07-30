@@ -97,11 +97,12 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     end
 
     %--- Perform various initializations ------------------------------
-    codeFreq      = ch.codeFreq;   % define initial code frequency basis of NCO
     remCodePhase  = 0.0;                % Define residual code phase (in chips)
     carrFreq      = ch.acquiredFreq ; % Define carrier frequency which is used over whole tracking period
     carrFreqBasis = ch.acquiredFreq ;
     remCarrPhase  = 0.0 + (polarityRef < 0) * pi; % Define residual carrier phase (apply acquisition polarity reference)
+    % Code NCO: nominal + optional carrier aid (instantaneous carrFreq), DLL codeNco=0 at start
+    codeFreq      = codeFreqFromCarrierAid(settings, carrFreq, 0);
     %code tracking loop parameters
     oldCodeNco   = 0.0;
     oldCodeError = 0.0;
@@ -357,13 +358,13 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                         warning('REACQ fseek failed -> handover likely wrong.');
                     end
                     % 4) Reset loop states using the re-acquired baselines
-                    codeFreq      = ch.codeFreq;
-                    remCodePhase  = 0.0;
                     carrFreq      = ch.acquiredFreq;
                     carrFreqBasis = ch.acquiredFreq;
+                    remCodePhase  = 0.0;
                     remCarrPhase  = (ch.polarityRef < 0) * pi;
                     oldCodeNco   = 0.0;
                     oldCodeError = 0.0;
+                    codeFreq      = codeFreqFromCarrierAid(settings, carrFreq, 0);
                     d2CarrError  = 0.0;
                     dCarrError   = 0.0;
                     PsumPilot = 0 + 1i*0;
@@ -626,8 +627,9 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
         oldCodeNco   = codeNco;
         oldCodeError = codeError;
         % Log the code frequency used for THIS correlation, then update NCO
+        % Carrier-aided: f_code = f0 + sat(carrFreq*f0/fL) - codeNco
         logCodeFreq = codeFreq;
-        codeFreq = ch.codeFreq - codeNco;
+        codeFreq = codeFreqFromCarrierAid(settings, carrFreq, codeNco);
 
         % P0: bulk 1-ms log (mutate reusable tick — no struct alloc)
         tick.absoluteSample = logAbsSample;

@@ -97,9 +97,9 @@ function report = smoke_pullin_fll_off(varargin)
                 fwStr = sprintf('%d', r.firstWeak_ms);
             end
             fprintf(['  PRN%02d LONG%%=%.1f meanCNo=%.1f P0=%.3g P200=%.3g ' ...
-                'P1s=%.3g dCarr200=%+.1f firstWeak=%s status=%s\n'], ...
+                'P1s=%.3g dCarr200=%+.1f firstWeak=%s |dll|=%.3f dCode=%.2f status=%s\n'], ...
                 r.PRN, r.longPct, r.meanCNo, r.P0, r.P200, r.P1s, ...
-                r.dCarr200, fwStr, r.status);
+                r.dCarr200, fwStr, r.meanAbsDll, r.meanCodeDf, r.status);
         end
 
         modeOut = struct();
@@ -145,6 +145,23 @@ function r = summarizeSv(tr, ms)
     r.pctINIT = 100*mean(ts==1 | ts==2);
     r.pctLONG = 100*mean(ts==3 | ts==4);
     r.pctREACQ = 100*mean(ts==9);
+    % DLL / code-rate metrics (for carrier-aid comparison)
+    dll = tr.dllDiscr(1:N);
+    dll = dll(isfinite(dll));
+    if isempty(dll)
+        r.meanAbsDll = NaN;
+    else
+        r.meanAbsDll = mean(abs(dll));
+    end
+    cdf = tr.codeFreq(1:N);
+    cdf = cdf(isfinite(cdf));
+    f0 = 10.23e6;
+    if isempty(cdf)
+        r.meanCodeDf = NaN;
+    else
+        r.meanCodeDf = mean(cdf) - f0;
+    end
+    r.meanCarr = mean(cf(isfinite(cf)));
 end
 
 function y = ifelse(c, a, b)
@@ -159,8 +176,8 @@ function writeCompareMd(path, report)
     for mi = 1:numel(report.modes)
         m = report.modes{mi};
         fprintf(fid, '## Mode `%s` (track %.1f s)\n\n', m.tag, m.trkElapsed_s);
-        fprintf(fid, '| PRN | LONG%% | meanCNo | P0 | P200 | P1s | dCarr200 | firstWeak | INIT%% | LONG_st%% |\n');
-        fprintf(fid, '|----:|------:|--------:|---:|-----:|----:|---------:|----------:|------:|---------:|\n');
+        fprintf(fid, '| PRN | LONG%% | meanCNo | P0 | P200 | |dll| | dCode | dCarr200 | firstWeak | LONG_st%% |\n');
+        fprintf(fid, '|----:|------:|--------:|---:|-----:|------:|------:|---------:|----------:|---------:|\n');
         for i = 1:numel(m.rows)
             r = m.rows(i);
             if isnan(r.firstWeak_ms)
@@ -168,9 +185,9 @@ function writeCompareMd(path, report)
             else
                 fwStr = sprintf('%d', r.firstWeak_ms);
             end
-            fprintf(fid, '| %d | %.1f | %.1f | %.3g | %.3g | %.3g | %+.1f | %s | %.1f | %.1f |\n', ...
-                r.PRN, r.longPct, r.meanCNo, r.P0, r.P200, r.P1s, r.dCarr200, ...
-                fwStr, r.pctINIT, r.pctLONG);
+            fprintf(fid, '| %d | %.1f | %.1f | %.3g | %.3g | %.3f | %+.2f | %+.1f | %s | %.1f |\n', ...
+                r.PRN, r.longPct, r.meanCNo, r.P0, r.P200, r.meanAbsDll, r.meanCodeDf, ...
+                r.dCarr200, fwStr, r.pctLONG);
         end
         fprintf(fid, '\n');
     end
