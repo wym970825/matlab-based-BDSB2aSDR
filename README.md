@@ -10,6 +10,18 @@ NH/Weil state machine, pulse blanking, and restored **tracking → navigation** 
 
 ## Quick start
 
+### Web UI (recommended, no MATLAB desktop setup)
+
+```text
+cd F:\matlab-GNSSsdr\BDS\B2a
+python launch_b2a_ui.py
+```
+
+Browser: http://127.0.0.1:8787 — tabs for IF / 捕获 / 跟踪 / 定位 / 显示, then **运行全流程**.  
+MATLAB is auto-detected (`PATH` or install dir); optional `B2A_MATLAB` env. See [docs/web_ui_v016.md](docs/web_ui_v016.md).
+
+### MATLAB CLI
+
 ```matlab
 cd('F:\matlab-GNSSsdr\BDS\B2a')
 setupPaths
@@ -30,6 +42,10 @@ results = run_B2a('msToProcess', 60000, 'acqSatelliteList', [24 38 39 41]);
 
 See [docs/architecture.md](docs/architecture.md).
 
+## 用户手册（推荐先读）
+
+- **[中文用户手册：模块关系 · 捕获/跟踪/定位 · 可选算法](docs/user_manual_zh.md)** — 面向会一点 MATLAB 的新手，讲清数据流与如何打开 FLL/载波辅助/RAIM/加权/Web UI 等
+
 ## Design docs
 
 - [Architecture](docs/architecture.md)
@@ -38,8 +54,11 @@ See [docs/architecture.md](docs/architecture.md).
 - [Navigation bridge](docs/navigation_design.md)
 - [Module audit](docs/module_audit.md)
 - [Optimization plan](docs/optimization_plan.md) (parallel + MEX — plan only)
+- [Web UI v0.1.6](docs/web_ui_v016.md)
 
 ## Version
+
+**v0.1.6** — Web UI + Python orchestrator: tabbed config (IF / acq / track / nav / plot), auto-detect MATLAB `-batch`, full pipeline, auto PVT plots & Baidu map. `python launch_b2a_ui.py` → http://127.0.0.1:8787
 
 **v0.1.5** — Multi-segment TOW after REACQ (epoch LS if nSat≥4); optional elev/C/N0 WLS weights; NMEA GGA+GSV export; geobasemap streets-light + ENU/vel/DOP plots; Baidu CustomOverlay track UI; ENU jump filter (v>500 m/s).
 

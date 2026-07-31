@@ -26,3 +26,10 @@ Thumbs.db
 
 # Secrets — Baidu Map browser AK (use BaidumapKey.example.txt as template)
 config/BaidumapKey.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+

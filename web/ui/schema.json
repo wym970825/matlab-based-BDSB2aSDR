@@ -1,0 +1,92 @@
+{
+  "version": "0.1.6",
+  "title": "BDS B2a SDR",
+  "tabs": [
+    {
+      "id": "data",
+      "label": "数据 / IF",
+      "description": "中频文件与采样参数",
+      "fields": [
+        {"key": "filePath", "label": "IF 目录", "type": "text", "path": true},
+        {"key": "fileName", "label": "IF 文件名", "type": "text"},
+        {"key": "msToProcess", "label": "处理时长 (ms)", "type": "number", "min": 1000, "step": 1000},
+        {"key": "samplingFreq", "label": "采样率 (Hz)", "type": "number"},
+        {"key": "IF", "label": "中频 IF (Hz)", "type": "number"},
+        {"key": "dataType", "label": "数据类型", "type": "select", "options": ["int16", "int8"]},
+        {"key": "fileType", "label": "文件类型", "type": "select", "options": [{"v": 1, "t": "实数"}, {"v": 2, "t": "IQ 交织"}]},
+        {"key": "numberOfChannels", "label": "通道数", "type": "number", "min": 1, "max": 24},
+        {"key": "EnablePB", "label": "脉冲消隐 PB", "type": "bool"}
+      ]
+    },
+    {
+      "id": "acq",
+      "label": "捕获",
+      "description": "Acquisition 搜索与门限",
+      "fields": [
+        {"key": "skipAcquisition", "label": "跳过捕获", "type": "bool"},
+        {"key": "acqSatelliteList", "label": "PRN 列表", "type": "text", "hint": "如 24,38,39,41 或 1:60"},
+        {"key": "acqSearchBand", "label": "搜索带宽单边 (Hz)", "type": "number"},
+        {"key": "acqStep", "label": "多普勒步进 (Hz)", "type": "number"},
+        {"key": "acqThreshold", "label": "捕获门限", "type": "number", "step": 0.1},
+        {"key": "fineNoncoh", "label": "精捕获非相干 (ms)", "type": "number"}
+      ]
+    },
+    {
+      "id": "trk",
+      "label": "跟踪",
+      "description": "DLL / PLL / FLL / 载波辅助 / 并行",
+      "fields": [
+        {"key": "dllNoiseBandwidth_pull", "label": "DLL 带宽 pull (Hz)", "type": "number"},
+        {"key": "dllNoiseBandwidth_stab", "label": "DLL 带宽 stab (Hz)", "type": "number"},
+        {"key": "pllNoiseBandwidth_pull", "label": "PLL 带宽 pull (Hz)", "type": "number"},
+        {"key": "pllNoiseBandwidth_stab", "label": "PLL 带宽 stab (Hz)", "type": "number"},
+        {"key": "filter_pullinMS", "label": "Pull-in 时长 (ms)", "type": "number"},
+        {"key": "trackInit_MS", "label": "INIT 时长 (ms)", "type": "number"},
+        {"key": "carrierAidCode", "label": "载波辅助码环", "type": "bool"},
+        {"key": "carrierAidCodeMaxHz", "label": "码辅助限幅 (Hz)", "type": "number"},
+        {"key": "TrkCN0Th", "label": "失锁 C/N0 门限 (dB-Hz)", "type": "number"},
+        {"key": "CNo_Th", "label": "C/N0 门限 (dB-Hz)", "type": "number"},
+        {"key": "FLL.enable", "label": "FLL 使能", "type": "bool"},
+        {"key": "FLL.aidingEnable", "label": "FLL 辅助 PLL", "type": "bool"},
+        {"key": "REACQ_max", "label": "最大重捕获次数", "type": "number"},
+        {"key": "useParfor", "label": "parfor 并行跟踪", "type": "bool"},
+        {"key": "parMaxWorkers", "label": "并行 workers (≤6)", "type": "number", "min": 1, "max": 6},
+        {"key": "plotTracking", "label": "跟踪过程绘图", "type": "bool"}
+      ]
+    },
+    {
+      "id": "nav",
+      "label": "定位",
+      "description": "PVT / RAIM / 加权 / NMEA",
+      "fields": [
+        {"key": "doNavigation", "label": "运行定位", "type": "bool"},
+        {"key": "navSolPeriod", "label": "历元间隔 (ms)", "type": "number"},
+        {"key": "elevationMask", "label": "高度角掩码 (°)", "type": "number"},
+        {"key": "useTropCorr", "label": "对流层改正", "type": "bool"},
+        {"key": "raim.enable", "label": "RAIM FDE", "type": "bool"},
+        {"key": "raim.enableFde1", "label": "单星剔除 FDE1", "type": "bool"},
+        {"key": "raim.enableFde2", "label": "双星剔除 FDE2", "type": "bool"},
+        {"key": "raim.maxRmsM", "label": "残差 RMS 门限 (m)", "type": "number"},
+        {"key": "raim.maxResM", "label": "最大残差门限 (m)", "type": "number"},
+        {"key": "lsWeight.enableElev", "label": "高度角加权", "type": "bool"},
+        {"key": "lsWeight.enableCno", "label": "C/N0 加权", "type": "bool"},
+        {"key": "lsWeight.wMin", "label": "权重下限", "type": "number", "step": 0.01},
+        {"key": "navTrackMaxSpeedMps", "label": "航迹跳变速度门限 (m/s)", "type": "number"},
+        {"key": "nmea.enable", "label": "导出 NMEA", "type": "bool"},
+        {"key": "nmea.talkerId", "label": "NMEA Talker", "type": "select", "options": ["GB", "BD", "GN", "GP"]},
+        {"key": "doNmea", "label": "本次运行写 NMEA", "type": "bool"}
+      ]
+    },
+    {
+      "id": "plot",
+      "label": "显示 / 输出",
+      "description": "定位图与百度地图",
+      "fields": [
+        {"key": "doPlot", "label": "定位后绘图", "type": "bool"},
+        {"key": "plotNavPost", "label": "ENU/DOP/地图图", "type": "bool"},
+        {"key": "plotBaiduMap", "label": "百度地图 UI", "type": "bool"},
+        {"key": "doBaiduMap", "label": "本次打开百度地图", "type": "bool"}
+      ]
+    }
+  ]
+}
