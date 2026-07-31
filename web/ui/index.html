@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BDS B2a SDR · Web UI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="brand">
+        <div class="logo">B2a</div>
+        <div>
+          <h1>BDS-3 B2a 软件接收机</h1>
+          <p class="sub">Web 配置 · Python 调度 · MATLAB 后台 · 自动定位绘图</p>
+        </div>
+      </div>
+      <div class="top-meta">
+        <span id="verBadge" class="badge">v—</span>
+        <span id="matlabBadge" class="badge badge-warn">MATLAB …</span>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+
+    <main class="main">
+      <section class="panel">
+        <div id="tabPanels"></div>
+        <div class="actions">
+          <button type="button" id="btnReset" class="btn ghost">恢复默认</button>
+          <button type="button" id="btnExport" class="btn ghost">导出 JSON</button>
+          <button type="button" id="btnRun" class="btn primary">运行全流程</button>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="card">
+          <h2>运行状态</h2>
+          <div class="status-row">
+            <span class="k">Job</span>
+            <span id="jobId" class="v mono">—</span>
+          </div>
+          <div class="status-row">
+            <span class="k">状态</span>
+            <span id="jobStatus" class="v"><span class="pill idle">idle</span></span>
+          </div>
+          <div class="status-row">
+            <span class="k">输出</span>
+            <span id="jobOut" class="v mono small">—</span>
+          </div>
+          <div class="status-row">
+            <span class="k">定位</span>
+            <span id="jobNav" class="v">—</span>
+          </div>
+          <div class="progress"><div id="progressBar" class="bar"></div></div>
+          <div class="side-actions">
+            <button type="button" id="btnOpen" class="btn ghost" disabled>打开结果</button>
+            <button type="button" id="btnRefresh" class="btn ghost">刷新状态</button>
+          </div>
+        </div>
+        <div class="card log-card">
+          <h2>MATLAB 日志</h2>
+          <pre id="logView" class="log"></pre>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="foot">
+      不需手动配置 MATLAB 桌面环境；自动探测 <code>matlab</code> / 安装目录，可用环境变量 <code>B2A_MATLAB</code> 指定路径。
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
