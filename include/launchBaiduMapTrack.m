@@ -4,11 +4,14 @@ function outDir = launchBaiduMapTrack(navSolutions, settings, varargin)
 %   outDir = launchBaiduMapTrack(navSolutions, settings)
 %   outDir = launchBaiduMapTrack(..., 'outDir', dir, 'openBrowser', true)
 %
-% GNSS solutions are WGS84. Baidu Maps uses BD-09. The web page converts
-% WGS84 -> BD-09 via BMap.Convertor.translate (from=1, to=5) per official
-% JSAPI 4.0 docs before drawing Polyline / Markers.
+% Points are time-ordered via navTrackTimeOrder. Web UI draws:
+%   - Polyline trajectory
+%   - Time-heat scatter (CustomOverlay dots when available)
+%   - Start / end CustomOverlay labels
+%   - Bottom-right info panel
 %
-% AK is read from config/BaidumapKey.txt (gitignored).
+% GNSS = WGS84; tiles = BD-09 (Convertor 1→5 or offline fallback).
+% AK: config/BaidumapKey.txt (gitignored).
 
     p = inputParser;
     addParameter(p, 'outDir', '', @(x) ischar(x) || isstring(x));
@@ -34,7 +37,6 @@ function outDir = launchBaiduMapTrack(navSolutions, settings, varargin)
         mkdir(outDir);
     end
 
-    % Key
     if ~isempty(opt.keyFile)
         ak = loadBaiduMapKey(opt.keyFile);
     elseif isfield(settings, 'baiduMapKeyFile') && ~isempty(settings.baiduMapKeyFile)
@@ -43,46 +45,60 @@ function outDir = launchBaiduMapTrack(navSolutions, settings, varargin)
         ak = loadBaiduMapKey();
     end
 
-    % Track points (WGS84 degrees)
-    if ~isfield(navSolutions, 'latitude') || ~isfield(navSolutions, 'longitude')
-        error('launchBaiduMapTrack:NoLLA', 'navSolutions missing latitude/longitude');
-    end
-    lat = navSolutions.latitude(:);
-    lon = navSolutions.longitude(:);
-    h = [];
-    if isfield(navSolutions, 'height')
-        h = navSolutions.height(:);
-    end
-    ok = isfinite(lat) & isfinite(lon);
-    if ~any(ok)
+    trk = navTrackTimeOrder(navSolutions, settings);
+    if trk.n < 1
         warning('launchBaiduMapTrack:NoFixes', 'No valid lat/lon — skip Baidu Map UI.');
         outDir = '';
         return;
     end
-    lat = lat(ok);
-    lon = lon(ok);
-    if isempty(h)
-        h = nan(size(lat));
-    else
-        h = h(ok);
+
+    % Build track payload (WGS84); tNorm in [0,1] for heat colour
+    t0 = trk.t(1);
+    tSpan = max(trk.t(end) - t0, eps);
+    pts = struct('lng', {}, 'lat', {}, 'h', {}, 'tMs', {}, 'tNorm', {});
+    for i = 1:trk.n
+        pts(i).lng = trk.lon(i); %#ok<AGROW>
+        pts(i).lat = trk.lat(i);
+        pts(i).h   = trk.h(i);
+        pts(i).tMs = trk.t(i) * 1000;
+        pts(i).tNorm = (trk.t(i) - t0) / tSpan;
     end
-    tMs = (0:numel(lat)-1)' * settings.navSolPeriod;
 
     track = struct();
     track.coord = 'WGS84';
     track.note = 'Convert WGS84->BD-09 with BMap.Convertor before display';
-    track.navSolPeriodMs = settings.navSolPeriod;
-    track.nPoints = numel(lat);
-    track.meanLat = mean(lat);
-    track.meanLon = mean(lon);
-    track.points = arrayfun(@(i) struct( ...
-        'lng', lon(i), 'lat', lat(i), 'h', h(i), 'tMs', tMs(i)), ...
-        (1:numel(lat))');
+    track.navSolPeriodMs = trk.navSolPeriodMs;
+    track.nPoints = trk.n;
+    track.nRemovedJump = trk.nRemovedJump;
+    track.maxSpeedMps = trk.maxSpeedMps;
+    track.meanLat = trk.meanLat;
+    track.meanLon = trk.meanLon;
+    track.meanH = trk.meanH;
+    track.tStartS = trk.tStart;
+    track.tEndS = trk.tEnd;
+    track.durationS = trk.tEnd - trk.tStart;
+    track.start = struct('lng', trk.lon(1), 'lat', trk.lat(1), 'h', trk.h(1));
+    track.end   = struct('lng', trk.lon(end), 'lat', trk.lat(end), 'h', trk.h(end));
+    if any(isfinite(trk.GDOP))
+        track.medianGDOP = median(trk.GDOP(isfinite(trk.GDOP)));
+    else
+        track.medianGDOP = NaN;
+    end
+    if any(isfinite(trk.HDOP))
+        track.medianHDOP = median(trk.HDOP(isfinite(trk.HDOP)));
+    else
+        track.medianHDOP = NaN;
+    end
+    if any(isfinite(trk.VDOP))
+        track.medianVDOP = median(trk.VDOP(isfinite(trk.VDOP)));
+    else
+        track.medianVDOP = NaN;
+    end
+    track.points = pts;
 
     jsonPath = fullfile(outDir, 'track.json');
     writeTrackJson(jsonPath, track);
 
-    % Build index.html from template
     tplHtml = fullfile(webTplDir, 'index.template.html');
     tplJs   = fullfile(webTplDir, 'track.template.js');
     if ~isfile(tplHtml) || ~isfile(tplJs)
@@ -99,7 +115,7 @@ function outDir = launchBaiduMapTrack(navSolutions, settings, varargin)
     html = fileread(tplHtml);
     html = strrep(html, '{{BAIDU_AK}}', ak);
     html = strrep(html, '{{TRACK_JSON_EMBED}}', trackJsonEmbed);
-    html = strrep(html, '{{TITLE}}', sprintf('B2a PVT track (N=%d)', numel(lat)));
+    html = strrep(html, '{{TITLE}}', sprintf('B2a PVT track (N=%d)', trk.n));
 
     js = fileread(tplJs);
 
@@ -107,14 +123,14 @@ function outDir = launchBaiduMapTrack(navSolutions, settings, varargin)
     jsOut   = fullfile(outDir, 'track.js');
     writeTextFile(htmlOut, html);
     writeTextFile(jsOut, js);
-    % copy README snippet if present
     readmeSrc = fullfile(webTplDir, 'README.md');
     if isfile(readmeSrc)
         copyfile(readmeSrc, fullfile(outDir, 'README.md'));
     end
 
     fprintf('Baidu Map UI written: %s\n', htmlOut);
-    fprintf('  points: %d  mean WGS84 (%.6f, %.6f)\n', numel(lat), mean(lat), mean(lon));
+    fprintf('  points: %d  mean WGS84 (%.6f, %.6f)  start→end t=%.1f→%.1f s\n', ...
+        trk.n, trk.meanLat, trk.meanLon, trk.tStart, trk.tEnd);
     fprintf('  NOTE: open via http://127.0.0.1 (not file://) so Baidu tiles load.\n');
 
     if opt.openBrowser
@@ -123,21 +139,21 @@ function outDir = launchBaiduMapTrack(navSolutions, settings, varargin)
 end
 
 function writeTrackJson(path, track)
-    % Prefer jsonencode (R2016b+)
     try
         txt = jsonencode(track);
     catch
-        % Minimal fallback
         n = track.nPoints;
         pts = cell(n, 1);
         for i = 1:n
             p = track.points(i);
-            pts{i} = sprintf('{"lng":%.8f,"lat":%.8f,"h":%.3f,"tMs":%g}', ...
-                p.lng, p.lat, p.h, p.tMs);
+            pts{i} = sprintf( ...
+                '{"lng":%.8f,"lat":%.8f,"h":%.3f,"tMs":%g,"tNorm":%.6f}', ...
+                p.lng, p.lat, p.h, p.tMs, p.tNorm);
         end
         txt = sprintf(['{"coord":"WGS84","nPoints":%d,"meanLat":%.8f,' ...
-            '"meanLon":%.8f,"navSolPeriodMs":%g,"points":[%s]}'], ...
-            n, track.meanLat, track.meanLon, track.navSolPeriodMs, strjoin(pts, ','));
+            '"meanLon":%.8f,"meanH":%.3f,"navSolPeriodMs":%g,"points":[%s]}'], ...
+            n, track.meanLat, track.meanLon, track.meanH, ...
+            track.navSolPeriodMs, strjoin(pts, ','));
     end
     writeTextFile(path, txt);
 end
@@ -158,7 +174,6 @@ function openInBrowser(htmlPath, outDir)
     end
     outDir = char(outDir);
 
-    % Baidu basemap tiles usually fail under file:// — serve over localhost HTTP.
     url = startLocalHttpAndUrl(outDir);
     if ~isempty(url)
         fprintf('  Open in browser: %s\n', url);
@@ -177,7 +192,6 @@ function openInBrowser(htmlPath, outDir)
         return;
     end
 
-    % Fallback: file:// (tiles may be blank — HUD will warn)
     warning('launchBaiduMapTrack:NoHttpServer', ...
         ['Could not start local HTTP server (need python/py). ' ...
          'Opening file:// — Baidu basemap often blank. ' ...
@@ -197,7 +211,6 @@ function openInBrowser(htmlPath, outDir)
 end
 
 function url = startLocalHttpAndUrl(outDir)
-%STARTLOCALHTTPANDURL Serve outDir on 127.0.0.1 and return index URL.
     url = '';
     ports = 8765:8775;
     py = localPythonCmd();
@@ -205,7 +218,6 @@ function url = startLocalHttpAndUrl(outDir)
         return;
     end
     for p = ports
-        % Probe if something already serves our index
         try
             t = webread(sprintf('http://127.0.0.1:%d/index.html', p), ...
                 weboptions('Timeout', 0.4)); %#ok<NASGU>
@@ -213,7 +225,6 @@ function url = startLocalHttpAndUrl(outDir)
             return;
         catch
         end
-        % Start server in background (Windows / Unix)
         try
             if ispc
                 cmd = sprintf([ ...
@@ -236,7 +247,6 @@ function url = startLocalHttpAndUrl(outDir)
                 url = sprintf('http://127.0.0.1:%d/index.html', p);
                 return;
             catch
-                % port busy or server not ready — try next
             end
         catch
         end

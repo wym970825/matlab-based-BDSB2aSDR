@@ -20,6 +20,7 @@ function rootDir = setupPaths()
         'common'
         'cn0'
         'tests'
+        'mex'
         };
 
     addpath(rootDir);

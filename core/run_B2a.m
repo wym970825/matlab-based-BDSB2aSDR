@@ -66,6 +66,18 @@ function results = run_B2a(varargin)
         fprintf('   Calculating navigation solutions...\n');
         [navSolutions, eph] = runNavigation(trackResults, settings);
         fprintf('   Navigation complete.\n');
+        % NMEA 0183 (GGA + GSV)
+        if ~isempty(navSolutions) ...
+                && (~isfield(settings, 'nmea') || ~isfield(settings.nmea, 'enable') ...
+                    || logical(settings.nmea.enable))
+            try
+                nmeaDir = fullfile(settings.resultRoot, sprintf('nmea_%s', pipe.tag));
+                exportNmea(navSolutions, settings, ...
+                    'trackResults', trackResults, 'outDir', nmeaDir);
+            catch ME
+                warning('run_B2a:NMEA', 'NMEA export failed: %s', ME.message);
+            end
+        end
     end
 
     %% Plot ----------------------------------------------------------------
