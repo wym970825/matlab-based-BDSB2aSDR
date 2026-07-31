@@ -1,94 +1,57 @@
 function [pseudoranges,transmitTime,localTime] = ...
-             calculatePseudoranges(trackResults,subFrameStart,TOW,currMeasSample, ...
+             calculatePseudoranges(trackResults,towSeg,TOW_legacy,currMeasSample, ...
              localTime,channelList, settings)
-         
 %calculatePseudoranges finds relative pseudoranges for all satellites
 %listed in CHANNELLIST at the specified millisecond of the processed
-%signal. The pseudoranges contain unknown receiver clock offset. It can be
-%found by the least squares position search procedure. 
+%signal. The pseudoranges contain unknown receiver clock offset.
 %
-% [pseudoranges,transmitTime,localTime] = ...
-%              calculatePseudoranges(trackResults,subFrameStart,TOW,currMeasSample, ...
-%              localTime,channelList, settings)
+% Supports multi-segment TOW after REACQ:
+%   towSeg  - cell 1xNch, each cell a struct array with fields
+%             indexStart, indexEnd, subFrameStart, TOW
+%             OR numeric vector of subFrameStart (legacy SoftGNSS)
+%   TOW_legacy - if towSeg is numeric, vector of TOW [s] per channel
 %
-%   Inputs:
-%       trackResults    - output from the tracking function
-%       subFrameStart   - the array contains positions of the first
-%                       preamble in each channel. The position is ms count 
-%                       since start of tracking. Corresponding value will
-%                       be set to 0 if no valid preambles were detected in
-%                       the channel: 
-%                       1 by settings.numberOfChannels
-%       TOW             - Time Of Week (TOW) of the first sub-frame in the bit
-%                       stream (in seconds)
-%       currMeasSample  - current measurement sample location(measurement time)
-%       localTime       - local time(in GPST) at measurement time
-%       channelList     - list of channels to be processed
-%       settings        - receiver settings
-%
-%   Outputs:
-%       pseudoranges    - relative pseudoranges to the satellites. 
-
-%       transmitTime    - transmitting time of channels to be processed 
-%                         corresponding to measurement time  
-%       localTime       - local time(in GPST) at measurement time
+% When towSeg is a cell of segments, TOW_legacy is ignored (pass []).
 
 %--------------------------------------------------------------------------
-%--------------------------------------------------------------------------
-%                         CU Multi-GNSS SDR  
+%                         CU Multi-GNSS SDR
 % (C) Written by Yafeng Li, Nagaraj C. Shivaramaiah and Dennis M. Akos
 % based on the original work by Darius Plausinaitis,
 % Peter Rinder, Nicolaj Bertelsen and Dennis M. Akos
-%--------------------------------------------------------------------------
-%
-%This program is free software; you can redistribute it and/or
-%modify it under the terms of the GNU General Public License
-%as published by the Free Software Foundation; either version 2
-%of the License, or (at your option) any later version.
-%
-%This program is distributed in the hope that it will be useful,
-%but WITHOUT ANY WARRANTY; without even the implied warranty of
-%MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-%GNU General Public License for more details.
-%
-%You should have received a copy of the GNU General Public License
-%along with this program; if not, write to the Free Software
-%Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
-%USA.
+% Extended: multi-segment TOW for mid-session REACQ
 %--------------------------------------------------------------------------
 
-% CVS record:
-% $Id: calculatePseudoranges.m,v 1.1.2.18 2006/08/09 17:20:11 dpl Exp $
-    
-% Transmitting Time of all channels at current measurement sample location
 transmitTime = inf(1, settings.numberOfChannels);
 
-% This is used to accelerate the search process
+% Accelerate sequential search along absoluteSample
 persistent searchIndex;
 if isempty(searchIndex) || (localTime == inf)
     searchIndex = ones(1, settings.numberOfChannels);
 end
-%--- For all channels in the list ... 
+
+useSegments = iscell(towSeg);
+
 for channelNr = channelList
     absS = trackResults(channelNr).absoluteSample;
     nAbs = numel(absS);
-    if nAbs < 2 || ~isfinite(subFrameStart(channelNr)) || ~isfinite(TOW(channelNr))
+    if nAbs < 2
         transmitTime(channelNr) = inf;
         continue;
     end
-    % Clamp search start into range (ring/chunk edges + REACQ recovery)
+
+    % --- Resolve (subFrameStart, TOW) for this measurement index --------
+    % Find tracking index first, then pick matching TOW segment.
     i0 = searchIndex(channelNr);
     if ~isfinite(i0) || i0 < 1
         i0 = 1;
     end
     i0 = min(i0, nAbs);
 
-    % Find last index with finite absoluteSample <= currMeasSample
     index = i0;
     for ii = i0:nAbs
         a = absS(ii);
         if ~isfinite(a)
-            continue; % skip REACQ holes that still slipped through
+            continue;
         end
         if a > currMeasSample
             break
@@ -101,10 +64,15 @@ for channelNr = channelList
         transmitTime(channelNr) = inf;
         continue;
     end
-    % Exclude REACQ / no-correlation ticks from PR (trk_state==9)
     if isfield(trackResults, 'trk_state') ...
             && numel(trackResults(channelNr).trk_state) >= index ...
             && trackResults(channelNr).trk_state(index) == 9
+        transmitTime(channelNr) = inf;
+        continue;
+    end
+
+    [sf0, tow0] = localTowAtIndex(towSeg, TOW_legacy, channelNr, index, useSegments);
+    if ~isfinite(sf0) || ~isfinite(tow0)
         transmitTime(channelNr) = inf;
         continue;
     end
@@ -115,26 +83,58 @@ for channelNr = channelList
     end
     codePhaseStep = cf / settings.samplingFreq;
 
-    % Code phase from start of a PRN code to current measurement sample
     codePhase = trackResults(channelNr).remCodePhase(index) +  ...
         codePhaseStep * (currMeasSample - absS(index));
 
-    % Transmit time: TOW anchors subFrameStart (post-REACQ re-synced in nav)
     transmitTime(channelNr) = (codePhase/settings.codeLength + index - ...
-        subFrameStart(channelNr)) * settings.codeLength / ...
-        settings.codeFreqBasis + TOW(channelNr);
+        sf0) * settings.codeLength / settings.codeFreqBasis + tow0;
 end
 
-% At first time of fix, local time is initialized by transmitTime and 
-% settings.startOffset
 if (localTime == inf)
-    maxTime   = max(transmitTime(channelList));
-    localTime = maxTime + settings.startOffset/1000;  
+    finiteTt = transmitTime(channelList);
+    finiteTt = finiteTt(isfinite(finiteTt));
+    if isempty(finiteTt)
+        % leave localTime = inf; caller will skip
+        pseudoranges = nan(1, settings.numberOfChannels);
+        return;
+    end
+    maxTime   = max(finiteTt);
+    localTime = maxTime + settings.startOffset/1000;
 end
 
-%--- Convert travel time to a distance ------------------------------------
 pseudoranges = (localTime - transmitTime) * settings.c;
-% Invalid / REACQ channels keep NaN (not Inf) for downstream LS masks
 badTt = ~isfinite(transmitTime);
 pseudoranges(badTt) = NaN;
 
+end
+
+function [sf0, tow0] = localTowAtIndex(towSeg, TOW_legacy, channelNr, index, useSegments)
+    sf0 = inf;
+    tow0 = inf;
+    if useSegments
+        if channelNr > numel(towSeg) || isempty(towSeg{channelNr})
+            return;
+        end
+        segs = towSeg{channelNr};
+        for k = 1:numel(segs)
+            a = segs(k).indexStart;
+            b = segs(k).indexEnd;
+            if index >= a && index <= b ...
+                    && isfinite(segs(k).subFrameStart) && isfinite(segs(k).TOW)
+                % Need measurement at or after first subframe of this segment
+                if index >= segs(k).subFrameStart
+                    sf0 = segs(k).subFrameStart;
+                    tow0 = segs(k).TOW;
+                    return;
+                end
+            end
+        end
+        return;
+    end
+    % Legacy SoftGNSS: numeric subFrameStart + TOW vectors
+    if channelNr > numel(towSeg) || channelNr > numel(TOW_legacy)
+        return;
+    end
+    sf0 = towSeg(channelNr);
+    tow0 = TOW_legacy(channelNr);
+end

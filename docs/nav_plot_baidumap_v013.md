@@ -1,31 +1,57 @@
-# v0.1.3 Post-PVT plots + Baidu Map UI
+# Post-PVT display (MATLAB + Baidu Map)
+
+## Master switch
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `settings.plotNavPost` | **true** | MATLAB post-PVT figures (ENU / vel / DOP / sky / geo map) |
+| `settings.plotBaiduMap` | **true** | Baidu Map web UI after `plotNavPost` |
+| `settings.plotNavLegacy` | false | SoftGNSS `plotNavigation` combined figure |
+
+Silent batch:
+
+```matlab
+settings.plotNavPost = false;   % no MATLAB figures
+settings.plotBaiduMap = false;  % no browser UI
+% or: plotNavPost(ns, settings, 'silent', true);
+```
+
+## Time-ordered track + jump filter
+
+`navTrackTimeOrder(navSolutions, settings)`:
+
+1. Drops non-finite lat/lon; keeps **epoch order**
+2. Removes points that imply an ENU velocity jump: any of
+   `|vE|`, `|vN|`, `|vU|` > `settings.navTrackMaxSpeedMps` (**default 500 m/s**)
+   between consecutive samples (later point of the bad edge is discarded;
+   iterated until clean)
+
+Shared by MATLAB maps and Baidu export.
 
 ## MATLAB figures (`plotNavPost`)
 
-| Figure | Content |
-|--------|---------|
-| ENU variations | ΔE/ΔN/ΔU vs time (ref = mean or `truePosition`) |
-| Sky plot | `skyPlot` az/el + PRN (SoftGNSS) |
-| LLA scatter | Mapping Toolbox `geoshow` when licensed; else plain `plot(lon,lat)` |
+1. **ENU displacement** ΔE/ΔN/ΔU vs time  
+2. **ENU velocity** m/s (diff of ENU / Δt)  
+3. **GDOP / HDOP / VDOP** (+ PDOP dashed if present)  
+4. **Sky plot**  
+5. **LLA map**: `geobasemap('streets-light')` + trajectory + **time-heat** scatter + **start (green ●) / end (red ■)**  
+   Fallback: plain lon/lat scatter if Mapping Toolbox / geoaxes unavailable.
 
-Called from `run_B2a` after navigation when `doPlot=true`.
+## Baidu Map JSAPI 4.0 (`launchBaiduMapTrack`)
 
-## Baidu Map web UI
+- Templates: `web/baidumap/index.template.html`, `track.template.js`  
+- [CustomOverlay](https://lbs.baidu.com/jsapi/refdoc/v4/classes/BMap.CustomOverlay.html) for:
+  - start / end labels（起点 S / 终点 E）
+  - time-heat track dots (subsampled, ≤~400)
+- Polyline trajectory (time-ordered)
+- **Info panel bottom-right**: nPoints, duration, start/end WGS84, mean LLA/h, median DOP, convert method
+- WGS84 → BD-09: Convertor 1→5, offline fallback
+- Open via `http://127.0.0.1:8765` (not `file://`)
 
-- Templates: `web/baidumap/`
-- Export: `launchBaiduMapTrack` → `results/.../index.html` + embedded `track.json`
-- AK: `config/BaidumapKey.txt` (**gitignored**)
-- API: JSAPI **4.0** — https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/index
+## Smoke
 
-### Coordinate offset (required in China)
-
-| System | Role |
-|--------|------|
-| WGS84 | GNSS / `navSolutions.latitude/longitude` |
-| BD-09 | Baidu Maps default |
-
-Page uses official `BMap.Convertor.translate(points, 1, 5, cb)`  
-(`1`=WGS84 → `5`=BD-09), batched ≤10 pts/request.  
-Docs: https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/guide/concept/coord
-
-Display: basic 2D `Polyline` + start/end markers.
+```matlab
+S = load('results/smoke/fullsky_pvt60_260731_063450/results.mat');
+% re-nav if needed, then:
+plotNavPost(navSolutions, settings, 'saveDir', 'results/smoke/navfigs_demo');
+```

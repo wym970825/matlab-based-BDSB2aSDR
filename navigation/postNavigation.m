@@ -79,15 +79,13 @@ end
 % Align channel dimension with actual trackResults length
 nChUse = min(settings.numberOfChannels, nCh);
 
-%% Pre-allocate space 
-% Starting positions of the first message in the input bit stream 
-% trackResults.I_P in each channel. The position is PRN code count
-% since start of tracking. Corresponding value will be set to inf 
-% if no valid preambles were detected in the channel.
+%% Pre-allocate space
+% Per-channel TOW segments (REACQ-aware). Each cell is a struct array with
+% indexStart/indexEnd/subFrameStart/TOW so pre- and post-REACQ epochs both
+% remain usable; LS runs whenever >=4 SVs have a valid segment at the epoch.
+towSeg = cell(1, nChUse);
+% Legacy scalars (first segment) kept for diagnostics / plots
 subFrameStart  = inf(1, nChUse);
-
-% Time Of Week (TOW) of the first message(in seconds). Corresponding value
-% will be set to inf if no valid preambles were detected in the channel.
 TOW  = inf(1, nChUse);
 
 %--- Make a list of channels excluding not tracking channels ---------------
@@ -109,16 +107,20 @@ for channelNr = activeChnList
     
     fprintf('Decoding B-CNAV2 for PRN %02d of BDS-3 B2a signals -------------------- \n', PRN);
 
-    %=== Decode ephemerides + TOW; re-frame-sync after last REACQ =========
-    % First-preamble-only TOW is wrong if the channel REACQ'd mid-stream:
-    % each SV re-locks at a different loopCnt, so re-decode I_P *after*
-    % the last REACQ and map subFrameStart back into the full index.
+    %=== Decode ephemerides + multi-segment TOW (each lock run after REACQ)
     try
-        [eph(PRN), subFrameStart(channelNr), TOW(channelNr)] = ...
+        [eph(PRN), segs, subFrameStart(channelNr), TOW(channelNr)] = ...
             decodeEphWithReacqResync(trackResults(channelNr));
+        towSeg{channelNr} = segs;
     catch ME
         warning('postNavigation:DecodeFail', 'PRN %02d decode failed: %s', PRN, ME.message);
         activeChnList = setdiff(activeChnList, channelNr);
+        continue;
+    end
+
+    if isempty(towSeg{channelNr})
+        activeChnList = setdiff(activeChnList, channelNr);
+        fprintf('  No valid TOW segment for PRN %02d — excluded.\n', PRN);
         continue;
     end
 
@@ -141,7 +143,8 @@ for channelNr = activeChnList
         end
         fprintf('  Channel for PRN %02d excluded!!\n', PRN);
     else
-        fprintf('  Three requisite messages for PRN %02d all decoded!\n', PRN);
+        fprintf('  Three requisite messages for PRN %02d all decoded! (%d TOW segment(s))\n', ...
+            PRN, numel(towSeg{channelNr}));
     end 
 end %  channelNr = activeChnList
 
@@ -154,19 +157,31 @@ if (isempty(activeChnList) || (size(activeChnList, 2) < 4))
 end
 
 %% Set measurement-time point and step  =====================================
-% Find start and end of measurement point locations in IF signal stream with available
-% measurements
-sampleStart = zeros(1, nChUse);
-sampleEnd = inf(1, nChUse);
+% LS is epoch-wise: any epoch with >=4 SVs that have a valid TOW segment
+% should attempt a fix. Therefore navigation time starts at the *earliest*
+% first-segment preamble among ready SVs (not the max / last-REACQ only).
+sampleStartCh = inf(1, nChUse);
+sampleEndCh = inf(1, nChUse);
 for channelNr = activeChnList
     absS = trackResults(channelNr).absoluteSample;
-    sf = subFrameStart(channelNr);
+    segs = towSeg{channelNr};
+    if isempty(segs)
+        activeChnList = setdiff(activeChnList, channelNr);
+        continue;
+    end
+    sf = segs(1).subFrameStart;
     if ~isfinite(sf) || sf < 1 || sf > numel(absS) || ~isfinite(absS(sf))
         activeChnList = setdiff(activeChnList, channelNr);
         continue;
     end
-    sampleStart(channelNr) = absS(sf);
-    sampleEnd(channelNr) = absS(end);
+    sampleStartCh(channelNr) = absS(sf);
+    % Prefer last finite absoluteSample (REACQ holes may leave NaN at end)
+    lastFin = find(isfinite(absS), 1, 'last');
+    if isempty(lastFin)
+        activeChnList = setdiff(activeChnList, channelNr);
+        continue;
+    end
+    sampleEndCh(channelNr) = absS(lastFin);
 end
 if numel(activeChnList) < 4
     disp('Too few satellites after sample alignment. Exiting!');
@@ -174,10 +189,12 @@ if numel(activeChnList) < 4
     return
 end
 
-% Second term is to make space to aviod index exceeds matrix dimensions, 
-% thus a margin of 1 is added.
-sampleStart = max(sampleStart) + 1;
-sampleEnd = min(sampleEnd) - 1;
+% Earliest any SV can contribute; end when the shortest track ends
+sampleStart = min(sampleStartCh(activeChnList)) + 1;
+sampleEnd = min(sampleEndCh(activeChnList)) - 1;
+fprintf(['Navigation window: sampleStart=%g sampleEnd=%g' ...
+    ' (epoch-wise LS, multi-segment TOW; need >=4 SV/epoch)\n'], ...
+    sampleStart, sampleEnd);
  
 %--- Measurement step in unit of IF samples -------------------------------
 measSampleStep = fix(settings.samplingFreq * settings.navSolPeriod/1000);
@@ -200,7 +217,10 @@ readyChnList = activeChnList;
 
 % Set local time to inf for first calculation of receiver position. After
 % first fix, localTime will be updated by measurement sample step.
+% Re-init after multi-SV REACQ gaps so post-REACQ TOW segments do not inherit
+% a stale pre-REACQ receiver clock.
 localTime = inf;
+noFixStreak = 0;
 
 % RAIM log pre-alloc
 navSolutions.raim.mode = repmat({''}, 1, max(measNrSum, 1));
@@ -247,21 +267,22 @@ for currMeasNr = 1:measNrSum
     % Raw pseudorange = (localTime - transmitTime) * light speed (in m)
     % All output are 1 by settings.numberOfChannels columme vecters.
     [navSolutions.rawP(:, currMeasNr),transmitTime,localTime]=  ...
-                     calculatePseudoranges(trackResults,subFrameStart,TOW, ...
-                     currMeasSample,localTime,activeChnList, settings);     
+                     calculatePseudoranges(trackResults, towSeg, [], ...
+                     currMeasSample,localTime,activeChnList, settings);
     % Save transmitTime
     navSolutions.transmitTime(activeChnList, currMeasNr) = ...
                                         transmitTime(activeChnList);
 
-    % Drop REACQ / invalid-PR channels this epoch (tt=inf from calculatePseudoranges)
+    % Drop REACQ / gap / no-segment channels this epoch (tt=inf)
     validPr = activeChnList(isfinite(transmitTime(activeChnList)));
     if numel(validPr) < numel(activeChnList) && (currMeasNr <= 3 || mod(currMeasNr, 50) == 0)
-        fprintf('  Fix %d: %d/%d channels valid for PR (excluded REACQ/NaN-as)\n', ...
+        fprintf('  Fix %d: %d/%d channels valid for PR (excluded REACQ/gap/no-TOW-seg)\n', ...
             currMeasNr, numel(validPr), numel(activeChnList));
     end
 
 %% Find satellites positions and clocks corrections =======================
-    if numel(validPr) > 3
+    % Epoch-wise LS: attempt whenever this epoch has >=4 usable SVs
+    if numel(validPr) >= 4
         [satPositions, satClkCorr] = satpos1(transmitTime(validPr), ...
                                             [trackResults(validPr).PRN], eph);
         navSolutions.satClkCorr(validPr, currMeasNr) = satClkCorr;
@@ -271,9 +292,8 @@ for currMeasNr = 1:measNrSum
     end
 
 %% Find receiver position =================================================
-    % 3D receiver position can be found only if signals from more than 3
-    % satellites are available  
-    if numel(validPr) > 3
+    if numel(validPr) >= 4
+        noFixStreak = 0;
 
         %=== Calculate receiver position ==================================
         % Correct pseudorange for SV clock error
@@ -281,13 +301,18 @@ for currMeasNr = 1:measNrSum
                                                    satClkCorr * settings.c;
         prnUsed = [trackResults(validPr).PRN];
 
+        % Optional elev / C/N0 observation weights (settings.lsWeight)
+        elForW = satElev(validPr);
+        cnoForW = cnoAtMeasSample(trackResults, validPr, currMeasSample, settings);
+        wObs = lsObservationWeights(elForW, cnoForW, settings);
+
         % Calculate receiver position (optional RAIM 1/2-SV FDE)
         useRaim = ~isfield(settings, 'raim') || ~isfield(settings.raim, 'enable') ...
             || logical(settings.raim.enable);
         try
             if useRaim
                 [xyzdt, elAct, azAct, dopAct, raimInfo] = ...
-                    raimLeastSquarePos(satPositions, clkCorrRawP, settings, prnUsed);
+                    raimLeastSquarePos(satPositions, clkCorrRawP, settings, prnUsed, wObs);
                 navSolutions.el(validPr, currMeasNr) = elAct;
                 navSolutions.az(validPr, currMeasNr) = azAct;
                 navSolutions.DOP(:, currMeasNr) = dopAct(:);
@@ -317,7 +342,7 @@ for currMeasNr = 1:measNrSum
                 [xyzdt, navSolutions.el(validPr, currMeasNr), ...
                  navSolutions.az(validPr, currMeasNr), ...
                  navSolutions.DOP(:, currMeasNr)] = ...
-                    leastSquarePos(satPositions, clkCorrRawP, settings);
+                    leastSquarePos(satPositions, clkCorrRawP, settings, wObs);
             end
         catch ME
             warning('postNavigation:LS', 'Fix %d LS/RAIM failed: %s', currMeasNr, ME.message);
@@ -415,14 +440,17 @@ for currMeasNr = 1:measNrSum
         end
         
     else
-        %--- There are not enough satellites to find 3D position ----------
-        disp(['   Measurement No. ', num2str(currMeasNr), ...
-                       ': Not enough information for position solution.']);
+        %--- This epoch has <4 SVs with valid TOW segment / PR -----------
+        noFixStreak = noFixStreak + 1;
+        if noFixStreak >= 2
+            % Gap / collective REACQ: drop stale localTime so next fix re-seeds
+            localTime = inf;
+        end
+        if currMeasNr <= 5 || mod(currMeasNr, 50) == 0
+            fprintf('   Measurement No. %d: only %d SV with valid PR (need >=4)\n', ...
+                currMeasNr, numel(validPr));
+        end
 
-        %--- Set the missing solutions to NaN. These results will be
-        %excluded automatically in all plots. For DOP it is easier to use
-        %zeros. NaN values might need to be excluded from results in some
-        %of further processing to obtain correct results.
         navSolutions.X(currMeasNr)           = NaN;
         navSolutions.Y(currMeasNr)           = NaN;
         navSolutions.Z(currMeasNr)           = NaN;
@@ -440,15 +468,16 @@ for currMeasNr = 1:measNrSum
         navSolutions.el(activeChnList, currMeasNr) = ...
                                              NaN(1, length(activeChnList));
 
-        % TODO: Know issue. Satellite positions are not updated if the
-        % satellites are excluded do to elevation mask. Therefore rasing
-        % satellites will be not included even if they will be above
-        % elevation mask at some point. This would be a good place to
-        % update positions of the excluded satellites.
-
-    end % if size(activeChnList, 2) > 3
+    end % if numel(validPr) >= 4
 
     %=== Update local time by measurement  step  ====================================
-    localTime = localTime + measSampleStep/settings.samplingFreq ;
+    if isfinite(localTime)
+        localTime = localTime + measSampleStep/settings.samplingFreq ;
+    end
 
 end %for currMeasNr...
+
+% Attach multi-segment TOW metadata for diagnostics
+navSolutions.towSeg = towSeg;
+navSolutions.subFrameStart = subFrameStart;
+navSolutions.TOW = TOW;

@@ -5,30 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{TITLE}}</title>
   <!-- Baidu Map JSAPI 4.0 — https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/index -->
+  <!-- CustomOverlay: https://lbs.baidu.com/jsapi/refdoc/v4/classes/BMap.CustomOverlay.html -->
   <script src="https://api.map.baidu.com/api?v=4.0&ak={{BAIDU_AK}}"></script>
   <style>
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: system-ui, sans-serif; }
-    /* map must have non-zero pixel size or tiles never appear */
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
     #map { position: absolute; inset: 0; width: 100%; height: 100%; background: #e8eef5; }
-    #hud {
-      position: absolute; z-index: 10; top: 12px; left: 12px;
-      background: rgba(255,255,255,0.92); border-radius: 8px;
-      padding: 10px 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      max-width: 400px; font-size: 13px; line-height: 1.45; color: #222;
+
+    /* Bottom-right info panel */
+    #info {
+      position: absolute; z-index: 20; right: 14px; bottom: 14px;
+      width: min(340px, calc(100vw - 28px));
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 14px 16px 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.04);
+      font-size: 12.5px; line-height: 1.5; color: #1a1a1a;
     }
-    #hud h1 { margin: 0 0 6px; font-size: 15px; }
-    #hud .muted { color: #666; font-size: 12px; }
-    #hud .err { color: #b00020; }
-    #hud code { background: #f0f0f0; padding: 0 3px; border-radius: 3px; }
+    #info h1 {
+      margin: 0 0 8px; font-size: 14.5px; font-weight: 650;
+      letter-spacing: 0.02em; color: #0d47a1;
+    }
+    #info .row { display: flex; justify-content: space-between; gap: 8px; margin: 3px 0; }
+    #info .k { color: #5f6368; flex-shrink: 0; }
+    #info .v { font-variant-numeric: tabular-nums; text-align: right; word-break: break-all; }
+    #info .muted { color: #666; font-size: 11.5px; margin-top: 8px; }
+    #info .err { color: #b00020; }
+    #info code { background: #f1f3f4; padding: 0 4px; border-radius: 3px; font-size: 11px; }
+    #info .legend {
+      display: flex; align-items: center; gap: 8px; margin-top: 10px;
+      padding-top: 8px; border-top: 1px solid #e8eaed;
+    }
+    #info .swatch {
+      flex: 1; height: 10px; border-radius: 4px;
+      background: linear-gradient(90deg, #3b4cc0, #78c0e0, #f7e55e, #e85d04, #9d0208);
+    }
+    #info .leg-lab { font-size: 11px; color: #5f6368; }
+    #info .badges { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    #info .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 8px; border-radius: 999px; font-size: 11px;
+      background: #f1f3f4; color: #333;
+    }
+    #info .dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #222; }
+    #info .dot.start { background: #34a853; }
+    #info .dot.end { background: #ea4335; border-radius: 2px; }
+
+    /* CustomOverlay labels (start / end) */
+    .b2a-pin {
+      transform: translate(-50%, -100%);
+      pointer-events: none;
+      white-space: nowrap;
+      font-size: 12px; font-weight: 700;
+      padding: 3px 8px 4px;
+      border-radius: 6px 6px 6px 2px;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.28);
+      border: 1.5px solid rgba(0,0,0,0.35);
+    }
+    .b2a-pin.start { background: #34a853; }
+    .b2a-pin.end { background: #ea4335; }
+    .b2a-pin::after {
+      content: ""; position: absolute; left: 50%; bottom: -6px;
+      margin-left: -5px; border: 5px solid transparent;
+      border-top-color: inherit;
+    }
+    .b2a-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(0,0,0,0.35);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.35);
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
-  <div id="hud">
+  <div id="map"></div>
+  <aside id="info" aria-label="track summary">
     <h1>BDS B2a PVT 轨迹</h1>
     <div id="status" class="muted">加载中…</div>
-  </div>
-  <div id="map"></div>
-  <!-- Prefer http://127.0.0.1 (launchBaiduMapTrack starts a local server). file:// often blanks basemap tiles. -->
+    <div id="stats" hidden></div>
+    <div class="legend" id="heatLegend" hidden>
+      <span class="leg-lab">起</span>
+      <div class="swatch" title="时间热力：蓝→红"></div>
+      <span class="leg-lab">止</span>
+    </div>
+    <div class="badges" id="badges" hidden>
+      <span class="badge"><span class="dot start"></span>起点</span>
+      <span class="badge"><span class="dot end"></span>终点</span>
+      <span class="badge">轨迹点 · 时间热力</span>
+    </div>
+  </aside>
+  <!-- Prefer http://127.0.0.1 (launchBaiduMapTrack starts a local server). -->
   <script type="application/json" id="b2a-track-data">{{TRACK_JSON_EMBED}}</script>
   <script src="track.js"></script>
 </body>

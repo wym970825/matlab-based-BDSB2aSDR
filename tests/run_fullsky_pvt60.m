@@ -101,6 +101,19 @@ function report = run_fullsky_pvt60(varargin)
 
     navSummary = summarizeNav(navSolutions, eph);
 
+    % NMEA 0183 (GGA + GSV)
+    nmeaPath = '';
+    if ~isempty(navSolutions) ...
+            && (~isfield(settings, 'nmea') || ~isfield(settings.nmea, 'enable') ...
+                || logical(settings.nmea.enable))
+        try
+            nmeaPath = exportNmea(navSolutions, settings, ...
+                'trackResults', trackResults, 'outDir', outDir);
+        catch ME
+            warning('run_fullsky_pvt60:NMEA', '%s', ME.message);
+        end
+    end
+
     if p.Results.doPlot
         try
             exportQuickFigs(trackResults, navSolutions, settings, figDir, ms);
@@ -130,6 +143,7 @@ function report = run_fullsky_pvt60(varargin)
     report.stage = stage;
     report.trkSummary = trkSummary;
     report.navSummary = navSummary;
+    report.nmeaPath = nmeaPath;
 
     save(fullfile(outDir, 'results.mat'), 'report', '-v7.3');
     writeReport(fullfile(outDir, 'report_pvt60.md'), report);
