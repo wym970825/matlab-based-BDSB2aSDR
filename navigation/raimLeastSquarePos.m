@@ -1,7 +1,8 @@
-function [pos, el, az, dop, info] = raimLeastSquarePos(satpos, obs, settings, prnList)
+function [pos, el, az, dop, info] = raimLeastSquarePos(satpos, obs, settings, prnList, weights)
 %RAIMLEASTSQUAREPOS LS position with RAIM single/dual-SV fault exclusion.
 %
 %   [pos, el, az, dop, info] = raimLeastSquarePos(satpos, obs, settings, prnList)
+%   [pos, el, az, dop, info] = raimLeastSquarePos(..., weights)
 %
 % Strategy (solution-separation FDE):
 %   1) All-in-view least-squares
@@ -16,16 +17,26 @@ function [pos, el, az, dop, info] = raimLeastSquarePos(satpos, obs, settings, pr
 %   - |r|_ECEF in [5.5e6, 7.5e6] m  (receiver near Earth surface)
 %
 % prnList: 1xN PRN numbers matching columns of satpos / obs (for logging).
+% weights: optional 1xN observation weights (elev/C/N0 WLS); default ones.
 
     if nargin < 4 || isempty(prnList)
         prnList = 1:size(satpos, 2);
     end
-    prnList = prnList(:)';
+    prnList = prnList(:).';
     n = size(satpos, 2);
     if numel(obs) ~= n
         error('raimLeastSquarePos:Size', 'obs length must match satpos columns');
     end
-    obs = obs(:)';
+    obs = obs(:).';
+    if nargin < 5 || isempty(weights)
+        weights = ones(1, n);
+    else
+        weights = weights(:).';
+        if numel(weights) ~= n
+            error('raimLeastSquarePos:WeightSize', ...
+                'weights length must match satpos columns');
+        end
+    end
 
     cfg = localRaimCfg(settings);
 
@@ -83,7 +94,7 @@ function [pos, el, az, dop, info] = raimLeastSquarePos(satpos, obs, settings, pr
 
         try
             [p, elK, azK, dopK, resK] = leastSquarePos( ...
-                satpos(:, keep), obs(keep).', settings);
+                satpos(:, keep), obs(keep).', settings, weights(keep));
         catch
             continue;
         end

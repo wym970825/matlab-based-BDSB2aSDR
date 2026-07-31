@@ -173,6 +173,17 @@ settings.truePosition.E = nan;
 settings.truePosition.N = nan;
 settings.truePosition.U = nan;
 
+% Optional WLS observation weights (LS when nSat>=4; both off = equal weight)
+% w = w_el * w_cno, clamped to [wMin, wMax], then scaled so max(w)=1
+settings.lsWeight = struct();
+settings.lsWeight.enableElev = false;  % sin(el)^elevExp (el floor applied)
+settings.lsWeight.enableCno  = false;  % 10^((C/N0 - cnoRefDb)/10)
+settings.lsWeight.elevExp    = 2;
+settings.lsWeight.elFloorDeg = 5;      % min elev for sin() so weight not ~0
+settings.lsWeight.cnoRefDb   = 40;     % unit C/N0 weight reference [dB-Hz]
+settings.lsWeight.wMin       = 0.05;   % weight floor (limit weak SV influence)
+settings.lsWeight.wMax       = 1.0;    % weight ceiling before re-normalise
+
 % RAIM: solution-separation FDE (single- and dual-SV exclusion)
 settings.raim = struct();
 settings.raim.enable       = true;   % default ON
@@ -184,8 +195,23 @@ settings.raim.maxResM      = 200;    % max |residual| gate [m]
 
 %% Plot / I/O ==============================================================
 settings.plotTracking = 1;
-% Post-PVT: ENU + sky + geoshow LLA; optional Baidu Map JSAPI 4.0 web UI
-settings.plotBaiduMap = true;
+% Post-PVT display (default ON; set plotNavPost=false for silent / batch)
+%   ENU displacement + velocity, GDOP/HDOP/VDOP, sky, geobasemap streets-light
+settings.plotNavPost   = true;   % master switch for plotNavPost figures
+settings.plotNavLegacy = false;  % SoftGNSS combined plotNavigation
+% After time-order aggregate: drop points with |vE| or |vN| or |vU| > this (m/s)
+settings.navTrackMaxSpeedMps = 500;  % position-jump filter for display track
+% Baidu Map JSAPI 4.0 web UI (start/end + time-heat track; CustomOverlay labels)
+settings.plotBaiduMap  = true;
+
+% NMEA 0183 export (GGA + GSV minimum; talker GB = BeiDou per NMEA 4.10)
+settings.nmea = struct();
+settings.nmea.enable      = true;   % write pvt.nmea after navigation
+settings.nmea.talkerId    = 'GB';   % GB (BDS); alternatives: BD, GN
+settings.nmea.bdtMinusUtc = 4;      % BDT = UTC + 4 s → UTC field uses SOW−4
+settings.nmea.quality     = 1;      % GGA quality for valid fix (autonomous)
+settings.nmea.geoidSepM   = 0;      % geoid separation (alt = ellipsoidal h)
+settings.nmea.fileName    = 'pvt.nmea';
 
 %% Multi-SV parallel tracking (par-fast-matlab) ============================
 % Option A: each worker fopen()s the IF file privately. Hard cap 6 cores.

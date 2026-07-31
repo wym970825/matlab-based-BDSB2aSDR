@@ -2,15 +2,25 @@
  * B2a PVT track on Baidu Map JSAPI 4.0
  *
  * GNSS = WGS84; Baidu tiles = BD-09.
- * Prefer official BMap.Convertor (1→5); fall back to offline transform
- * if Convertor fails (common under file:// or network/AK issues).
+ * Prefer BMap.Convertor (1→5); offline fallback if needed.
  *
- * Docs: https://lbsyun.baidu.com/docs/jsapi?title=jsapi4/guide/concept/coord
+ * Drawing:
+ *   - Polyline trajectory
+ *   - Time-heat points (BMap.CustomOverlay dots, or Circle fallback)
+ *   - Start / end CustomOverlay labels
+ *   - Bottom-right info panel (#info)
+ *
+ * CustomOverlay:
+ *   https://lbs.baidu.com/jsapi/refdoc/v4/classes/BMap.CustomOverlay.html
  */
 (function () {
   'use strict';
 
   var statusEl = document.getElementById('status');
+  var statsEl = document.getElementById('stats');
+  var heatLegend = document.getElementById('heatLegend');
+  var badges = document.getElementById('badges');
+
   function setStatus(html, isErr) {
     if (!statusEl) return;
     statusEl.innerHTML = html;
@@ -29,7 +39,7 @@
     });
   }
 
-  // ---- Offline WGS84 -> GCJ-02 -> BD-09 (China offset; no network) ----
+  // ---- Offline WGS84 -> GCJ-02 -> BD-09 ----
   var PI = Math.PI;
   var A = 6378245.0;
   var EE = 0.00669342162296594323;
@@ -78,7 +88,6 @@
     });
   }
 
-  /** Official Convertor batch WGS84(1) -> BD09(5); max 10 pts/request. */
   function convertorWgs84ToBd09(pointsWgs) {
     return new Promise(function (resolve, reject) {
       if (typeof BMap.Convertor !== 'function') {
@@ -102,14 +111,8 @@
         }
       }, 12000);
 
-      function finishOk(pts) {
-        clearTimeout(timer);
-        resolve(pts);
-      }
-      function finishErr(err) {
-        clearTimeout(timer);
-        reject(err);
-      }
+      function finishOk(pts) { clearTimeout(timer); resolve(pts); }
+      function finishErr(err) { clearTimeout(timer); reject(err); }
 
       function pump() {
         if (failed) return;
@@ -154,12 +157,116 @@
       return { points: pts, how: 'BMap.Convertor 1→5' };
     }).catch(function (err) {
       console.warn('Convertor failed, offline BD-09:', err);
-      return { points: offlineWgs84ToBd09(pointsWgs), how: 'offline WGS84→GCJ02→BD09 (fallback)' };
+      return { points: offlineWgs84ToBd09(pointsWgs), how: 'offline WGS84→GCJ02→BD09' };
     });
   }
 
-  function drawTrack(bdPoints, meta, how) {
-    // Drop undefined holes if convertor partially failed
+  /** turbo-like heat: t in [0,1] → css rgb */
+  function heatColor(t) {
+    t = Math.max(0, Math.min(1, t));
+    // blue → cyan → yellow → orange → red
+    var stops = [
+      [0.00, [59, 76, 192]],
+      [0.25, [120, 192, 224]],
+      [0.50, [247, 229, 94]],
+      [0.75, [232, 93, 4]],
+      [1.00, [157, 2, 8]]
+    ];
+    var a = stops[0], b = stops[stops.length - 1];
+    for (var i = 0; i < stops.length - 1; i++) {
+      if (t >= stops[i][0] && t <= stops[i + 1][0]) {
+        a = stops[i]; b = stops[i + 1];
+        break;
+      }
+    }
+    var u = (t - a[0]) / Math.max(1e-9, b[0] - a[0]);
+    var r = Math.round(a[1][0] + (b[1][0] - a[1][0]) * u);
+    var g = Math.round(a[1][1] + (b[1][1] - a[1][1]) * u);
+    var bl = Math.round(a[1][2] + (b[1][2] - a[1][2]) * u);
+    return 'rgb(' + r + ',' + g + ',' + bl + ')';
+  }
+
+  function fmt(n, dig) {
+    if (n == null || !isFinite(Number(n))) return '—';
+    return Number(n).toFixed(dig == null ? 6 : dig);
+  }
+
+  function makePinOverlay(point, label, kind) {
+    if (typeof BMap.CustomOverlay !== 'function') return null;
+    return new BMap.CustomOverlay(function () {
+      var div = document.createElement('div');
+      div.className = 'b2a-pin ' + (kind || 'start');
+      div.textContent = label;
+      div.style.position = 'relative';
+      return div;
+    }, {
+      point: point,
+      offsetX: 0,
+      offsetY: -4,
+      zIndex: 1000,
+      properties: { role: kind, label: label }
+    });
+  }
+
+  function makeDotOverlay(point, color, tNorm) {
+    if (typeof BMap.CustomOverlay !== 'function') return null;
+    return new BMap.CustomOverlay(function () {
+      var div = document.createElement('div');
+      div.className = 'b2a-dot';
+      div.style.background = color;
+      return div;
+    }, {
+      point: point,
+      zIndex: 100,
+      properties: { tNorm: tNorm }
+    });
+  }
+
+  function fillInfoPanel(track, bdPoints, how) {
+    var raw = track.points || [];
+    var n = bdPoints.length;
+    var start = raw[0] || {};
+    var end = raw[raw.length - 1] || {};
+    var proto = (location.protocol || '').toLowerCase();
+    var warn = '';
+    if (proto === 'file:') {
+      warn = '<div class="err" style="margin-top:6px">当前 file:// 打开，底图常被拦。请用 http://127.0.0.1。</div>';
+    }
+
+    var jumpNote = '';
+    if (track.nRemovedJump != null && Number(track.nRemovedJump) > 0) {
+      jumpNote = ' <span class="muted">(已剔跳变 ' + Number(track.nRemovedJump) +
+        ' 点, v&gt;' + fmt(track.maxSpeedMps, 0) + ' m/s)</span>';
+    }
+    var rows = [
+      ['轨迹点', '<b>' + n + '</b>' + jumpNote],
+      ['时长', fmt(track.durationS, 1) + ' s'],
+      ['起点 WGS84', fmt(start.lat) + ', ' + fmt(start.lng)],
+      ['终点 WGS84', fmt(end.lat) + ', ' + fmt(end.lng)],
+      ['均值 lat/lon', fmt(track.meanLat) + ', ' + fmt(track.meanLon)],
+      ['均值高度', fmt(track.meanH, 1) + ' m'],
+      ['中位 GDOP', fmt(track.medianGDOP, 2)],
+      ['中位 HDOP', fmt(track.medianHDOP, 2)],
+      ['中位 VDOP', fmt(track.medianVDOP, 2)],
+      ['坐标变换', how]
+    ];
+
+    var html = rows.map(function (r) {
+      return '<div class="row"><span class="k">' + r[0] + '</span><span class="v">' + r[1] + '</span></div>';
+    }).join('');
+    html += warn;
+
+    if (statsEl) {
+      statsEl.innerHTML = html;
+      statsEl.hidden = false;
+    }
+    if (heatLegend) heatLegend.hidden = false;
+    if (badges) badges.hidden = false;
+    setStatus('');
+    if (statusEl) statusEl.style.display = 'none';
+  }
+
+  function drawTrack(bdPoints, track, how, tNorms) {
     bdPoints = bdPoints.filter(function (p) {
       return p && typeof p.lng === 'number' && typeof p.lat === 'number' &&
         isFinite(p.lng) && isFinite(p.lat);
@@ -180,93 +287,110 @@
       if (typeof BMap.ScaleControl === 'function') {
         map.addControl(new BMap.ScaleControl());
       }
-      if (typeof BMap.MapTypeControl === 'function') {
-        map.addControl(new BMap.MapTypeControl());
-      }
     } catch (e) {
       console.warn('controls:', e);
     }
-
-    // Force a known basemap type if API exposes it
     try {
-      if (typeof BMAP_NORMAL_MAP !== 'undefined') {
-        map.setMapType(BMAP_NORMAL_MAP);
-      }
+      if (typeof BMAP_NORMAL_MAP !== 'undefined') map.setMapType(BMAP_NORMAL_MAP);
     } catch (e2) { /* ignore */ }
 
+    // Trajectory polyline (time-ordered)
     var polyline = new BMap.Polyline(bdPoints, {
-      strokeColor: '#1a73e8',
-      strokeWeight: 5,
-      strokeOpacity: 0.9,
+      strokeColor: '#5f6368',
+      strokeWeight: 3,
+      strokeOpacity: 0.55,
       strokeStyle: 'solid',
       enableClicking: false
     });
     map.addOverlay(polyline);
 
-    map.addOverlay(new BMap.Marker(bdPoints[0]));
-    map.addOverlay(new BMap.Marker(bdPoints[bdPoints.length - 1]));
+    // Subsample heat dots for performance (cap ~400 overlays)
+    var n = bdPoints.length;
+    var step = Math.max(1, Math.ceil(n / 400));
+    var useCustom = typeof BMap.CustomOverlay === 'function';
+
+    for (var i = 0; i < n; i += step) {
+      var tn = (tNorms && tNorms[i] != null) ? tNorms[i] : (n <= 1 ? 0 : i / (n - 1));
+      var col = heatColor(tn);
+      if (useCustom) {
+        var dot = makeDotOverlay(bdPoints[i], col, tn);
+        if (dot) map.addOverlay(dot);
+      } else if (typeof BMap.Circle === 'function') {
+        map.addOverlay(new BMap.Circle(bdPoints[i], 4, {
+          strokeColor: col,
+          fillColor: col,
+          strokeWeight: 1,
+          strokeOpacity: 0.9,
+          fillOpacity: 0.85
+        }));
+      }
+    }
+
+    // Start / end — CustomOverlay labels (fallback Marker)
+    var p0 = bdPoints[0];
+    var p1 = bdPoints[n - 1];
+    if (useCustom) {
+      var startOv = makePinOverlay(p0, '起点 S', 'start');
+      var endOv = makePinOverlay(p1, '终点 E', 'end');
+      if (startOv) map.addOverlay(startOv);
+      if (endOv) map.addOverlay(endOv);
+    } else {
+      map.addOverlay(new BMap.Marker(p0));
+      map.addOverlay(new BMap.Marker(p1));
+    }
 
     if (typeof map.setViewport === 'function') {
       try {
-        map.setViewport(bdPoints, { margins: [60, 40, 40, 40] });
+        map.setViewport(bdPoints, { margins: [50, 50, 120, 50] });
       } catch (e3) {
         map.centerAndZoom(center, 16);
       }
     }
 
-    // Nudge redraw (helps after container was 0-size under some hosts)
     setTimeout(function () {
       try {
         if (typeof map.checkResize === 'function') map.checkResize();
-        map.centerAndZoom(map.getCenter(), map.getZoom());
       } catch (e4) { /* ignore */ }
     }, 200);
 
-    var proto = (location.protocol || '').toLowerCase();
-    var warn = '';
-    if (proto === 'file:') {
-      warn = '<br/><span class="err">提示: 当前是 file:// 打开。百度底图常被拦，请用 http://127.0.0.1 起本地服务（MATLAB launch 会自动起）。</span>';
-    }
-
-    setStatus(
-      '点数: <b>' + bdPoints.length + '</b><br/>' +
-      '坐标: WGS84 → BD-09 via <b>' + how + '</b><br/>' +
-      '均值 WGS84: ' + meta.meanLat.toFixed(6) + ', ' + meta.meanLon.toFixed(6) + '<br/>' +
-      '协议: ' + proto + ' · 若只有线/点、无底图：查 AK 是否开 JSAPI、Referer 白名单是否含 localhost' +
-      warn
-    );
+    fillInfoPanel(track, bdPoints, how);
   }
 
   function main() {
     if (typeof BMap === 'undefined') {
       setStatus(
         'BMap 未加载。<br/>' +
-        '1) AK 是否启用「JavaScript API」<br/>' +
-        '2) 浏览器端 AK 的 Referer 白名单是否含 <code>*</code> 或 <code>127.0.0.1</code><br/>' +
-        '3) 不要用 file:// 双击打开，请用本地 http 服务',
+        '1) AK 启用 JavaScript API<br/>' +
+        '2) Referer 白名单含 <code>*</code> 或 <code>127.0.0.1</code><br/>' +
+        '3) 用本地 http 服务，勿 file://',
         true
       );
       return;
-    }
-
-    var mapBox = document.getElementById('map');
-    if (!mapBox || mapBox.clientHeight < 10) {
-      setStatus('地图容器高度为 0，请检查 CSS (#map height:100%)', true);
     }
 
     loadTrack()
       .then(function (track) {
         var raw = track.points || [];
         if (!raw.length) throw new Error('track has no points');
+        // Ensure time order by tMs if present
+        raw = raw.slice().sort(function (a, b) {
+          var ta = a.tMs != null ? a.tMs : 0;
+          var tb = b.tMs != null ? b.tMs : 0;
+          return ta - tb;
+        });
+        track.points = raw;
+
         var wgs = raw.map(function (p) {
           return new BMap.Point(Number(p.lng), Number(p.lat));
         });
+        var tNorms = raw.map(function (p, i) {
+          if (p.tNorm != null && isFinite(Number(p.tNorm))) return Number(p.tNorm);
+          return raw.length <= 1 ? 0 : i / (raw.length - 1);
+        });
+
         setStatus('坐标转换中…');
         return toBd09(wgs).then(function (res) {
-          drawTrack(res.points, {
-            meanLat: track.meanLat || raw[0].lat,
-            meanLon: track.meanLon || raw[0].lng
-          }, res.how);
+          drawTrack(res.points, track, res.how, tNorms);
         });
       })
       .catch(function (err) {

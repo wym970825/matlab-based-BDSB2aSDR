@@ -41,6 +41,8 @@ See [docs/architecture.md](docs/architecture.md).
 
 ## Version
 
+**v0.1.5** — Multi-segment TOW after REACQ (epoch LS if nSat≥4); optional elev/C/N0 WLS weights; NMEA GGA+GSV export; geobasemap streets-light + ENU/vel/DOP plots; Baidu CustomOverlay track UI; ENU jump filter (v>500 m/s).
+
 **v0.1.4** — RAIM single/dual-SV FDE in PVT; Baidu Map opens via local HTTP (not `file://`) so basemap tiles load; offline WGS84→BD-09 fallback.
 
 **v0.1.3** — post-PVT plots (ENU / sky / geoshow LLA) + Baidu Map JSAPI 4.0 trajectory web UI (WGS84→BD-09).
@@ -53,8 +55,11 @@ Branches: `master` (baseline), `mexBaseFast` (MEX path), `par-fast-matlab` (parf
 
 ```matlab
 % After navigation:
-plotNavPost(navSolutions, settings);           % ENU + sky + geoshow + Baidu UI
+plotNavPost(navSolutions, settings);           % ENU/vel/DOP + geobasemap + Baidu UI
 launchBaiduMapTrack(navSolutions, settings);   % map only (starts http://127.0.0.1:8765)
+exportNmea(navSolutions, settings, 'trackResults', trackResults);  % GGA+GSV → pvt.nmea
+% settings.plotNavPost=false;                  % silent (default true)
+% settings.nmea.enable=false;                  % disable NMEA export
 ```
 
 Put browser AK in `config/BaidumapKey.txt` (gitignored; see `BaidumapKey.example.txt`).  
