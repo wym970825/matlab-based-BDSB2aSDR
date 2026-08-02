@@ -42,8 +42,14 @@ if (~isempty(navSolutions))
 
     %% If reference position is not provided, then set reference position
     %% to the average postion
-    if isnan(settings.truePosition.E) || isnan(settings.truePosition.N) ...
-                                      || isnan(settings.truePosition.U)
+    % JSON null → []; isnan([]) is non-scalar and breaks || — use scalar guards.
+    refE = settings.truePosition.E;
+    refN = settings.truePosition.N;
+    refU = settings.truePosition.U;
+    useTrueRef = isnumeric(refE) && isscalar(refE) && isfinite(refE) ...
+        && isnumeric(refN) && isscalar(refN) && isfinite(refN) ...
+        && isnumeric(refU) && isscalar(refU) && isfinite(refU);
+    if ~useTrueRef
 
         %=== Compute mean values ========================================== 
         % Remove NaN-s or the output of the function MEAN will be NaN.
@@ -69,9 +75,9 @@ if (~isempty(navSolutions))
                             num2str(mean(navSolutions.height(~isnan(navSolutions.height))), '%+6.1f')];
     else
         refPointLgText = 'Reference Position';
-        refCoord.E = settings.truePosition.E;
-        refCoord.N = settings.truePosition.N;
-        refCoord.U = settings.truePosition.U;        
+        refCoord.E = refE;
+        refCoord.N = refN;
+        refCoord.U = refU;
     end    
      
     figureNumber = 300;

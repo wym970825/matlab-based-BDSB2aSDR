@@ -12,22 +12,38 @@ function report = runFromJsonConfig(jsonPath, varargin)
 
     p = inputParser;
     addParameter(p, 'outDir', '', @(x) ischar(x) || isstring(x));
+    addParameter(p, 'openBaiduBrowser', true, @islogical);
+    addParameter(p, 'closeFigures', false, @islogical);
     parse(p, varargin{:});
 
-    jsonPath = char(jsonPath);
-    if ~isfile(jsonPath)
-        error('runFromJsonConfig:Missing', 'Config not found: %s', jsonPath);
-    end
-
-    raw = jsondecode(fileread(jsonPath));
-    if ~isstruct(raw)
-        error('runFromJsonConfig:BadJson', 'JSON root must be an object');
+    settingsSource = isstruct(jsonPath);
+    if settingsSource
+        if ~isscalar(jsonPath)
+            error('runFromJsonConfig:BadSettings', ...
+                'Settings input must be a scalar struct');
+        end
+        raw = jsonPath;
+        doPlotDefault = localTopFlag(raw, 'plotNavPost', true);
+        doNmeaDefault = localNestedFlag(raw, 'nmea', 'enable', true);
+        doBaiduDefault = localTopFlag(raw, 'plotBaiduMap', true);
+    else
+        jsonPath = char(jsonPath);
+        if ~isfile(jsonPath)
+            error('runFromJsonConfig:Missing', 'Config not found: %s', jsonPath);
+        end
+        raw = jsondecode(fileread(jsonPath));
+        if ~isstruct(raw) || ~isscalar(raw)
+            error('runFromJsonConfig:BadJson', 'JSON root must be an object');
+        end
+        doPlotDefault = true;
+        doNmeaDefault = true;
+        doBaiduDefault = true;
     end
 
     doNav   = localFlag(raw, 'doNavigation', true);
-    doPlot  = localFlag(raw, 'doPlot', true);
-    doNmea  = localFlag(raw, 'doNmea', true);
-    doBaidu = localFlag(raw, 'doBaiduMap', true);
+    doPlot  = localFlag(raw, 'doPlot', doPlotDefault);
+    doNmea  = localFlag(raw, 'doNmea', doNmeaDefault);
+    doBaidu = localFlag(raw, 'doBaiduMap', doBaiduDefault);
     tag = localStr(raw, 'tag', char(string(datetime('now'), 'yyMMdd_HHmmss')));
 
     outDir = char(p.Results.outDir);
@@ -44,9 +60,14 @@ function report = runFromJsonConfig(jsonPath, varargin)
     if ~exist(tempDir, 'dir'), mkdir(tempDir); end
     if ~exist(figDir, 'dir'), mkdir(figDir); end
 
-    nv = localBuildInitArgs(raw);
-    settings = initSettings(nv{:});
-    settings = localApplyNested(settings, raw);
+    if settingsSource
+        settings = raw;
+    else
+        nv = localBuildInitArgs(raw);
+        settings = initSettings(nv{:});
+        settings = localApplyNested(settings, raw);
+    end
+    settings = localFinalizeSettings(settings, raw, settingsSource);
     settings.resultRoot = outDir;
     settings.tempdataSvPth = tempDir;
     settings.plotNavPost = doPlot;
@@ -55,6 +76,12 @@ function report = runFromJsonConfig(jsonPath, varargin)
         settings.nmea = struct('enable', doNmea);
     end
     settings.nmea.enable = doNmea;
+    figuresBefore = [];
+    if p.Results.closeFigures
+        figuresBefore = findall(groot, 'Type', 'figure');
+    end
+    figureCleaner = onCleanup(@() localCloseNewFigures( ...
+        figuresBefore, p.Results.closeFigures));
 
     fprintf('\n========== B2a UI pipeline ==========\n');
     fprintf('outDir      = %s\n', outDir);
@@ -69,6 +96,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
     report.figDir = figDir;
     report.tag = tag;
     report.stage = 'start';
+    report.errorIdentifier = '';
     report.error = '';
     report.nmeaPath = '';
     report.nAcquired = 0;
@@ -135,7 +163,8 @@ function report = runFromJsonConfig(jsonPath, varargin)
                 plotNavPost(navSolutions, settings, ...
                     'saveDir', figDir, ...
                     'doLegacy', false, ...
-                    'openBaiduMap', doBaidu);
+                    'openBaiduMap', doBaidu, ...
+                    'openBaiduBrowser', p.Results.openBaiduBrowser);
             catch ME
                 warning('runFromJsonConfig:Plot', '%s', ME.message);
             end
@@ -170,6 +199,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
             report.navSummary.nFixes);
     catch ME
         report.ok = false;
+        report.errorIdentifier = ME.identifier;
         report.error = ME.message;
         if strcmp(report.stage, 'start'), report.stage = 'failed'; end
         fprintf(2, 'FAILED at %s: %s\n', report.stage, ME.message);
@@ -209,12 +239,19 @@ end
 function settings = localApplyNested(settings, raw)
     flat = { ...
         'samplingFreq','IF','dataType','fileType','acqSearchBand','acqThreshold', ...
-        'acqStep','fineNoncoh','dllNoiseBandwidth_pull','dllNoiseBandwidth_stab', ...
+        'acqStep','fineNoncoh','fineCodeSearchHalfWinSamples','resamplingThreshold', ...
+        'resamplingflag','dllNoiseBandwidth_pull','dllNoiseBandwidth_stab', ...
         'pllNoiseBandwidth_pull','pllNoiseBandwidth_stab','filter_pullinMS', ...
         'trackInit_MS','carrierAidCode','carrierAidCodeMaxHz','TrkCN0Th','CNo_Th', ...
-        'navSolPeriod','elevationMask','useTropCorr','plotNavPost','plotBaiduMap', ...
-        'navTrackMaxSpeedMps','REACQ_max','max_reacqT','scint_updateMs', ...
-        'dllDampingRatio','dllCorrelatorSpacing','pllOrder','pllDampingRatio'};
+        'CNoInterval','navSolPeriod','elevationMask','useTropCorr','plotNavPost', ...
+        'plotBaiduMap','plotNavLegacy','navTrackMaxSpeedMps','REACQ_max','max_reacqT', ...
+        'scint_updateMs','scint_bufLen','scint_fCutoff', ...
+        'dllDampingRatio','dllCorrelatorSpacing','pllOrder','pllDampingRatio', ...
+        'pllDampingRatio_pull','pllDampingRatio_stab','phaseDisType','phaseDisType_init', ...
+        'reEstimateMS','longCoh_ms','intTime','pilotTRKflag','weilEstBuffLen', ...
+        'weilConfTh','codeLength','codeFreqBasis','carrFreqBasis','startOffset','c', ...
+        'IFBandwidth','skipNumberOfBytes','Th_static_dBm','FLLinitT', ...
+        'REACQ_eachTimeWaitMs','pllDampingRatio_init','baiduMapKeyFile'};
     for i = 1:numel(flat)
         k = flat{i};
         if isfield(raw, k)
@@ -227,6 +264,7 @@ function settings = localApplyNested(settings, raw)
     end
     if isfield(settings, 'pllNoiseBandwidth_stab')
         settings.pllNoiseBandwidth = settings.pllNoiseBandwidth_stab;
+        settings.pllNoiseBandwidth_init = settings.pllNoiseBandwidth_pull;
     end
     settings = localMergeStruct(settings, raw, 'FLL');
     settings = localMergeStruct(settings, raw, 'KF');
@@ -234,7 +272,113 @@ function settings = localApplyNested(settings, raw)
     settings = localMergeStruct(settings, raw, 'lsWeight');
     settings = localMergeStruct(settings, raw, 'nmea');
     settings = localMergeStruct(settings, raw, 'truePosition');
+    settings = localSanitizeTruePosition(settings);
+    settings = localMergeStruct(settings, raw, 'usrp');
+    if isfield(settings, 'Th_static_dBm') && isfield(settings, 'usrp')
+        try
+            threshold_digdB = settings.Th_static_dBm - settings.usrp.scaleK - ...
+                settings.usrp.gain + 10*log10(settings.samplingFreq);
+            settings.PB_settings.Th_static = 10.^(threshold_digdB/20);
+        catch
+        end
+    end
+    % An explicitly supplied digital threshold takes precedence over dBm.
     settings = localMergeStruct(settings, raw, 'PB_settings');
+end
+
+function settings = localFinalizeSettings(settings, raw, settingsSource)
+    required = {'filePath','fileName','dataType','fileType','samplingFreq', ...
+        'skipNumberOfBytes','msToProcess'};
+    for i = 1:numel(required)
+        if ~isfield(settings, required{i})
+            error('runFromJsonConfig:MissingSetting', ...
+                'Required setting is missing: %s', required{i});
+        end
+    end
+
+    bytesPerValue = localBytesPerValue(settings.dataType);
+    if ~isnumeric(settings.fileType) || ~isscalar(settings.fileType) || ...
+            ~isfinite(settings.fileType) || settings.fileType ~= round(settings.fileType) || ...
+            ~ismember(round(double(settings.fileType)), [1 2])
+        error('runFromJsonConfig:BadFileType', ...
+            'fileType must be 1 (real) or 2 (IQ)');
+    end
+    settings.fileType = round(double(settings.fileType));
+    settings.size_per_sample = settings.fileType * bytesPerValue;
+
+    if ~isnumeric(settings.samplingFreq) || ~isscalar(settings.samplingFreq) || ...
+            ~isfinite(settings.samplingFreq) || settings.samplingFreq <= 0
+        error('runFromJsonConfig:BadSamplingFreq', ...
+            'samplingFreq must be a positive finite scalar');
+    end
+    if ~isnumeric(settings.skipNumberOfBytes) || ...
+            ~isscalar(settings.skipNumberOfBytes) || ...
+            ~isfinite(settings.skipNumberOfBytes) || settings.skipNumberOfBytes < 0
+        error('runFromJsonConfig:BadSkip', ...
+            'skipNumberOfBytes must be a nonnegative finite scalar');
+    end
+    settings.skipNumberOfBytes = floor(double(settings.skipNumberOfBytes));
+
+    requestedMs = double(settings.msToProcess);
+    if ~settingsSource && isfield(raw, 'msToProcess')
+        requestedMs = double(raw.msToProcess);
+    end
+    if ~isscalar(requestedMs) || ~isfinite(requestedMs) || requestedMs < 1
+        error('runFromJsonConfig:BadDuration', ...
+            'msToProcess must be a positive finite scalar');
+    end
+
+    fileInfo = dir(fullfile(settings.filePath, settings.fileName));
+    if ~isempty(fileInfo)
+        usableBytes = double(fileInfo(1).bytes) - settings.skipNumberOfBytes;
+        maxMs = floor(1e3 * usableBytes / settings.size_per_sample / ...
+            double(settings.samplingFreq) - 1e3);
+        if maxMs < 1
+            error('runFromJsonConfig:FileTooShort', ...
+                'IF file is too short after skip/reserved tail: %s', ...
+                fullfile(settings.filePath, settings.fileName));
+        end
+        settings.msToProcess = min(floor(requestedMs), maxMs);
+        if settings.msToProcess < requestedMs
+            warning('runFromJsonConfig:CapMs', ...
+                'msToProcess capped to file length: %d ms', ...
+                settings.msToProcess);
+        end
+    else
+        settings.msToProcess = floor(requestedMs);
+    end
+
+    if ~settingsSource && ~isfield(raw, 'fineCodeSearchHalfWinSamples')
+        settings.fineCodeSearchHalfWinSamples = ceil( ...
+            2 * settings.samplingFreq / settings.codeFreqBasis);
+    end
+    if isfield(settings, 'REACQ_max')
+        nReacq = max(0, round(double(settings.REACQ_max)));
+        if ~isfield(settings, 'REACQ_eachTimeWaitMs') || ...
+                numel(settings.REACQ_eachTimeWaitMs) ~= nReacq
+            settings.REACQ_eachTimeWaitMs = 100 * (0:nReacq-1);
+        end
+    end
+end
+
+function n = localBytesPerValue(dataType)
+    t = lower(strtrim(char(string(dataType))));
+    arrow = strfind(t, '=>');
+    if ~isempty(arrow), t = strtrim(t(1:arrow(1)-1)); end
+    if startsWith(t, '*'), t = t(2:end); end
+    switch t
+        case {'int8','uint8','char','schar','uchar','logical'}
+            n = 1;
+        case {'int16','uint16','short','ushort'}
+            n = 2;
+        case {'int32','uint32','single','float','integer*4','real*4'}
+            n = 4;
+        case {'int64','uint64','double','integer*8','real*8'}
+            n = 8;
+        otherwise
+            error('runFromJsonConfig:BadDataType', ...
+                'Unsupported fread dataType: %s', t);
+    end
 end
 
 function settings = localMergeStruct(settings, raw, name)
@@ -247,6 +391,28 @@ function settings = localMergeStruct(settings, raw, name)
         f = fieldnames(src);
         for i = 1:numel(f)
             settings.(name).(f{i}) = src.(f{i});
+        end
+    end
+end
+
+function settings = localSanitizeTruePosition(settings)
+    % jsondecode maps JSON null → []; plotNavPost/plotNavigation use scalar
+    % isfinite/isnan &&/|| on E/N/U. Empty must become NaN.
+    if ~isfield(settings, 'truePosition') || ~isstruct(settings.truePosition)
+        settings.truePosition = struct('E', nan, 'N', nan, 'U', nan);
+        return;
+    end
+    for f = {'E', 'N', 'U'}
+        k = f{1};
+        if ~isfield(settings.truePosition, k)
+            settings.truePosition.(k) = nan;
+            continue;
+        end
+        v = settings.truePosition.(k);
+        if isempty(v) || ~isnumeric(v) || ~isscalar(v)
+            settings.truePosition.(k) = nan;
+        else
+            settings.truePosition.(k) = double(v);
         end
     end
 end
@@ -264,8 +430,14 @@ function list = localParsePrnList(v)
     s = strtrim(char(string(v)));
     if contains(s, ':')
         parts = split(s, ':');
-        list = str2double(parts{1}):str2double(parts{end});
-        return;
+        nums = str2double(parts);
+        if numel(nums) == 2 && all(isfinite(nums))
+            list = nums(1):nums(2);
+            return;
+        elseif numel(nums) == 3 && all(isfinite(nums)) && nums(2) ~= 0
+            list = nums(1):nums(2):nums(3);
+            return;
+        end
     end
     s = strrep(s, ';', ',');
     parts = split(s, ',');
@@ -281,10 +453,31 @@ function tf = localFlag(raw, name, default)
     tf = default;
     if ~isfield(raw, name), return; end
     v = raw.(name);
-    if islogical(v), tf = v; return; end
-    if isnumeric(v), tf = v ~= 0; return; end
+    if islogical(v) && isscalar(v), tf = v; return; end
+    if isnumeric(v) && isscalar(v), tf = v ~= 0; return; end
     if ischar(v) || isstring(v)
         tf = any(strcmpi(strtrim(char(v)), {'1','true','yes','on'}));
+    end
+end
+
+function tf = localTopFlag(raw, name, default)
+    tf = default;
+    if isfield(raw, name)
+        value = raw.(name);
+        if (islogical(value) || isnumeric(value)) && isscalar(value)
+            tf = logical(value);
+        end
+    end
+end
+
+function tf = localNestedFlag(raw, parent, name, default)
+    tf = default;
+    if isfield(raw, parent) && isstruct(raw.(parent)) && ...
+            isfield(raw.(parent), name)
+        value = raw.(parent).(name);
+        if (islogical(value) || isnumeric(value)) && isscalar(value)
+            tf = logical(value);
+        end
     end
 end
 
@@ -292,6 +485,20 @@ function s = localStr(raw, name, default)
     s = default;
     if isfield(raw, name) && ~isempty(raw.(name))
         s = char(string(raw.(name)));
+    end
+end
+
+function localCloseNewFigures(figuresBefore, enabled)
+    if ~enabled, return; end
+    figuresAfter = findall(groot, 'Type', 'figure');
+    for i = 1:numel(figuresAfter)
+        h = figuresAfter(i);
+        try
+            if isempty(figuresBefore) || ~any(h == figuresBefore)
+                close(h);
+            end
+        catch
+        end
     end
 end
 

@@ -145,6 +145,8 @@ classdef pulseBlanker < handle
             % gain, rffe gain [dB]
             % fs, sampling rate
             if isempty(signal)
+                if nargout >= 1, varargout{1} = signal; end
+                if nargout >= 2, varargout{2} = gobjects(0); end
                 return;
             end
             signal_post  = signal;
@@ -193,9 +195,20 @@ classdef pulseBlanker < handle
             l3 = plot(ax,tLim, [threshold,threshold],...
                 'Color','k','LineWidth',1,'LineStyle','--');
             % power limit(i.e., YLim in [dBm])
-            pLim = [floor(min(pwr_post(isfinite(pwr_post)))/10)*10,...
-                ceil(max(pwr_pre(isfinite(pwr_pre)))/10)*10];
-            set(gca,'GridAlpha',0.4,'XLim',tLim,'YLim',pLim,'FontName',...
+            finitePost = pwr_post(isfinite(pwr_post));
+            finitePre = pwr_pre(isfinite(pwr_pre));
+            if isempty(finitePost), finitePost = finitePre; end
+            if isempty(finitePre)
+                pLim = [threshold - 10, threshold + 10];
+            else
+                pLim = [floor(min(finitePost)/10)*10, ...
+                    ceil(max(finitePre)/10)*10];
+                if ~all(isfinite(pLim)) || pLim(2) <= pLim(1)
+                    center = mean(finitePre);
+                    pLim = [center - 10, center + 10];
+                end
+            end
+            set(ax,'GridAlpha',0.4,'XLim',tLim,'YLim',pLim,'FontName',...
                 'Times New Roman','FontSize',10.5);
             xlabel(ax,'T (ms)','FontName','Times New Roman','FontSize',10.5);
             ylabel(ax,'Power (dBm)','FontName','Times New Roman','FontSize',10.5);

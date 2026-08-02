@@ -4,15 +4,16 @@ function codeFreq = codeFreqFromCarrierAid(settings, carrFreq, codeNco)
 %   codeFreq = codeFreqFromCarrierAid(settings, carrFreq, codeNco)
 %
 %   When settings.carrierAidCode is true (default):
-%     aid = -carrFreq * (codeFreqBasis / carrFreqBasis)  % instantaneous NCO
-%     aid = clamp(aid, ±carrierAidCodeMaxHz)             % code-domain Hz
+%     residual = carrFreq + IF   % wipe-off uses carrFreq≈-(IF+fd); Zero-IF: IF=0
+%     aid = -residual * (codeFreqBasis / carrFreqBasis)
+%     aid = clamp(aid, ±carrierAidCodeMaxHz)
 %     codeFreq = codeFreqBasis + aid - codeNco
 %   Else (legacy SoftGNSS):
 %     codeFreq = codeFreqBasis - codeNco
 %
-%   Sign note: this receiver stores wipe-off carrFreq with acq convention
-%   (carrFreq = -fineFreq). Empirically locked tracks show
-%   (codeFreq-f0) ≈ -carrFreq*(f0/fL); use that polarity for aiding.
+%   Important: wipe-off carrFreq is IF-domain (e.g. ≈-1.05e6 for IF=1.05e6).
+%   Code Doppler must use residual only (≈-fd). Using raw carrFreq saturates
+%   ±maxAid (~±50 Hz) and prevents LONG lock on non-zero-IF files.
 
     if nargin < 3 || isempty(codeNco), codeNco = 0; end
     f0 = settings.codeFreqBasis;
@@ -25,7 +26,13 @@ function codeFreq = codeFreqFromCarrierAid(settings, carrFreq, codeNco)
     if ~(isfinite(fL) && fL > 0)
         fL = 1176.45e6;
     end
-    aid = -carrFreq * (f0 / fL);  % match observed code/carrier polarity
+    if0 = 0;
+    if isfield(settings, 'IF') && isfinite(settings.IF)
+        if0 = settings.IF;
+    end
+    % Acq stores carrFreq ≈ -fineFreq; fineFreq ≈ IF + fd → residual ≈ carrFreq + IF
+    residual = carrFreq + if0;
+    aid = -residual * (f0 / fL);
     maxAid = 50;
     if isfield(settings, 'carrierAidCodeMaxHz') && ~isempty(settings.carrierAidCodeMaxHz) ...
             && isfinite(settings.carrierAidCodeMaxHz)

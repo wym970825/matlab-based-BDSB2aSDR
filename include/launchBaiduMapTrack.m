@@ -221,8 +221,9 @@ function url = startLocalHttpAndUrl(outDir)
         try
             t = webread(sprintf('http://127.0.0.1:%d/index.html', p), ...
                 weboptions('Timeout', 0.4)); %#ok<NASGU>
-            url = sprintf('http://127.0.0.1:%d/index.html', p);
-            return;
+            % Occupied by an unknown/older result directory. Never reuse it
+            % for a new track because that can display the wrong job.
+            continue;
         catch
         end
         try
