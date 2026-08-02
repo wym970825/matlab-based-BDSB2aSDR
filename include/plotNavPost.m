@@ -21,6 +21,7 @@ function figs = plotNavPost(navSolutions, settings, varargin)
     addParameter(p, 'saveDir', '', @(x) ischar(x) || isstring(x));
     addParameter(p, 'doLegacy', [], @(x) isempty(x) || islogical(x));
     addParameter(p, 'openBaiduMap', [], @(x) isempty(x) || islogical(x));
+    addParameter(p, 'openBaiduBrowser', true, @islogical);
     addParameter(p, 'silent', [], @(x) isempty(x) || islogical(x));
     parse(p, varargin{:});
     opt = p.Results;
@@ -57,7 +58,7 @@ function figs = plotNavPost(navSolutions, settings, varargin)
         disp('plotNavPost: No valid lat/lon fixes after time-order / jump filter.');
         return;
     end
-    if isfield(trk, 'nRemovedJump') && trk.nRemovedJump > 0
+    if isfield(trk, 'nRemovedJump') && isscalar(trk.nRemovedJump) && trk.nRemovedJump > 0
         fprintf('plotNavPost: track N=%d after removing %d ENU jump point(s) (v>%g m/s)\n', ...
             trk.n, trk.nRemovedJump, trk.maxSpeedMps);
     end
@@ -278,7 +279,8 @@ function figs = plotNavPost(navSolutions, settings, varargin)
     end
     if doBaidu
         try
-            launchBaiduMapTrack(navSolutions, settings, 'outDir', saveDir);
+            launchBaiduMapTrack(navSolutions, settings, 'outDir', saveDir, ...
+                'openBrowser', opt.openBaiduBrowser);
         catch ME
             warning('plotNavPost:Baidu', 'Baidu Map UI failed: %s', ME.message);
         end
@@ -286,12 +288,14 @@ function figs = plotNavPost(navSolutions, settings, varargin)
 end
 
 function [refE, refN, refU, label] = localEnuReference(trk, settings)
-    if isfield(settings, 'truePosition') ...
-            && isfinite(settings.truePosition.E) && isfinite(settings.truePosition.N) ...
-            && isfinite(settings.truePosition.U)
-        refE = settings.truePosition.E;
-        refN = settings.truePosition.N;
-        refU = settings.truePosition.U;
+    % JSON null → [] in MATLAB; isfinite([]) is non-scalar and breaks &&.
+    te = localScalarOrNan(settings, 'truePosition', 'E');
+    tn = localScalarOrNan(settings, 'truePosition', 'N');
+    tu = localScalarOrNan(settings, 'truePosition', 'U');
+    if isfinite(te) && isfinite(tn) && isfinite(tu)
+        refE = te;
+        refN = tn;
+        refU = tu;
         label = 'truePosition';
     else
         refE = mean(trk.E(isfinite(trk.E)));
@@ -301,6 +305,18 @@ function [refE, refN, refU, label] = localEnuReference(trk, settings)
         if ~isfinite(refN), refN = 0; end
         if ~isfinite(refU), refU = 0; end
         label = 'mean ENU';
+    end
+end
+
+function v = localScalarOrNan(settings, parent, field)
+    % Return double scalar or NaN (never empty) for nested settings fields.
+    v = nan;
+    if ~isstruct(settings) || ~isfield(settings, parent), return; end
+    s = settings.(parent);
+    if ~isstruct(s) || ~isfield(s, field), return; end
+    x = s.(field);
+    if isnumeric(x) && isscalar(x)
+        v = double(x);
     end
 end
 

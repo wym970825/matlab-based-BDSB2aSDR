@@ -44,7 +44,16 @@
   },
   "KF": {
     "enable": false,
-    "enableFeedback": false
+    "enableFeedback": false,
+    "feedbackGain": 1,
+    "qJerk": 3.553057584189061,
+    "RphiFloor_deg": 3,
+    "RphiCeil": 45,
+    "RomegaFloor_Hz": 1,
+    "maxCorrHz": 100,
+    "scintAdaptiveEnable": true,
+    "scintWarmup_ms": 150000,
+    "rmsBeta": 0.98
   },
   "REACQ_max": 5,
   "max_reacqT": 10,
@@ -85,5 +94,52 @@
   "doNavigation": true,
   "doPlot": true,
   "doNmea": true,
-  "doBaiduMap": true
+  "doBaiduMap": true,
+  "probeDurationMs": 100,
+  "skipNumberOfBytes": 0,
+  "IFBandwidth": 18000000.0,
+  "codeLength": 10230,
+  "codeFreqBasis": 10230000.0,
+  "carrFreqBasis": 1176450000.0,
+  "startOffset": 68.802,
+  "c": 299792458,
+  "usrp": {
+    "scaleK": -94.72,
+    "gain": 60
+  },
+  "Th_static_dBm": -76.5,
+  "PB_settings": {
+    "UseStatic": true,
+    "falseAlert": 0.0001,
+    "Th_TTL": 5,
+    "debugplot": false
+  },
+  "fineCodeSearchHalfWinSamples": 4,
+  "resamplingThreshold": 50000000.0,
+  "resamplingflag": 0,
+  "dllDampingRatio": 0.707,
+  "dllCorrelatorSpacing": 0.5,
+  "pllOrder": 3,
+  "pllDampingRatio": 0.707,
+  "pllDampingRatio_pull": 0.707,
+  "pllDampingRatio_stab": 0.707,
+  "phaseDisType": 2,
+  "phaseDisType_init": 2,
+  "reEstimateMS": 10000,
+  "longCoh_ms": 1,
+  "intTime": 0.001,
+  "pilotTRKflag": 1,
+  "weilEstBuffLen": 100,
+  "weilConfTh": 1.5,
+  "CNoInterval": 200,
+  "FLLinitT": 100,
+  "scint_updateMs": 5000,
+  "scint_bufLen": 60000,
+  "scint_fCutoff": 0.1,
+  "truePosition": {
+    "E": null,
+    "N": null,
+    "U": null
+  },
+  "plotNavLegacy": false
 }

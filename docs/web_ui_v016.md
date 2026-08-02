@@ -27,6 +27,12 @@ set B2A_MATLAB=C:\Program Files\MATLAB\R2024b\bin\matlab.exe
 
 **Dependencies:** Python 3.9+ **stdlib only** (no pip packages). MATLAB on PATH or standard install path.
 
+### UI notes (light research theme)
+
+- 浅色科研风格；图标来自 `python/b2a_ui/icon/icon1.jpg`（复制到 `web/ui/assets/icon.jpg`）
+- Tabs 覆盖几乎全部 `initSettings` 参数（数据 / PB / 捕获 / 跟踪 / FLL / KF / 闪烁 / 定位 / 显示）
+- **Probe 探针**：仅读 IF 生成时域 + Welch 频谱 + 直方图 PNG，经 `/api/files/...` 嵌在页面中；入口 `core/runProbeIf.m`（基于 `probeData`）
+
 ## Layout
 
 | Path | Role |

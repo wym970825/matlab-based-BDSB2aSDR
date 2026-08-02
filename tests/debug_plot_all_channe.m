@@ -1,0 +1,44 @@
+%DEBUG_PLOT_ALL_CHANNE Replay and plot all saved tracking channels.
+%
+% This script intentionally keeps the requested historical file name.
+% Set the variables below before calling RUN to replay another result root
+% or a subset of runs/PRNs without editing this file:
+%
+%   trackReplayRoot = 'F:\path\to\batch_result';
+%   trackReplayOptions = { ...
+%       'RunNames', "0001_example", ...
+%       'PRNs', [20 38], ...
+%       'Overwrite', false, ...
+%       'Visible', true, ...
+%       'SaveFigure', true, ...
+%       'MaxPlotPoints', inf, ...
+%       'KeepLoadedResults', true};
+%   run('tests/debug_plot_all_channe.m');
+%
+% Outputs in the caller workspace:
+%   trackReplayReport - per-run source, PRN, figure, timing, and error data
+%   trackReplayData   - merged channel arrays when KeepLoadedResults is true
+
+projectRoot = fileparts(fileparts(mfilename('fullpath')));
+setupPaths();
+
+if ~exist('trackReplayRoot', 'var') || isempty(trackReplayRoot)
+    trackReplayRoot = fullfile(projectRoot, 'results', 'batch', ...
+        '260802_X310_IFData_full');
+end
+if ~exist('trackReplayOptions', 'var') || isempty(trackReplayOptions)
+    trackReplayOptions = {};
+end
+if ~iscell(trackReplayOptions)
+    error('debug_plot_all_channe:OptionsType', ...
+        'trackReplayOptions must be a cell array of name-value arguments.');
+end
+
+[trackReplayReport, trackReplayData] = replayTrackingChannels( ...
+    trackReplayRoot, trackReplayOptions{:});
+
+fprintf(['Tracking replay complete: %d run(s), %d channel(s), ' ...
+    '%d figure(s), %d error(s).\n'], ...
+    trackReplayReport.nRuns, trackReplayReport.nChannels, ...
+    trackReplayReport.nFigures, trackReplayReport.nErrors);
+

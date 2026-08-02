@@ -42,6 +42,20 @@ results = run_B2a('msToProcess', 60000, 'acqSatelliteList', [24 38 39 41]);
 
 See [docs/architecture.md](docs/architecture.md).
 
+## Directory batch processing
+
+Apply one JSON config or one initSettings struct to every binary file in a
+directory:
+
+    setupPaths
+    report = batchDirForOneSettings( ...
+        'F:\Data\ExpKLHP\X310_IFData', ...
+        'results\ui\260802_023720_944b90\ui_config.json');
+
+Each input file receives an isolated result and temp directory. Progress is
+written after every item to batch_report.json. See
+[batch/README.md](batch/README.md).
+
 ## 用户手册（推荐先读）
 
 - **[中文用户手册：模块关系 · 捕获/跟踪/定位 · 可选算法](docs/user_manual_zh.md)** — 面向会一点 MATLAB 的新手，讲清数据流与如何打开 FLL/载波辅助/RAIM/加权/Web UI 等

@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BDS B2a SDR · Web UI</title>
+  <title>BDS-3 B2a Software Receiver</title>
+  <link rel="icon" type="image/jpeg" href="assets/icon.jpg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app">
     <header class="top">
       <div class="brand">
-        <div class="logo">B2a</div>
+        <img class="logo-img" src="assets/icon.jpg" alt="B2a" width="48" height="48" />
         <div>
           <h1>BDS-3 B2a 软件接收机</h1>
-          <p class="sub">Web 配置 · Python 调度 · MATLAB 后台 · 自动定位绘图</p>
+          <p class="sub">科研用配置台 · IF 探针 · 捕获 / 跟踪 / 定位 · MATLAB 后台批处理</p>
         </div>
       </div>
       <div class="top-meta">
@@ -30,6 +31,7 @@
         <div class="actions">
           <button type="button" id="btnReset" class="btn ghost">恢复默认</button>
           <button type="button" id="btnExport" class="btn ghost">导出 JSON</button>
+          <button type="button" id="btnProbe" class="btn probe">运行 IF 探针</button>
           <button type="button" id="btnRun" class="btn primary">运行全流程</button>
         </div>
       </section>
@@ -40,6 +42,10 @@
           <div class="status-row">
             <span class="k">Job</span>
             <span id="jobId" class="v mono">—</span>
+          </div>
+          <div class="status-row">
+            <span class="k">类型</span>
+            <span id="jobKind" class="v">—</span>
           </div>
           <div class="status-row">
             <span class="k">状态</span>
@@ -67,7 +73,8 @@
     </main>
 
     <footer class="foot">
-      不需手动配置 MATLAB 桌面环境；自动探测 <code>matlab</code> / 安装目录，可用环境变量 <code>B2A_MATLAB</code> 指定路径。
+      图标：<code>python/b2a_ui/icon</code> · 探针基于 <code>probeData</code> 思路生成时域/频谱图 ·
+      MATLAB 干净环境 <code>-batch</code> · 可选 <code>B2A_MATLAB</code>
     </footer>
   </div>
   <script src="app.js"></script>

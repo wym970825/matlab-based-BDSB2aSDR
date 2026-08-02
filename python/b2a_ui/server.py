@@ -32,10 +32,12 @@ from b2a_ui.matlab_runner import (  # noqa: E402
     probe_matlab,
     project_root,
     run_pipeline,
+    run_probe,
 )
 
 ROOT = project_root()
 UI_DIR = ROOT / "web" / "ui"
+ICON_DIR = ROOT / "python" / "b2a_ui" / "icon"
 SCHEMA_PATH = UI_DIR / "schema.json"
 DEFAULTS_PATH = ROOT / "config" / "ui_defaults.json"
 JOBS_DIR = ROOT / "results" / "ui"
@@ -179,7 +181,7 @@ def normalize_config(cfg: dict) -> dict:
     bool_keys = [
         "EnablePB", "skipAcquisition", "carrierAidCode", "useParfor",
         "plotTracking", "doNavigation", "useTropCorr", "doNmea", "doPlot",
-        "plotNavPost", "plotBaiduMap", "doBaiduMap",
+        "plotNavPost", "plotBaiduMap", "doBaiduMap", "plotNavLegacy",
     ]
     for k in bool_keys:
         if k in out:
@@ -246,7 +248,7 @@ class Handler(SimpleHTTPRequestHandler):
         if path in ("/", "/index.html"):
             return SimpleHTTPRequestHandler.do_GET(self)
 
-        if path == "/api/health":
+        if path.rstrip("/") == "/api/health" or path == "/api/health":
             matlab = find_matlab()
             return self._json(200, {
                 "ok": True,
@@ -254,6 +256,11 @@ class Handler(SimpleHTTPRequestHandler):
                 "matlab": matlab,
                 "matlabFound": bool(matlab),
                 "version": _version(),
+                "endpoints": {
+                    "POST": ["/api/run", "/api/probe", "/api/open"],
+                    "GET": ["/api/health", "/api/schema", "/api/defaults",
+                            "/api/job/<id>", "/api/files/...", "/api/matlab_probe"],
+                },
                 "note": "MATLAB is launched with a clean env (no PYTHON* inheritance)",
             })
 
@@ -312,14 +319,32 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             data = fp.read_bytes()
             ctype = "application/octet-stream"
-            if fp.suffix == ".png":
+            if fp.suffix.lower() in (".png",):
                 ctype = "image/png"
+            elif fp.suffix.lower() in (".jpg", ".jpeg"):
+                ctype = "image/jpeg"
             elif fp.suffix == ".html":
                 ctype = "text/html; charset=utf-8"
             elif fp.suffix == ".json":
                 ctype = "application/json"
             elif fp.suffix == ".nmea" or fp.suffix == ".log":
                 ctype = "text/plain; charset=utf-8"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
+        if path.startswith("/icon/"):
+            name = path[len("/icon/"):]
+            fp = (ICON_DIR / name).resolve()
+            if not str(fp).startswith(str(ICON_DIR.resolve())) or not fp.is_file():
+                self.send_error(404)
+                return
+            data = fp.read_bytes()
+            ctype = "image/jpeg" if fp.suffix.lower() in (".jpg", ".jpeg") else "image/png"
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
@@ -332,7 +357,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         u = urlparse(self.path)
-        path = u.path
+        path = (u.path or "/").rstrip("/") or "/"
+        # Accept both /api/probe and /api/probe/
 
         if path == "/api/run":
             try:
@@ -342,7 +368,7 @@ class Handler(SimpleHTTPRequestHandler):
             cfg = normalize_config(body.get("config") or body)
             jid = STORE.create()
             out_dir = Path(STORE.get(jid)["outDir"])
-            STORE.update(jid, status="running")
+            STORE.update(jid, status="running", kind="pipeline")
 
             def worker():
                 def log_cb(line: str):
@@ -366,7 +392,66 @@ class Handler(SimpleHTTPRequestHandler):
                     )
 
             threading.Thread(target=worker, daemon=True).start()
-            return self._json(200, {"jobId": jid, "outDir": str(out_dir)})
+            return self._json(200, {"jobId": jid, "outDir": str(out_dir), "kind": "pipeline"})
+
+        if path == "/api/probe":
+            try:
+                body = self._read_json()
+            except Exception as e:
+                return self._json(400, {"error": f"bad json: {e}"})
+            cfg = normalize_config(body.get("config") or body)
+            jid = "probe_" + time.strftime("%y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:6]
+            out_dir = JOBS_DIR / jid
+            out_dir.mkdir(parents=True, exist_ok=True)
+            with STORE._lock:
+                STORE.jobs[jid] = {
+                    "id": jid,
+                    "status": "running",
+                    "kind": "probe",
+                    "log": "",
+                    "report": None,
+                    "outDir": str(out_dir),
+                    "started": time.time(),
+                }
+
+            def worker_probe():
+                def log_cb(line: str):
+                    STORE.append_log(jid, line)
+
+                try:
+                    report = run_probe(cfg, out_dir, log_cb=log_cb, timeout_s=600)
+                    # Attach absolute image URLs for UI
+                    imgs = {}
+                    if report.get("images"):
+                        for k, rel in report["images"].items():
+                            if rel:
+                                imgs[k] = f"/api/files/{jid}/{rel}".replace("\\", "/")
+                    elif (out_dir / "probe").is_dir():
+                        for name, key in (
+                            ("probe_spectrum.png", "spectrum"),
+                            ("probe_time.png", "time"),
+                            ("probe_hist.png", "hist"),
+                            ("probe_pb_debug.png", "pbDebug"),
+                        ):
+                            if (out_dir / "probe" / name).is_file():
+                                imgs[key] = f"/api/files/{jid}/probe/{name}"
+                    # Always fill pbDebug URL if file exists
+                    pb_png = out_dir / "probe" / "probe_pb_debug.png"
+                    if pb_png.is_file() and "pbDebug" not in imgs:
+                        imgs["pbDebug"] = f"/api/files/{jid}/probe/probe_pb_debug.png"
+                    report["imageUrls"] = imgs
+                    status = "done" if report.get("ok") else "failed"
+                    STORE.update(jid, status=status, report=report)
+                except Exception as e:
+                    STORE.append_log(jid, "\n" + traceback.format_exc())
+                    STORE.update(
+                        jid,
+                        status="failed",
+                        report={"ok": False, "error": str(e), "outDir": str(out_dir)},
+                    )
+
+            threading.Thread(target=worker_probe, daemon=True).start()
+            return self._json(200, {"jobId": jid, "outDir": str(out_dir), "kind": "probe"})
 
         if path == "/api/open":
             body = self._read_json()
@@ -375,7 +460,11 @@ class Handler(SimpleHTTPRequestHandler):
                 open_results(Path(out))
             return self._json(200, {"ok": True})
 
-        return self._json(404, {"error": "unknown endpoint"})
+        return self._json(404, {
+            "error": "unknown endpoint",
+            "path": path,
+            "hint": "POST /api/run | /api/probe | /api/open — restart: python launch_b2a_ui.py",
+        })
 
 
 def _version() -> str:

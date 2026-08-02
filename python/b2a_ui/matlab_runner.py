@@ -105,14 +105,16 @@ def _matlab_clean_env(matlab_exe: str) -> dict:
     return env
 
 
-def _build_matlab_statement(root: Path, cfg_path: Path) -> str:
+def _build_matlab_statement(root: Path, cfg_path: Path, entry: str = "runFromJsonConfig") -> str:
     root_m = str(root).replace("\\", "/")
     cfg_m = str(cfg_path).replace("\\", "/")
+    if entry not in ("runFromJsonConfig", "runProbeIf"):
+        entry = "runFromJsonConfig"
     # Single-line, no newlines (safer for -batch / -r)
     return (
         f"cd('{root_m}');"
         f"setupPaths;"
-        f"runFromJsonConfig('{cfg_m}');"
+        f"{entry}('{cfg_m}');"
     )
 
 
@@ -185,6 +187,18 @@ def probe_matlab(timeout_s: float = 120) -> dict:
         return {"ok": False, "matlab": matlab, "error": str(e)}
 
 
+def run_probe(
+    config: dict,
+    out_dir: Path,
+    log_cb: Optional[Callable[[str], None]] = None,
+    timeout_s: Optional[float] = 600,
+) -> dict:
+    """IF probe only (time + spectrum PNG). Calls runProbeIf via MATLAB."""
+    return _run_matlab_job(
+        config, out_dir, entry="runProbeIf", log_cb=log_cb, timeout_s=timeout_s
+    )
+
+
 def run_pipeline(
     config: dict,
     out_dir: Path,
@@ -192,6 +206,19 @@ def run_pipeline(
     timeout_s: Optional[float] = None,
 ) -> dict:
     """Write config JSON, invoke MATLAB with clean env, return report dict."""
+    return _run_matlab_job(
+        config, out_dir, entry="runFromJsonConfig", log_cb=log_cb, timeout_s=timeout_s
+    )
+
+
+def _run_matlab_job(
+    config: dict,
+    out_dir: Path,
+    entry: str = "runFromJsonConfig",
+    log_cb: Optional[Callable[[str], None]] = None,
+    timeout_s: Optional[float] = None,
+) -> dict:
+    """Shared launcher for pipeline / probe."""
     root = project_root()
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -214,7 +241,7 @@ def run_pipeline(
             "outDir": str(out_dir),
         }
 
-    statement = _build_matlab_statement(root, cfg_path)
+    statement = _build_matlab_statement(root, cfg_path, entry=entry)
     log_path = out_dir / "matlab.log"
     env = _matlab_clean_env(matlab)
     variants = _launch_variants(matlab, statement)
@@ -228,19 +255,23 @@ def run_pipeline(
         if log_cb:
             log_cb(msg)
 
-    _log(f"[matlab_runner] exe={matlab}\n")
+    _log(f"[matlab_runner] exe={matlab} entry={entry}\n")
     _log("[matlab_runner] using CLEAN environment (no PYTHON* inheritance)\n")
 
-    # Optional preflight probe (short). Skip if B2A_SKIP_MATLAB_PROBE=1
-    if os.environ.get("B2A_SKIP_MATLAB_PROBE", "").strip() not in ("1", "true", "yes"):
-        _log("[matlab_runner] preflight probe…\n")
+    # Optional MATLAB start preflight (skip for IF probe job — already short)
+    skip_pf = (
+        entry == "runProbeIf"
+        or os.environ.get("B2A_SKIP_MATLAB_PROBE", "").strip().lower() in ("1", "true", "yes")
+    )
+    if not skip_pf:
+        _log("[matlab_runner] preflight matlab -batch…\n")
         probe = probe_matlab(timeout_s=180)
-        _log(f"[matlab_runner] probe ok={probe.get('ok')} exit={probe.get('exitCode')} "
+        _log(f"[matlab_runner] preflight ok={probe.get('ok')} exit={probe.get('exitCode')} "
              f"err={probe.get('error')}\n")
         if not probe.get("ok"):
             _log(
-                "[matlab_runner] WARNING: clean-env probe failed. "
-                "Will still try pipeline launch variants.\n"
+                "[matlab_runner] WARNING: clean-env preflight failed. "
+                "Will still try launch variants.\n"
             )
             if probe.get("output"):
                 _log(probe["output"] + "\n")
@@ -355,7 +386,7 @@ def _run_one(
         return -1, str(e)
 
 
-_http_servers: dict[int, object] = {}
+_http_servers: dict[int, tuple[object, Path]] = {}
 
 
 def open_results(out_dir: Path) -> None:
@@ -396,7 +427,10 @@ def _serve_dir(directory: Path) -> Optional[int]:
     directory = directory.resolve()
     for port in range(8765, 8780):
         if port in _http_servers:
-            return port
+            _, served_dir = _http_servers[port]
+            if served_dir == directory:
+                return port
+            continue
         try:
             class _Quiet(http.server.SimpleHTTPRequestHandler):
                 def __init__(self, *a, **k):
@@ -409,7 +443,7 @@ def _serve_dir(directory: Path) -> Optional[int]:
             httpd.allow_reuse_address = True
             t = threading.Thread(target=httpd.serve_forever, daemon=True)
             t.start()
-            _http_servers[port] = httpd
+            _http_servers[port] = (httpd, directory)
             return port
         except OSError:
             continue

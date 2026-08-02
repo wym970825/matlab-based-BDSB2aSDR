@@ -171,7 +171,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     % re-acquisition
     REACQbuff_size = Nin1ms*(settings.fineNoncoh + 1); % +1ms to allow fine stage window without wrap
     REACQbuff = zeros(REACQbuff_size,1);
-    REACQbuff_pointer = 1;
+    REACQbuff_pointer = 0;
     % REACQbuff_isfull = false;
     
     % Update in Version 4, Feb-2026
@@ -300,7 +300,14 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
 
             % load buffer in this step
             % ensure that only one ms data read in one step
-            temp_data = fread(fid, dataAdaptCoeff*Nin1ms, settings.dataType);
+            samplesExpected = dataAdaptCoeff * Nin1ms;
+            [temp_data, samplesRead] = fread(fid, samplesExpected, settings.dataType);
+            if samplesRead ~= samplesExpected
+                warning('tracking2_v6_fix2:REACQEOF', ...
+                    ['PRN %d REACQ reached EOF (got %d values, need %d); ' ...
+                     'ending channel early.'], ch.PRN, samplesRead, samplesExpected);
+                break;
+            end
             
             if (dataAdaptCoeff == 2)
                 data_ii = temp_data(1:2:end);
@@ -335,7 +342,10 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
             tick.kf_rmsNuPhiRad = NaN; tick.kf_rmsNuOmegaHz = NaN;
             trkBuf.writeTick(TRii, tick);
             if rem(loopCnt, trkBuf.ChunkCapacity) == 0
-                try, trkBuf.save(); catch, end %#ok<CTCH>
+                if ~trkBuf.save()
+                    error('tracking2_v6_fix2:ChunkSave', ...
+                        'Failed to save REACQ tracking chunk for PRN %d', ch.PRN);
+                end
             end
 
             if REACQbuff_pointer >= REACQbuff_size
@@ -851,7 +861,8 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
             % Full chunk only (capacity, not truncated Nsize)
             succeed = trkBuf.save();
             if ~succeed
-                warning('Tracking Result didnot saved.');
+                error('tracking2_v6_fix2:ChunkSave', ...
+                    'Failed to save tracking chunk for PRN %d', ch.PRN);
             end
         end
 
@@ -860,7 +871,8 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     if rem(loopCnt, trkBuf.ChunkCapacity) ~= 0
         succeed = trkBuf.partsave(settings, TRii);
         if ~succeed
-            warning('Tracking Result didnot saved.');
+            error('tracking2_v6_fix2:ChunkSave', ...
+                'Failed to save final tracking chunk for PRN %d', ch.PRN);
         end
     end
 
@@ -896,10 +908,12 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     % Full TOW alignment requires valid B-CNAV2 preamble; short smoke
     % runs may not decode — leave Timestamp as NaN in that case.
     try
-        [ephPrn, subFrameStart, towVal] = BCNAV2decoding(finalTRes.I_P);
-        if isfield(ephPrn, 'SOW') && isfinite(ephPrn.SOW) ...
-                && isfinite(subFrameStart)
-            TOW_first_tracking_result = ephPrn.SOW ...
+        [~, subFrameStart, towVal] = BCNAV2decoding(finalTRes.I_P);
+        validTow = isnumeric(towVal) && isscalar(towVal) && isfinite(towVal);
+        validStart = isnumeric(subFrameStart) && isscalar(subFrameStart) && ...
+            isfinite(subFrameStart);
+        if validTow && validStart
+            TOW_first_tracking_result = towVal ...
                 - subFrameStart * settings.intTime;
             tracking_result_time = TOW_first_tracking_result + settings.intTime : ...
                 settings.intTime : ...

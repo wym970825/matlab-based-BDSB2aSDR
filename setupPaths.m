@@ -11,6 +11,7 @@ function rootDir = setupPaths()
     subdirs = {
         'config'
         'core'
+        'batch'
         'acquisition'
         'tracking'
         'navigation'

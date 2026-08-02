@@ -745,6 +745,10 @@ classdef scint_calculator < handle
                     isstruct(settings.KF) && isfield(settings.KF,'RphiCeil_deg') && ...
                     ~isempty(settings.KF.RphiCeil_deg)
                 RphiCeil = (settings.KF.RphiCeil_deg * pi / 180)^2;
+            elseif nargin >= 2 && isstruct(settings) && isfield(settings,'KF') && ...
+                    isstruct(settings.KF) && isfield(settings.KF,'RphiCeil') && ...
+                    ~isempty(settings.KF.RphiCeil)
+                RphiCeil = (settings.KF.RphiCeil * pi / 180)^2;
             end
             Rphi = min(max(Rphi, RphiFloor), RphiCeil);
 
