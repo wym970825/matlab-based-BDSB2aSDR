@@ -108,7 +108,7 @@ function report = run_fullsky_pvt60(varargin)
                 || logical(settings.nmea.enable))
         try
             nmeaPath = exportNmea(navSolutions, settings, ...
-                'trackResults', trackResults, 'outDir', outDir);
+                'trackResults', trackResults, 'eph', eph, 'outDir', outDir);
         catch ME
             warning('run_fullsky_pvt60:NMEA', '%s', ME.message);
         end

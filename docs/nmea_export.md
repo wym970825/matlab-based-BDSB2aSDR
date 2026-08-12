@@ -1,57 +1,66 @@
-# NMEA 0183 export (GGA + GSV)
+# NMEA 0183 export and navigation replay
 
-## Output
+## Sentences
 
-After PVT, `exportNmea` writes a text log (default `pvt.nmea`) with at least:
+`exportNmea` writes the following sentences after PVT:
 
 | Sentence | Content |
 |----------|---------|
-| **GGA** | UTC time, lat/lon, quality, nSat, HDOP, altitude (m), geoid sep |
-| **GSV** | SVs in view: PRN, elev, az, SNR (C/N0 dB-Hz when track available) |
+| **GGA** | UTC time, position, fix quality, RAIM-used SV count, HDOP, height |
+| **GSA** | fix type, satellites actually used by LS/RAIM, PDOP/HDOP/VDOP |
+| **GSV** | satellites in view, elevation, azimuth, optional tracking C/N0 |
+| **ZDA** | UTC time and absolute date from week number plus week epoch |
 
-Talker default **`GB`** (BeiDou, NMEA 4.10). Alternatives: `BD`, `GN`.
-
-Example:
-
-```text
-$GBGGA,095432.00,4018.3775,N,11644.7996,E,1,08,1.2,51.7,M,0.0,M,,*hh
-$GBGSV,2,1,08,23,45,120,44,24,30,080,45,...*hh
-$GBGSV,2,2,08,...*hh
-```
-
-## Settings (`initSettings`)
+The functions in `navigation/nmeaBuild*.m`, `nmeaChecksum.m`, and the NMEA
+formatters do not contain BeiDou PRN mappings or time-system constants.
+Constellation-specific choices are supplied by `settings.nmea`.
 
 ```matlab
-settings.nmea.enable      = true;
-settings.nmea.talkerId    = 'GB';
-settings.nmea.bdtMinusUtc = 4;      % UTC field = BDT SOW − 4 s
-settings.nmea.quality     = 1;      % autonomous GNSS fix
-settings.nmea.geoidSepM   = 0;
-settings.nmea.fileName    = 'pvt.nmea';
+settings.nmea.enable = true;
+settings.nmea.talkerId = 'GB';
+settings.nmea.utcOffsetSeconds = 4;
+settings.nmea.weekEpoch = '2006-01-01';
+settings.nmea.weekNumber = [];       % decoded eph.WN is preferred
+settings.nmea.systemId = 4;          % optional NMEA 4.x GNSS system ID
+settings.nmea.quality = 1;
+settings.nmea.geoidSepM = 0;
+settings.nmea.fileName = 'pvt.nmea';
+settings.nmea.emitGGA = true;
+settings.nmea.emitGSA = true;
+settings.nmea.emitGSV = true;
+settings.nmea.emitZDA = true;
 ```
 
-## API
+Old configurations containing `nmea.bdtMinusUtc` remain supported as an
+alias of `utcOffsetSeconds`. ZDA is omitted when no trustworthy absolute
+date or valid position fix is available; GGA/GSA still record invalid-fix
+epochs so receiver status remains continuous.
 
 ```matlab
-exportNmea(navSolutions, settings, 'trackResults', trackResults, 'outDir', outDir);
+exportNmea(navSolutions, settings, ...
+    'trackResults', trackResults, 'eph', eph, 'outDir', outDir);
 ```
 
-Called from `run_B2a` and `run_fullsky_pvt60` when `nmea.enable` is true.
+## Navigation replay
 
-## Files
+Use saved `Trk_Prn_*_final.mat` files to re-run navigation and replace a
+run's `pvt.nmea` without acquisition or tracking:
 
-| File | Role |
-|------|------|
-| `navigation/exportNmea.m` | Epoch loop, write file |
-| `navigation/nmeaBuildGGA.m` | GGA builder |
-| `navigation/nmeaBuildGSV.m` | GSV builder (≤4 SV/msg) |
-| `navigation/nmeaChecksum.m` | XOR checksum |
-| `navigation/nmeaFormatLatLon.m` | ddmm.mmmm / dddmm.mmmm |
-| `navigation/nmeaFormatUtc.m` | SOW → hhmmss.ss |
+```matlab
+report = runNavigationFromTracking('results/batch/<batch>/<run>');
+```
 
-## Notes
+The input can also be the run's `temp` directory. Settings are restored from
+`ui_results.mat`; when that is unavailable, `ui_config.json` is used. An
+explicit JSON or settings struct can override the saved settings:
 
-- Time source: `navSolutions.localTime` (BDT-scale SOW from SoftGNSS).
-- Altitude: ellipsoidal height from `cart2geo` (geoid sep default 0).
-- SNR: `trackResults.B2a_CNo` mapped by epoch ≈ ms index / `CNoInterval`.
-- Jump-filtered display track is **not** applied to NMEA; NMEA uses raw nav epochs (invalid LLA → quality 0 GGA still emitted so timeline is continuous).
+```matlab
+report = runNavigationFromTracking(runDir, 'Config', 'updated_config.json');
+```
+
+The new NMEA log is generated at a temporary path and replaces the target
+only after export succeeds. Refreshed navigation state is saved separately
+as `navigation_replay.mat`; the original `ui_results.mat` is not rewritten.
+
+`tests/resume_pvt_from_track.m` predates this entry and remains a manually
+configured PVT smoke/recovery helper. It is not the normal replay API.

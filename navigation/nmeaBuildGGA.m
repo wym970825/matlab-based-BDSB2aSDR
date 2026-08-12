@@ -3,9 +3,11 @@ function sentence = nmeaBuildGGA(talker, utc, latDeg, lonDeg, quality, nSat, hdo
 %
 %   $ttGGA,hhmmss.ss,ddmm.mmmm,N,dddmm.mmmm,E,q,nn,hdop,alt,M,geoid,M,,*cs
 
-    if nargin < 1 || isempty(talker), talker = 'GB'; end
+    if nargin < 1 || isempty(talker), talker = 'GN'; end
     talker = upper(char(talker));
-    if numel(talker) ~= 2, talker = 'GB'; end
+    if numel(talker) ~= 2 || any(~isstrprop(talker, 'alphanum'))
+        talker = 'GN';
+    end
 
     if nargin < 5 || isempty(quality), quality = 0; end
     if nargin < 6 || isempty(nSat) || ~isfinite(nSat), nSat = 0; end

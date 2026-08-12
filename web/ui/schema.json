@@ -183,10 +183,17 @@
         {"key": "navTrackMaxSpeedMps", "label": "航迹跳变门限 (m/s)", "type": "number"},
         {"key": "nmea.enable", "label": "NMEA 导出", "type": "bool"},
         {"key": "nmea.talkerId", "label": "Talker", "type": "select", "options": ["GB", "BD", "GN", "GP"]},
-        {"key": "nmea.bdtMinusUtc", "label": "BDT−UTC (s)", "type": "number"},
+        {"key": "nmea.utcOffsetSeconds", "label": "系统时−UTC (s)", "type": "number"},
+        {"key": "nmea.weekEpoch", "label": "周历元 (yyyy-MM-dd)", "type": "text"},
+        {"key": "nmea.weekNumber", "label": "周号覆盖", "type": "number"},
+        {"key": "nmea.systemId", "label": "NMEA GNSS system ID", "type": "number"},
         {"key": "nmea.quality", "label": "GGA quality", "type": "number", "min": 0, "max": 8},
         {"key": "nmea.geoidSepM", "label": "大地水准面差 (m)", "type": "number"},
         {"key": "nmea.fileName", "label": "NMEA 文件名", "type": "text"},
+        {"key": "nmea.emitGGA", "label": "输出 GGA", "type": "bool"},
+        {"key": "nmea.emitGSA", "label": "输出 GSA", "type": "bool"},
+        {"key": "nmea.emitGSV", "label": "输出 GSV", "type": "bool"},
+        {"key": "nmea.emitZDA", "label": "输出 ZDA", "type": "bool"},
         {"key": "doNmea", "label": "本次写 NMEA", "type": "bool"}
       ]
     },

@@ -90,7 +90,10 @@ Branches: `master` (baseline), `mexBaseFast` (MEX path), `par-fast-matlab` (parf
 % After navigation:
 plotNavPost(navSolutions, settings);           % ENU/vel/DOP + geobasemap + Baidu UI
 launchBaiduMapTrack(navSolutions, settings);   % map only (starts http://127.0.0.1:8765)
-exportNmea(navSolutions, settings, 'trackResults', trackResults);  % GGA+GSV → pvt.nmea
+exportNmea(navSolutions, settings, ...
+    'trackResults', trackResults, 'eph', eph);  % GGA/GSA/GSV/ZDA -> pvt.nmea
+% Re-run navigation directly from saved tracking results:
+runNavigationFromTracking('results/batch/<batch>/<run>');
 % settings.plotNavPost=false;                  % silent (default true)
 % settings.nmea.enable=false;                  % disable NMEA export
 ```

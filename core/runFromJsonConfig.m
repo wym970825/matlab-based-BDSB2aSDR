@@ -148,7 +148,8 @@ function report = runFromJsonConfig(jsonPath, varargin)
             if doNmea && ~isempty(navSolutions)
                 try
                     report.nmeaPath = exportNmea(navSolutions, settings, ...
-                        'trackResults', trackResults, 'outDir', outDir);
+                        'trackResults', trackResults, 'eph', eph, ...
+                        'outDir', outDir);
                 catch ME
                     warning('runFromJsonConfig:NMEA', '%s', ME.message);
                 end
@@ -271,6 +272,11 @@ function settings = localApplyNested(settings, raw)
     settings = localMergeStruct(settings, raw, 'raim');
     settings = localMergeStruct(settings, raw, 'lsWeight');
     settings = localMergeStruct(settings, raw, 'nmea');
+    if isfield(raw, 'nmea') && isstruct(raw.nmea) ...
+            && isfield(raw.nmea, 'bdtMinusUtc') ...
+            && ~isfield(raw.nmea, 'utcOffsetSeconds')
+        settings.nmea.utcOffsetSeconds = raw.nmea.bdtMinusUtc;
+    end
     settings = localMergeStruct(settings, raw, 'truePosition');
     settings = localSanitizeTruePosition(settings);
     settings = localMergeStruct(settings, raw, 'usrp');

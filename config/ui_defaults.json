@@ -84,10 +84,19 @@
   "nmea": {
     "enable": true,
     "talkerId": "GB",
-    "bdtMinusUtc": 4,
+    "utcOffsetSeconds": 4,
+    "weekEpoch": "2006-01-01",
+    "weekNumber": null,
+    "systemId": 4,
     "quality": 1,
     "geoidSepM": 0,
-    "fileName": "pvt.nmea"
+    "fileName": "pvt.nmea",
+    "emitGGA": true,
+    "emitGSA": true,
+    "emitGSV": true,
+    "emitZDA": true,
+    "localZoneHours": 0,
+    "localZoneMinutes": 0
   },
   "useParfor": true,
   "parMaxWorkers": 4,

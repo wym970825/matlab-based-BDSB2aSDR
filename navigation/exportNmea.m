@@ -1,28 +1,21 @@
 function outPath = exportNmea(navSolutions, settings, varargin)
-%EXPORTNMEA Write NMEA 0183 log (GGA + GSV at least) from PVT results.
+%EXPORTNMEA Write NMEA 0183 GGA/GSA/GSV/ZDA sentences from PVT results.
 %
 %   outPath = exportNmea(navSolutions, settings)
-%   outPath = exportNmea(..., 'trackResults', tr, 'outDir', dir, 'fileName', 'pvt.nmea')
+%   outPath = exportNmea(..., 'trackResults', tr, 'eph', eph, ...
+%       'outDir', dir, 'fileName', 'pvt.nmea')
 %
-% Per valid fix epoch:
-%   $GBGGA,...   position / quality / HDOP / altitude
-%   $GBGSV,...   satellites in view (az/el + optional C/N0 from track)
-%
-% Talker default GB (BeiDou, NMEA 4.10). Configurable via settings.nmea.
-%
-% settings.nmea fields:
-%   .enable       (true)  master switch
-%   .talkerId     ('GB')
-%   .bdtMinusUtc  (4)     BDT − UTC [s] for time field
-%   .quality      (1)     GGA quality when fix valid (0 if invalid)
-%   .geoidSepM    (0)     geoid separation field (ellipsoidal h as alt)
-%   .fileName     ('pvt.nmea')
+% Sentence builders and formatters are constellation-neutral. The caller
+% selects the talker, system ID, receiver-to-UTC offset, and week epoch in
+% settings.nmea. The legacy bdtMinusUtc field remains a compatibility alias
+% for utcOffsetSeconds.
 
     p = inputParser;
     addParameter(p, 'trackResults', [], @(x) true);
+    addParameter(p, 'eph', [], @(x) true);
     addParameter(p, 'outDir', '', @(x) ischar(x) || isstring(x));
     addParameter(p, 'fileName', '', @(x) ischar(x) || isstring(x));
-    addParameter(p, 'force', false, @islogical);
+    addParameter(p, 'force', false, @(x) islogical(x) && isscalar(x));
     parse(p, varargin{:});
     opt = p.Results;
 
@@ -31,9 +24,8 @@ function outPath = exportNmea(navSolutions, settings, varargin)
     if ~cfg.enable && ~opt.force
         return;
     end
-
     if isempty(navSolutions) || ~isfield(navSolutions, 'latitude')
-        warning('exportNmea:NoNav', 'No navSolutions — skip NMEA export.');
+        warning('exportNmea:NoNav', 'No navigation solutions; NMEA export skipped.');
         return;
     end
 
@@ -45,131 +37,90 @@ function outPath = exportNmea(navSolutions, settings, varargin)
             outDir = fullfile(pwd, 'nmea');
         end
     end
-    if ~exist(outDir, 'dir')
-        mkdir(outDir);
-    end
-
+    if ~exist(outDir, 'dir'), mkdir(outDir); end
     fileName = char(opt.fileName);
-    if isempty(fileName)
-        fileName = cfg.fileName;
-    end
+    if isempty(fileName), fileName = cfg.fileName; end
     outPath = fullfile(outDir, fileName);
 
     trackResults = opt.trackResults;
-    if ~isempty(trackResults) && ~isstruct(trackResults)
-        if exist('trackResultsToStruct', 'file')
-            trackResults = trackResultsToStruct(trackResults);
-        end
+    if ~isempty(trackResults) && ~isstruct(trackResults) && ...
+            exist('trackResultsToStruct', 'file')
+        trackResults = trackResultsToStruct(trackResults);
     end
 
     lat = navSolutions.latitude(:);
     lon = navSolutions.longitude(:);
     nEp = numel(lat);
-    h = nan(nEp, 1);
-    if isfield(navSolutions, 'height')
-        hh = navSolutions.height(:);
-        h(1:min(nEp, numel(hh))) = hh(1:min(nEp, numel(hh)));
+    height = localEpochVector(navSolutions, 'height', nEp);
+    tSow = localEpochVector(navSolutions, 'localTime', nEp);
+    hasReceiverTime = isfinite(tSow);
+    periodS = localNavPeriod(settings);
+    missingTime = ~isfinite(tSow);
+    tSow(missingTime) = (find(missingTime) - 1) * periodS;
+
+    pdop = localDop(navSolutions, 2, nEp);
+    hdop = localDop(navSolutions, 3, nEp);
+    vdop = localDop(navSolutions, 4, nEp);
+    weekNumber = localWeekNumber(opt.eph, cfg.weekNumber);
+    weekEpoch = localWeekEpoch(cfg.weekEpoch);
+    canBuildDate = ~isempty(weekEpoch) && isfinite(weekNumber);
+    if cfg.emitZDA && ~canBuildDate
+        warning('exportNmea:NoAbsoluteDate', ...
+            ['ZDA skipped: supply settings.nmea.weekEpoch and either ' ...
+             'decoded eph.WN or settings.nmea.weekNumber.']);
     end
 
-    % Time: prefer localTime (receiver time, BDT-scale SOW)
-    tSow = nan(nEp, 1);
-    if isfield(navSolutions, 'localTime') && ~isempty(navSolutions.localTime)
-        lt = navSolutions.localTime(:);
-        tSow(1:min(nEp, numel(lt))) = lt(1:min(nEp, numel(lt)));
-    end
-    % Fallback: epoch index * navSolPeriod
-    periodS = 0.5;
-    if isfield(settings, 'navSolPeriod') && isfinite(settings.navSolPeriod)
-        periodS = settings.navSolPeriod / 1000;
-    end
-    for i = 1:nEp
-        if ~isfinite(tSow(i))
-            tSow(i) = (i-1) * periodS;
-        end
-    end
-
-    hdop = nan(nEp, 1);
-    if isfield(navSolutions, 'DOP') && ~isempty(navSolutions.DOP) ...
-            && size(navSolutions.DOP, 1) >= 3
-        d = navSolutions.DOP(3, :);
-        hdop(1:min(nEp, numel(d))) = d(1:min(nEp, numel(d)));
-    end
-
+    lines = cell(0, 1);
+    counts = struct('GGA', 0, 'GSA', 0, 'GSV', 0, 'ZDA', 0);
     hasAzEl = isfield(navSolutions, 'az') && isfield(navSolutions, 'el') ...
         && isfield(navSolutions, 'PRN');
     hasPRN = isfield(navSolutions, 'PRN');
 
-    lines = {};
-    nGga = 0;
-    nGsv = 0;
+    for epochIdx = 1:nEp
+        fixOk = isfinite(lat(epochIdx)) && isfinite(lon(epochIdx));
+        utc = nmeaFormatUtc(tSow(epochIdx), cfg.utcOffsetSeconds);
+        [visiblePrn, elev, azim, snr] = localSatellitesInView( ...
+            navSolutions, trackResults, epochIdx, settings, periodS, ...
+            hasAzEl, hasPRN);
+        [usedPrn, integrityOk] = localUsedSatellites( ...
+            navSolutions, epochIdx, visiblePrn, fixOk);
 
-    for i = 1:nEp
-        fixOk = isfinite(lat(i)) && isfinite(lon(i));
-        utc = nmeaFormatUtc(tSow(i), cfg.bdtMinusUtc);
-
-        % Count SVs in view this epoch
-        prnList = [];
-        elList = [];
-        azList = [];
-        snrList = [];
-        if hasAzEl
-            prnCol = navSolutions.PRN(:, min(i, size(navSolutions.PRN, 2)));
-            elCol  = navSolutions.el(:, min(i, size(navSolutions.el, 2)));
-            azCol  = navSolutions.az(:, min(i, size(navSolutions.az, 2)));
-            for ch = 1:numel(prnCol)
-                prn = prnCol(ch);
-                elv = elCol(ch);
-                if isfinite(prn) && prn > 0 && isfinite(elv) && elv >= 0
-                    prnList(end+1) = prn; %#ok<AGROW>
-                    elList(end+1)  = elv;
-                    azv = azCol(ch);
-                    if isfinite(azv), azList(end+1) = azv; else, azList(end+1) = NaN; end
-                    snrList(end+1) = localSnr(trackResults, prn, i, settings, periodS);
-                end
-            end
-        elseif hasPRN
-            prnCol = navSolutions.PRN(:, min(i, size(navSolutions.PRN, 2)));
-            for ch = 1:numel(prnCol)
-                prn = prnCol(ch);
-                if isfinite(prn) && prn > 0
-                    prnList(end+1) = prn; %#ok<AGROW>
-                    elList(end+1) = NaN;
-                    azList(end+1) = NaN;
-                    snrList(end+1) = localSnr(trackResults, prn, i, settings, periodS);
-                end
-            end
-        end
-        nSat = numel(prnList);
-
-        q = 0;
-        if fixOk
-            q = cfg.quality;
-        end
-        if nSat < 1 && fixOk
-            nSat = 4; % unknown count — do not leave 00 if we have a 3D fix
+        if cfg.emitGGA
+            quality = 0;
+            if fixOk && integrityOk, quality = cfg.quality; end
+            gga = nmeaBuildGGA(cfg.talkerId, utc, lat(epochIdx), ...
+                lon(epochIdx), quality, numel(usedPrn), hdop(epochIdx), ...
+                height(epochIdx), cfg.geoidSepM);
+            lines{end + 1, 1} = gga; %#ok<AGROW>
+            counts.GGA = counts.GGA + 1;
         end
 
-        gga = nmeaBuildGGA(cfg.talkerId, utc, lat(i), lon(i), q, nSat, ...
-            hdop(i), h(i), cfg.geoidSepM);
-        lines{end+1} = gga; %#ok<AGROW>
-        nGga = nGga + 1;
+        if cfg.emitGSA
+            fixType = localFixType(fixOk, integrityOk, numel(usedPrn));
+            gsa = nmeaBuildGSA(cfg.talkerId, 'A', fixType, usedPrn, ...
+                pdop(epochIdx), hdop(epochIdx), vdop(epochIdx), cfg.systemId);
+            lines{end + 1, 1} = gsa; %#ok<AGROW>
+            counts.GSA = counts.GSA + 1;
+        end
 
-        if ~isempty(prnList) && any(isfinite(elList))
-            gsv = nmeaBuildGSV(cfg.talkerId, prnList, elList, azList, snrList);
-            for k = 1:numel(gsv)
-                lines{end+1} = gsv{k}; %#ok<AGROW>
-                nGsv = nGsv + 1;
+        if cfg.emitGSV && ~isempty(visiblePrn)
+            if ~any(isfinite(elev)), elev = zeros(size(visiblePrn)); end
+            gsv = nmeaBuildGSV(cfg.talkerId, visiblePrn, elev, azim, snr);
+            for messageIdx = 1:numel(gsv)
+                lines{end + 1, 1} = gsv{messageIdx}; %#ok<AGROW>
+                counts.GSV = counts.GSV + 1;
             end
-        elseif ~isempty(prnList)
-            % elev unknown — still emit GSV with empty elev via 0? skip empty elev
-            % emit with elev=0 only if we want presence; NMEA allows empty elev.
-            % Use elev=0 placeholder for tracked PRNs without az/el this epoch
-            el0 = zeros(size(prnList));
-            gsv = nmeaBuildGSV(cfg.talkerId, prnList, el0, azList, snrList);
-            for k = 1:numel(gsv)
-                lines{end+1} = gsv{k}; %#ok<AGROW>
-                nGsv = nGsv + 1;
-            end
+        end
+
+        if cfg.emitZDA && canBuildDate && fixOk && ...
+                hasReceiverTime(epochIdx) && ~isempty(utc)
+            utcDate = localUtcDate(weekEpoch, weekNumber, ...
+                tSow(epochIdx), cfg.utcOffsetSeconds);
+            zda = nmeaBuildZDA(cfg.talkerId, utc, day(utcDate), ...
+                month(utcDate), year(utcDate), cfg.localZoneHours, ...
+                cfg.localZoneMinutes);
+            lines{end + 1, 1} = zda; %#ok<AGROW>
+            counts.ZDA = counts.ZDA + 1;
         end
     end
 
@@ -180,75 +131,211 @@ function outPath = exportNmea(navSolutions, settings, varargin)
     end
 
     fid = fopen(outPath, 'w', 'n', 'UTF-8');
-    if fid < 0
-        error('exportNmea:Write', 'Cannot open %s', outPath);
-    end
+    if fid < 0, error('exportNmea:Write', 'Cannot open %s', outPath); end
     cleaner = onCleanup(@() fclose(fid));
-    for i = 1:numel(lines)
-        fwrite(fid, lines{i}, 'char');
+    for lineIdx = 1:numel(lines)
+        fwrite(fid, lines{lineIdx}, 'char');
     end
 
     fprintf('NMEA export: %s\n', outPath);
-    fprintf('  sentences: GGA=%d  GSV=%d  talker=%s  epochs=%d\n', ...
-        nGga, nGsv, cfg.talkerId, nEp);
+    fprintf(['  sentences: GGA=%d GSA=%d GSV=%d ZDA=%d ' ...
+        'talker=%s epochs=%d\n'], counts.GGA, counts.GSA, counts.GSV, ...
+        counts.ZDA, cfg.talkerId, nEp);
 end
 
 function cfg = localNmeaCfg(settings)
-    cfg = struct();
-    cfg.enable = true;
-    cfg.talkerId = 'GB';
-    cfg.bdtMinusUtc = 4;
-    cfg.quality = 1;
-    cfg.geoidSepM = 0;
-    cfg.fileName = 'pvt.nmea';
-    if ~isstruct(settings) || ~isfield(settings, 'nmea') || isempty(settings.nmea)
+    cfg = struct('enable', true, 'talkerId', 'GN', ...
+        'utcOffsetSeconds', 0, 'quality', 1, 'geoidSepM', 0, ...
+        'fileName', 'pvt.nmea', 'systemId', [], 'weekNumber', nan, ...
+        'weekEpoch', '', 'localZoneHours', 0, 'localZoneMinutes', 0, ...
+        'emitGGA', true, 'emitGSA', true, 'emitGSV', true, 'emitZDA', true);
+    if ~isstruct(settings) || ~isfield(settings, 'nmea') || ...
+            ~isstruct(settings.nmea)
         return;
     end
-    r = settings.nmea;
-    if isfield(r, 'enable'),      cfg.enable = logical(r.enable); end
-    if isfield(r, 'talkerId') && ~isempty(r.talkerId)
-        cfg.talkerId = upper(char(r.talkerId));
+    raw = settings.nmea;
+    cfg = localCopyLogical(raw, cfg, {'enable','emitGGA','emitGSA','emitGSV','emitZDA'});
+    cfg = localCopyFinite(raw, cfg, {'quality','geoidSepM','systemId', ...
+        'weekNumber','localZoneHours','localZoneMinutes'});
+    if isfield(raw, 'talkerId') && ~isempty(raw.talkerId)
+        talker = upper(char(raw.talkerId));
+        if numel(talker) == 2, cfg.talkerId = talker; end
     end
-    if isfield(r, 'bdtMinusUtc') && isfinite(r.bdtMinusUtc)
-        cfg.bdtMinusUtc = r.bdtMinusUtc;
+    if isfield(raw, 'utcOffsetSeconds') && isfinite(raw.utcOffsetSeconds)
+        cfg.utcOffsetSeconds = raw.utcOffsetSeconds;
+    elseif isfield(raw, 'bdtMinusUtc') && isfinite(raw.bdtMinusUtc)
+        cfg.utcOffsetSeconds = raw.bdtMinusUtc;
     end
-    if isfield(r, 'quality') && isfinite(r.quality)
-        cfg.quality = max(0, min(8, round(r.quality)));
+    if isfield(raw, 'fileName') && ~isempty(raw.fileName)
+        cfg.fileName = char(raw.fileName);
     end
-    if isfield(r, 'geoidSepM') && isfinite(r.geoidSepM)
-        cfg.geoidSepM = r.geoidSepM;
+    if isfield(raw, 'weekEpoch') && ~isempty(raw.weekEpoch)
+        cfg.weekEpoch = char(raw.weekEpoch);
     end
-    if isfield(r, 'fileName') && ~isempty(r.fileName)
-        cfg.fileName = char(r.fileName);
+    cfg.quality = max(0, min(8, round(cfg.quality)));
+end
+
+function cfg = localCopyLogical(raw, cfg, names)
+    for idx = 1:numel(names)
+        name = names{idx};
+        if isfield(raw, name) && isscalar(raw.(name))
+            cfg.(name) = logical(raw.(name));
+        end
     end
 end
 
-function snr = localSnr(trackResults, prn, epIdx, settings, periodS)
-    snr = NaN;
-    if isempty(trackResults)
+function cfg = localCopyFinite(raw, cfg, names)
+    for idx = 1:numel(names)
+        name = names{idx};
+        if isfield(raw, name) && isnumeric(raw.(name)) && ...
+                isscalar(raw.(name)) && isfinite(raw.(name))
+            cfg.(name) = double(raw.(name));
+        end
+    end
+end
+
+function values = localEpochVector(source, fieldName, nEpochs)
+    values = nan(nEpochs, 1);
+    if isfield(source, fieldName) && ~isempty(source.(fieldName))
+        raw = source.(fieldName)(:);
+        nCopy = min(nEpochs, numel(raw));
+        values(1:nCopy) = raw(1:nCopy);
+    end
+end
+
+function values = localDop(navSolutions, row, nEpochs)
+    values = nan(nEpochs, 1);
+    if isfield(navSolutions, 'DOP') && size(navSolutions.DOP, 1) >= row
+        raw = navSolutions.DOP(row, :);
+        nCopy = min(nEpochs, numel(raw));
+        values(1:nCopy) = raw(1:nCopy);
+    end
+end
+
+function periodS = localNavPeriod(settings)
+    periodS = 0.5;
+    if isstruct(settings) && isfield(settings, 'navSolPeriod') && ...
+            isnumeric(settings.navSolPeriod) && isscalar(settings.navSolPeriod) ...
+            && isfinite(settings.navSolPeriod)
+        periodS = settings.navSolPeriod / 1000;
+    end
+end
+
+function weekNumber = localWeekNumber(eph, override)
+    weekNumber = override;
+    if isfinite(weekNumber), return; end
+    values = [];
+    if isstruct(eph)
+        for idx = 1:numel(eph)
+            if isfield(eph(idx), 'WN') && isnumeric(eph(idx).WN) && ...
+                    isscalar(eph(idx).WN) && isfinite(eph(idx).WN)
+                values(end + 1) = double(eph(idx).WN); %#ok<AGROW>
+            end
+        end
+    end
+    if ~isempty(values), weekNumber = mode(values); end
+end
+
+function epoch = localWeekEpoch(value)
+    epoch = [];
+    if isempty(value), return; end
+    try
+        epoch = datetime(value, 'InputFormat', 'yyyy-MM-dd', 'TimeZone', 'UTC');
+        if ~isscalar(epoch) || isnat(epoch), epoch = []; end
+    catch
+        epoch = [];
+    end
+end
+
+function utcDate = localUtcDate(epoch, weekNumber, sow, offset)
+    utcDate = epoch + seconds(weekNumber * 604800 + sow - offset);
+end
+
+function [prn, elev, azim, snr] = localSatellitesInView(navSolutions, ...
+        trackResults, epochIdx, settings, periodS, hasAzEl, hasPRN)
+    prn = [];
+    elev = [];
+    azim = [];
+    snr = [];
+    if ~hasPRN, return; end
+
+    prnCol = navSolutions.PRN(:, min(epochIdx, size(navSolutions.PRN, 2)));
+    if hasAzEl
+        elevCol = navSolutions.el(:, min(epochIdx, size(navSolutions.el, 2)));
+        azimCol = navSolutions.az(:, min(epochIdx, size(navSolutions.az, 2)));
+    else
+        elevCol = nan(size(prnCol));
+        azimCol = nan(size(prnCol));
+    end
+    for channelIdx = 1:numel(prnCol)
+        satelliteId = prnCol(channelIdx);
+        if ~isfinite(satelliteId) || satelliteId <= 0, continue; end
+        elevation = elevCol(channelIdx);
+        if hasAzEl && (~isfinite(elevation) || elevation < 0), continue; end
+        prn(end + 1) = satelliteId; %#ok<AGROW>
+        elev(end + 1) = elevation; %#ok<AGROW>
+        azim(end + 1) = azimCol(channelIdx); %#ok<AGROW>
+        snr(end + 1) = localSnr(trackResults, satelliteId, epochIdx, ...
+            settings, periodS); %#ok<AGROW>
+    end
+end
+
+function [usedPrn, integrityOk] = localUsedSatellites(navSolutions, ...
+        epochIdx, visiblePrn, fixOk)
+    usedPrn = visiblePrn;
+    integrityOk = fixOk;
+    if ~isfield(navSolutions, 'raim') || ~isstruct(navSolutions.raim)
         return;
     end
-    cnoInt = 200;
-    if isfield(settings, 'CNoInterval') && ~isempty(settings.CNoInterval)
-        cnoInt = settings.CNoInterval;
+    raim = navSolutions.raim;
+    if isfield(raim, 'usedPRN') && epochIdx <= numel(raim.usedPRN) && ...
+            ~isempty(raim.usedPRN{epochIdx})
+        usedPrn = double(raim.usedPRN{epochIdx}(:).');
+    elseif isfield(raim, 'excludedPRN') && ...
+            epochIdx <= numel(raim.excludedPRN) && ...
+            ~isempty(raim.excludedPRN{epochIdx})
+        usedPrn = setdiff(visiblePrn, raim.excludedPRN{epochIdx}, 'stable');
     end
-    % Approximate ms index of this nav epoch
-    msIdx = max(1, round((epIdx-1) * periodS * 1000) + 1);
-    for ch = 1:numel(trackResults)
-        if ~isfield(trackResults, 'PRN')
+    if isfield(raim, 'passed') && epochIdx <= numel(raim.passed)
+        integrityOk = fixOk && logical(raim.passed(epochIdx));
+    end
+    if ~integrityOk
+        usedPrn = [];
+    end
+end
+
+function fixType = localFixType(fixOk, integrityOk, nUsed)
+    if ~fixOk || ~integrityOk
+        fixType = 1;
+    elseif nUsed >= 4
+        fixType = 3;
+    elseif nUsed >= 3
+        fixType = 2;
+    else
+        fixType = 1;
+    end
+end
+
+function snr = localSnr(trackResults, prn, epochIdx, settings, periodS)
+    snr = nan;
+    if isempty(trackResults), return; end
+    cnoInterval = 200;
+    if isfield(settings, 'CNoInterval') && ~isempty(settings.CNoInterval)
+        cnoInterval = settings.CNoInterval;
+    end
+    msIdx = max(1, round((epochIdx - 1) * periodS * 1000) + 1);
+    for channelIdx = 1:numel(trackResults)
+        if ~isfield(trackResults, 'PRN') || trackResults(channelIdx).PRN ~= prn
             continue;
         end
-        if trackResults(ch).PRN ~= prn
-            continue;
-        end
-        if ~isfield(trackResults, 'B2a_CNo') || isempty(trackResults(ch).B2a_CNo)
+        if ~isfield(trackResults, 'B2a_CNo') || ...
+                isempty(trackResults(channelIdx).B2a_CNo)
             return;
         end
-        k = max(1, min(numel(trackResults(ch).B2a_CNo), ceil(msIdx / cnoInt)));
-        v = trackResults(ch).B2a_CNo(k);
-        if isfinite(v) && v > 0
-            snr = v;
-        end
+        cno = trackResults(channelIdx).B2a_CNo;
+        sampleIdx = max(1, min(numel(cno), ceil(msIdx / cnoInterval)));
+        value = cno(sampleIdx);
+        if isfinite(value) && value > 0, snr = value; end
         return;
     end
 end

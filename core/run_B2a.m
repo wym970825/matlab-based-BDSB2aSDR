@@ -73,7 +73,8 @@ function results = run_B2a(varargin)
             try
                 nmeaDir = fullfile(settings.resultRoot, sprintf('nmea_%s', pipe.tag));
                 exportNmea(navSolutions, settings, ...
-                    'trackResults', trackResults, 'outDir', nmeaDir);
+                    'trackResults', trackResults, 'eph', eph, ...
+                    'outDir', nmeaDir);
             catch ME
                 warning('run_B2a:NMEA', 'NMEA export failed: %s', ME.message);
             end

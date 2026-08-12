@@ -228,6 +228,7 @@ navSolutions.raim.residualRms = nan(1, max(measNrSum, 1));
 navSolutions.raim.maxResidual = nan(1, max(measNrSum, 1));
 navSolutions.raim.nExcluded = zeros(1, max(measNrSum, 1));
 navSolutions.raim.excludedPRN = cell(1, max(measNrSum, 1));
+navSolutions.raim.usedPRN = cell(1, max(measNrSum, 1));
 navSolutions.raim.passed = false(1, max(measNrSum, 1));
 
 %##########################################################################
@@ -329,6 +330,9 @@ for currMeasNr = 1:measNrSum
                 if isfield(raimInfo, 'excludedPRN')
                     navSolutions.raim.excludedPRN{currMeasNr} = raimInfo.excludedPRN;
                 end
+                if isfield(raimInfo, 'usedPRN')
+                    navSolutions.raim.usedPRN{currMeasNr} = raimInfo.usedPRN;
+                end
                 navSolutions.raim.passed(currMeasNr) = raimInfo.passed;
                 if nEx > 0 && (currMeasNr <= 5 || mod(currMeasNr, 20) == 0 ...
                         || ~raimInfo.passed)
@@ -343,6 +347,8 @@ for currMeasNr = 1:measNrSum
                  navSolutions.az(validPr, currMeasNr), ...
                  navSolutions.DOP(:, currMeasNr)] = ...
                     leastSquarePos(satPositions, clkCorrRawP, settings, wObs);
+                navSolutions.raim.mode{currMeasNr} = 'disabled';
+                navSolutions.raim.usedPRN{currMeasNr} = prnUsed;
             end
         catch ME
             warning('postNavigation:LS', 'Fix %d LS/RAIM failed: %s', currMeasNr, ME.message);
@@ -357,6 +363,9 @@ for currMeasNr = 1:measNrSum
         navSolutions.Z(currMeasNr)  = xyzdt(3);
         earthR = norm(xyzdt(1:3));
         fixValid = all(isfinite(xyzdt(1:3))) && earthR > 5.5e6 && earthR < 7.5e6;
+		if ~useRaim
+			navSolutions.raim.passed(currMeasNr) = fixValid;
+		end
 		% For first calculation of solution, clock error will be set 
         % to be zero
         if (currMeasNr == 1)

@@ -8,9 +8,11 @@ function sentences = nmeaBuildGSV(talker, prn, elevDeg, azDeg, snrDb)
 % Returns cellstr of full sentences including CR LF.
 
     sentences = {};
-    if nargin < 1 || isempty(talker), talker = 'GB'; end
+    if nargin < 1 || isempty(talker), talker = 'GN'; end
     talker = upper(char(talker));
-    if numel(talker) ~= 2, talker = 'GB'; end
+    if numel(talker) ~= 2 || any(~isstrprop(talker, 'alphanum'))
+        talker = 'GN';
+    end
 
     prn = prn(:);
     elevDeg = elevDeg(:);
@@ -61,11 +63,21 @@ function sentences = nmeaBuildGSV(talker, prn, elevDeg, azDeg, snrDb)
             else
                 snrStr = '';
             end
-            chunks{j} = sprintf('%02d,%d,%s,%s', ...
-                max(1, min(99, round(prn(k)))), el, azStr, snrStr);
+            chunks{j} = sprintf('%s,%d,%s,%s', ...
+                localSatelliteId(prn(k)), el, azStr, snrStr);
         end
         body = sprintf('%sGSV,%d,%d,%02d,%s', ...
             talker, nMsg, m, nSat, strjoin(chunks, ','));
         sentences{m} = sprintf('$%s*%s\r\n', body, nmeaChecksum(body));
+    end
+end
+
+
+function text = localSatelliteId(value)
+    value = max(1, round(value));
+    if value < 100
+        text = sprintf('%02d', value);
+    else
+        text = sprintf('%d', value);
     end
 end

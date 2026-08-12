@@ -1,22 +1,20 @@
-function hhmmss = nmeaFormatUtc(sowSec, bdtMinusUtc)
-%NMEAFORMATUTC Format constellation time [s] as hhmmss.ss for NMEA GGA.
+function hhmmss = nmeaFormatUtc(sowSec, utcOffsetSeconds)
+%NMEAFORMATUTC Format constellation time [s] as hhmmss.ss UTC.
 %
-%   hhmmss = nmeaFormatUtc(sowSec, bdtMinusUtc)
+%   hhmmss = nmeaFormatUtc(sowSec, utcOffsetSeconds)
 %
-% SoftGNSS localTime is typically BDT-scale continuous time / SOW.
-% GGA needs UTC *time of day*:
-%   sod = mod(sow − bdtMinusUtc, 86400)
-% Default bdtMinusUtc = 4 (BDT ≈ UTC + 4 s).
+% UTC = receiver time minus UTCOFFSETSECONDS. The caller supplies the time
+% system offset, so this formatter is not tied to a particular constellation.
 
-    if nargin < 2 || isempty(bdtMinusUtc) || ~isfinite(bdtMinusUtc)
-        bdtMinusUtc = 4;
+    if nargin < 2 || isempty(utcOffsetSeconds) || ~isfinite(utcOffsetSeconds)
+        utcOffsetSeconds = 0;
     end
     if ~isfinite(sowSec)
         hhmmss = '';
         return;
     end
     % Week wrap then day wrap → hh:mm:ss
-    sow = mod(sowSec - bdtMinusUtc, 604800);
+    sow = mod(sowSec - utcOffsetSeconds, 604800);
     if sow < 0
         sow = sow + 604800;
     end

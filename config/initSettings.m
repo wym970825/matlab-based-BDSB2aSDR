@@ -204,14 +204,24 @@ settings.navTrackMaxSpeedMps = 500;  % position-jump filter for display track
 % Baidu Map JSAPI 4.0 web UI (start/end + time-heat track; CustomOverlay labels)
 settings.plotBaiduMap  = true;
 
-% NMEA 0183 export (GGA + GSV minimum; talker GB = BeiDou per NMEA 4.10)
+% NMEA 0183 export. Constellation/time-system choices live in settings;
+% navigation/nmeaBuild*.m remain constellation-neutral.
 settings.nmea = struct();
 settings.nmea.enable      = true;   % write pvt.nmea after navigation
 settings.nmea.talkerId    = 'GB';   % GB (BDS); alternatives: BD, GN
-settings.nmea.bdtMinusUtc = 4;      % BDT = UTC + 4 s → UTC field uses SOW−4
+settings.nmea.utcOffsetSeconds = 4; % receiver time = UTC + offset
+settings.nmea.weekEpoch   = '2006-01-01'; % week-number epoch for ZDA date
+settings.nmea.weekNumber  = [];     % optional override; eph.WN preferred
+settings.nmea.systemId    = 4;      % optional NMEA 4.x GNSS system ID
 settings.nmea.quality     = 1;      % GGA quality for valid fix (autonomous)
 settings.nmea.geoidSepM   = 0;      % geoid separation (alt = ellipsoidal h)
 settings.nmea.fileName    = 'pvt.nmea';
+settings.nmea.emitGGA     = true;
+settings.nmea.emitGSA     = true;
+settings.nmea.emitGSV     = true;
+settings.nmea.emitZDA     = true;
+settings.nmea.localZoneHours = 0;
+settings.nmea.localZoneMinutes = 0;
 
 %% Multi-SV parallel tracking (par-fast-matlab) ============================
 % Option A: each worker fopen()s the IF file privately. Hard cap 6 cores.
