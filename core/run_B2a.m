@@ -32,6 +32,15 @@ function results = run_B2a(varargin)
     unmatched = namedargs2cell(p.Unmatched);
     settings = initSettings(unmatched{:});
 
+    projectRoot = fileparts(fileparts(mfilename('fullpath')));
+    if ~isfield(p.Unmatched, 'resultRoot')
+        settings.resultRoot = fullfile(projectRoot, 'results', 'ui', char(pipe.tag));
+    end
+    if ~isfield(p.Unmatched, 'tempdataSvPth')
+        settings.tempdataSvPth = fullfile(settings.resultRoot, 'temp');
+    end
+    localPrepareUiLayout(settings.resultRoot);
+
     fprintf('\n========== B2a Receiver (refactored) ==========\n');
     fprintf('Result root: %s\n', settings.resultRoot);
     fprintf('Temp track:  %s\n', settings.tempdataSvPth);
@@ -51,6 +60,9 @@ function results = run_B2a(varargin)
         disp('No GNSS signals detected — stopping.');
         results = struct('settings', settings, 'acqResults', acqResults, ...
             'trackResults', [], 'navSolutions', [], 'eph', []);
+        if pipe.saveResults
+            localWriteUiProducts(results, settings, pipe, acqResults);
+        end
         return;
     end
 
@@ -75,10 +87,9 @@ function results = run_B2a(varargin)
                 && (~isfield(settings, 'nmea') || ~isfield(settings.nmea, 'enable') ...
                     || logical(settings.nmea.enable))
             try
-                nmeaDir = fullfile(settings.resultRoot, sprintf('nmea_%s', pipe.tag));
                 exportNmea(navSolutions, settings, ...
                     'trackResults', trackResults, 'eph', eph, ...
-                    'outDir', nmeaDir);
+                    'outDir', settings.resultRoot);
             catch ME
                 warning('run_B2a:NMEA', 'NMEA export failed: %s', ME.message);
             end
@@ -94,7 +105,7 @@ function results = run_B2a(varargin)
                     isLongTracking = settings.msToProcess > 60000;
                     if isLongTracking || pipe.saveTrackingFigures
                         trkFigDir = fullfile(settings.resultRoot, ...
-                            sprintf('trkfigs_%s', pipe.tag));
+                            'figures', 'trkResult');
                         exportTrackingFiguresSequential(trackResults, ...
                             settings, trkFigDir, ...
                             'ChannelIndices', activeIdx, ...
@@ -111,7 +122,7 @@ function results = run_B2a(varargin)
         end
         if ~isempty(navSolutions)
             try
-                figDir = fullfile(settings.resultRoot, sprintf('navfigs_%s', pipe.tag));
+                figDir = fullfile(settings.resultRoot, 'figures', 'navResult');
                 navFigs = plotNavPost(navSolutions, settings, ...
                     'saveDir', figDir, ...
                     'doLegacy', false, ...
@@ -142,11 +153,87 @@ function results = run_B2a(varargin)
         diskPayload.results = results;
         diskPayload.results.trackResults = trackResultsToStruct(trackResults);
         save(outFile, '-struct', 'diskPayload', '-v7.3');
+        writeUiResultsMat(fullfile(settings.resultRoot, 'ui_results.mat'), results);
         clear diskPayload
+        localWriteUiProducts(results, settings, pipe, acqResults);
         fprintf('Saved results: %s\n', outFile);
     end
 
     fprintf('========== Processing complete ==========\n');
+end
+
+function localPrepareUiLayout(resultRoot)
+    dirs = {resultRoot, fullfile(resultRoot, 'temp'), ...
+        fullfile(resultRoot, 'figures'), ...
+        fullfile(resultRoot, 'figures', 'AcqResult'), ...
+        fullfile(resultRoot, 'figures', 'trkResult'), ...
+        fullfile(resultRoot, 'figures', 'navResult')};
+    for idx = 1:numel(dirs)
+        if ~exist(dirs{idx}, 'dir'), mkdir(dirs{idx}); end
+    end
+end
+
+function localWriteUiProducts(results, settings, pipe, acqResults)
+    writeUiResultsMat(fullfile(settings.resultRoot, 'ui_results.mat'), results);
+    config = settings;
+    config.tag = char(pipe.tag);
+    config.outDir = strrep(settings.resultRoot, '\', '/');
+    config.doNavigation = logical(pipe.doNavigation);
+    config.doPlot = logical(pipe.doPlot);
+    if isfield(settings, 'nmea') && isstruct(settings.nmea) && ...
+            isfield(settings.nmea, 'enable')
+        config.doNmea = logical(settings.nmea.enable);
+    else
+        config.doNmea = true;
+    end
+    if isempty(pipe.openBaiduMap)
+        config.doBaiduMap = isfield(settings, 'plotBaiduMap') && ...
+            logical(settings.plotBaiduMap);
+    else
+        config.doBaiduMap = logical(pipe.openBaiduMap);
+    end
+    config.recovered = false;
+    localWriteJson(fullfile(settings.resultRoot, 'ui_config.json'), config);
+
+    report = struct('ok', true, 'stage', 'done', ...
+        'outDir', settings.resultRoot, 'tag', char(pipe.tag), ...
+        'errorIdentifier', '', 'error', '', 'nAcquired', 0, ...
+        'figDir', fullfile(settings.resultRoot, 'figures'), ...
+        'acqFigDir', fullfile(settings.resultRoot, 'figures', 'AcqResult'), ...
+        'trkFigDir', fullfile(settings.resultRoot, 'figures', 'trkResult'), ...
+        'navFigDir', fullfile(settings.resultRoot, 'figures', 'navResult'), ...
+        'nmeaPath', fullfile(settings.resultRoot, 'pvt.nmea'), ...
+        'navSummary', struct('nFixes', 0, 'meanLat', NaN, ...
+        'meanLon', NaN, 'meanH', NaN));
+    if isstruct(acqResults) && isfield(acqResults, 'carrFreq')
+        report.nAcquired = nnz(acquisitionDetectedMask(acqResults));
+    end
+    nav = results.navSolutions;
+    if isstruct(nav) && isfield(nav, 'latitude') && isfield(nav, 'longitude')
+        ok = isfinite(nav.latitude) & isfinite(nav.longitude);
+        report.navSummary.nFixes = nnz(ok);
+        if any(ok)
+            report.navSummary.meanLat = mean(nav.latitude(ok));
+            report.navSummary.meanLon = mean(nav.longitude(ok));
+            if isfield(nav, 'height')
+                h = nav.height(ok); h = h(isfinite(h));
+                if ~isempty(h), report.navSummary.meanH = mean(h); end
+            end
+        end
+    end
+    localWriteJson(fullfile(settings.resultRoot, 'report.json'), report);
+end
+
+function localWriteJson(path, value)
+    try
+        text = jsonencode(value, 'PrettyPrint', true);
+    catch
+        text = jsonencode(value);
+    end
+    fid = fopen(path, 'w', 'n', 'UTF-8');
+    if fid < 0, error('run_B2a:WriteJson', 'Cannot write %s', path); end
+    cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
+    fwrite(fid, text, 'char');
 end
 
 function closeFigureStruct(figs)

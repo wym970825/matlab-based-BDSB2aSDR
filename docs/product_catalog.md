@@ -13,6 +13,7 @@
 | RAIM/FDE 与加权定位 | `navigation/raimLeastSquarePos.m`、`leastSquarePos.m` | 有效 PVT、卫星使用统计 |
 | NMEA 0183 | `navigation/exportNmea.m`、`nmeaBuildGGA/GSA/GSV/ZDA.m` | `pvt.nmea` |
 | 离线回放 | `core/runNavigationFromTracking.m`、`tests/replay*Channels.m` | 更新后的 NMEA、PVT MAT、离线图片 |
+| 产品补救 | `core/repairUiResultDirectory.m` | 从 `run_B2a_*.mat`/`navigation_replay.mat` 补齐统一 UI 产品 |
 | Web UI | `launch_b2a_ui.py`、`python/b2a_ui`、`web/ui` | `results/ui/<jobId>` |
 | 目录批处理 | `batch/batchDirForOneSettings.m` | `results/batch/<batch>/<item>` |
 
@@ -48,6 +49,15 @@ results/ui/<tag>/
     AcqResult/
     trkResult/
     navResult/
+```
+
+`ui_results.mat` 是轻量定位包装，包含设置、捕获摘要和导航结果；完整跟踪数组保留在
+`run_B2a_<tag>.mat` 与 `temp/`，避免下游定位加载时触发大 MAT 序列化或内存峰值。
+历史目录可用以下命令补齐产品：
+
+```matlab
+setupPaths;
+repairUiResultDirectory('results/ui/260814_032637', 'Force', true);
 ```
 
 批处理根目录额外包含 `source_config.json`、`batch_report.json` 和 `batch_report.mat`；每个编号子任务遵守同一单次运行契约。

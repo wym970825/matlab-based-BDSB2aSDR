@@ -128,6 +128,9 @@ function report = runFromJsonConfig(jsonPath, varargin)
 
     navSolutions = [];
     eph = [];
+    acqResults = [];
+    channel = [];
+    trackResults = [];
 
     try
         [fid, dataAdaptCoeff] = openIfFile(settings);
@@ -228,8 +231,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
         diskPayload.results = results;
         diskPayload.results.trackResults = trackResultsToStruct(trackResults);
         diskPayload.settings = settings;
-        save(fullfile(outDir, 'ui_results.mat'), ...
-            '-struct', 'diskPayload', '-v7.3');
+        writeUiResultsMat(fullfile(outDir, 'ui_results.mat'), results);
         diskPayload = rmfield(diskPayload, 'settings');
         save(fullfile(outDir, sprintf('run_B2a_%s.mat', tag)), ...
             '-struct', 'diskPayload', '-v7.3');
@@ -248,6 +250,17 @@ function report = runFromJsonConfig(jsonPath, varargin)
         try
             fprintf(2, '%s\n', getReport(ME, 'basic'));
         catch
+        end
+        % Keep the same product shape for partial runs.  The wrapper is
+        % intentionally lightweight and safe after a long tracking failure.
+        try
+            partialResults = struct('settings', settings, ...
+                'acqResults', acqResults, 'channel', channel, ...
+                'trackResults', [], 'navSolutions', navSolutions, 'eph', eph);
+            writeUiResultsMat(fullfile(outDir, 'ui_results.mat'), partialResults);
+        catch wrapperError
+            warning('runFromJsonConfig:PartialUiResults', ...
+                'Could not write partial ui_results.mat: %s', wrapperError.message);
         end
     end
 
