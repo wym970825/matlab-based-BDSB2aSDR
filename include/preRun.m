@@ -58,12 +58,15 @@ channel = repmat(channel, 1, settings.numberOfChannels);
 %% Copy acquisition results ===============================================
 
 %--- Sort peaks to find strongest signals, keep the peak index information
-[~, PRNindexes]          = sort(acqResults.peakMetric, 2, 'descend');
+detectedMask = acquisitionDetectedMask(acqResults);
+sortableMetric = acqResults.peakMetric;
+sortableMetric(~detectedMask) = -inf;
+[~, PRNindexes] = sort(sortableMetric, 2, 'descend');
 
 %--- Load information about each satellite --------------------------------
 % Maximum number of initialized channels is number of detected signals, but
 % not more as the number of channels specified in the settings.
-for ii = 1:min([settings.numberOfChannels, sum(acqResults.carrFreq ~= 0)])
+for ii = 1:min([settings.numberOfChannels, sum(detectedMask)])
     channel(ii).PRN          = PRNindexes(ii);
     channel(ii).acquiredFreq = acqResults.carrFreq(PRNindexes(ii));
     channel(ii).codePhase    = acqResults.codePhase(PRNindexes(ii));

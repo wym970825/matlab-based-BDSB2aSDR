@@ -390,23 +390,26 @@ _http_servers: dict[int, tuple[object, Path]] = {}
 
 
 def open_results(out_dir: Path) -> None:
-    """Open Baidu map index via localhost if present, else figures folder / PNGs."""
+    """Open the saved map or first navigation figure from the UI layout."""
     out_dir = Path(out_dir)
     fig = out_dir / "figures"
-    index = fig / "index.html"
+    nav = fig / "navResult"
+    index = next((p for p in (fig / "index.html", nav / "index.html") if p.is_file()), None)
 
-    if index.is_file():
-        port = _serve_dir(fig)
+    if index is not None:
+        serve_root = index.parent
+        port = _serve_dir(serve_root)
         if port:
-            webbrowser.open(f"http://127.0.0.1:{port}/index.html")
+            webbrowser.open(f"http://127.0.0.1:{port}/{index.name}")
             return
         _open_path(index)
         return
 
     if fig.is_dir():
         for name in ("lla_geobasemap.png", "enu_displacement.png", "dop.png"):
-            p = fig / name
-            if p.is_file():
+            p = next((candidate for candidate in (nav / name, fig / name)
+                      if candidate.is_file()), None)
+            if p is not None:
                 _open_path(p)
                 break
         else:

@@ -53,7 +53,8 @@ function smoke = smoke_pvt(varargin)
     stage.acq_s = toc(t0);
     fprintf('Stage acq: %.1f s\n', stage.acq_s);
 
-    acquiredMask = isfinite(acqResults.carrFreq(:)) & (acqResults.carrFreq(:) ~= 0);
+    acquiredMask = acquisitionDetectedMask(acqResults);
+    acquiredMask = acquiredMask(:);
     nAcq = nnz(acquiredMask);
     fprintf('Acquired %d / %d requested PRNs\n', nAcq, numel(prnList));
     if nAcq < 4

@@ -34,13 +34,19 @@ smokeA = smoke_acquisition('fullSky', false);          % default [24 38 39 41]
 % 2) Tracking smoke (single strong SV, short)
 smokeT = smoke_tracking('acqSatelliteList', smokeA.bestPrn, 'msToProcess', 5000);
 
-% 3) Full pipeline (nav needs ≥24 s and ≥4 SVs with eph)
-results = run_B2a('msToProcess', 60000, 'acqSatelliteList', [24 38 39 41]);
+% 3) Full pipeline (nav needs >=24 s and >=4 SVs with eph)
+settings = initSettings('msToProcess', 60000, ...
+    'acqSatelliteList', [24 38 39 41]);
+report = runFromSettings(settings);
 ```
 
 ## Layout
 
 See [docs/architecture.md](docs/architecture.md).
+
+- [Product catalog and result layout](docs/product_catalog.md)
+- [MATLAB quick guide: tests, PVT replay, visualization](docs/quickguide.m)
+- [Pre-v0.1.6 legacy archive](legacy/BeforeV0_1_6/README.md)
 
 ## Directory batch processing
 

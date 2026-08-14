@@ -64,9 +64,10 @@ function report = smoke_pullin_fll_off(varargin)
 
         % Print acq → track handoff params
         fprintf('--- acq handoff ---\n');
+        detectedMask = acquisitionDetectedMask(acqResults);
         for k = 1:numel(prnList)
             cf = acqResults.carrFreq(k);
-            if ~(isfinite(cf) && cf ~= 0)
+            if ~detectedMask(k)
                 fprintf('PRN%02d NOT ACQUIRED\n', prnList(k));
                 continue;
             end

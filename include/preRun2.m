@@ -12,12 +12,8 @@ channel.polarityRef = 1;   % NEW: +1/-1 from acquisition (pilot Psum sign)
 channel = repmat(channel, 1, settings.numberOfChannels);
 SatList = settings.acqSatelliteList;
 % --- 1) 统一“是否捕获成功”的判据（兼容 NaN 和 0 两种风格）
-cf = acqResults.carrFreq(:).';
-if all(isnan(cf))
-    acquiredMask = false(size(cf));
-else
-    acquiredMask = isfinite(cf) & (cf ~= 0);
-end
+acquiredMask = acquisitionDetectedMask(acqResults);
+acquiredMask = acquiredMask(:).';
 
 % --- 2) 只在已捕获的星里按强度排序（更合理）
 pm = acqResults.peakMetric(:).';

@@ -30,7 +30,7 @@ function smoke = resume_pvt_from_track(tempDir, varargin)
 
     prns = p.Results.acqSatelliteList(:).';
     nCh = settings.numberOfChannels;
-    trackResults = TrackResults2.createArray(settings, nCh);
+    trackResults = TrackResults2.createEmptyArray(nCh);
 
     for i = 1:numel(prns)
         f = fullfile(tempDir, sprintf('Trk_Prn_%02d_final.mat', prns(i)));
@@ -45,7 +45,7 @@ function smoke = resume_pvt_from_track(tempDir, varargin)
         else
             error('resume_pvt:BadMat', 'No finalTRes in %s', f);
         end
-        trackResults(i) = tr;
+        trackResults(i) = TrackResults2.fromStruct(tr);
         trackResults(i).status = 'T';
         fprintf('Loaded PRN %d from %s (N=%d)\n', prns(i), f, trackResults(i).Nsize);
     end
@@ -170,7 +170,7 @@ function figFiles = localExportFigures(trackResults, navSolutions, settings, fig
             exportgraphics(f, fpath, 'Resolution', 150); close(f);
             figFiles{end+1} = fpath; %#ok<AGROW>
         catch ME
-            warning('fig: %s', ME.message);
+            warning('resume_pvt:TrackingFigure', '%s', ME.message);
         end
     end
     if ~isempty(navSolutions) && isfield(navSolutions,'E')
@@ -200,7 +200,7 @@ function figFiles = localExportFigures(trackResults, navSolutions, settings, fig
                 exportgraphics(f, fpath, 'Resolution', 150); close(f);
                 figFiles{end+1} = fpath;
             catch ME
-                warning('navfig: %s', ME.message);
+                warning('resume_pvt:NavigationFigure', '%s', ME.message);
             end
         end
     end

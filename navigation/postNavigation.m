@@ -189,9 +189,12 @@ if numel(activeChnList) < 4
     return
 end
 
-% Earliest any SV can contribute; end when the shortest track ends
+% Earliest any SV can contribute. End when fewer than four ready tracks
+% remain: a short or prematurely terminated fifth channel must not truncate
+% a long capture that still has enough satellites for an epoch-wise fix.
 sampleStart = min(sampleStartCh(activeChnList)) + 1;
-sampleEnd = min(sampleEndCh(activeChnList)) - 1;
+sortedEnds = sort(sampleEndCh(activeChnList), 'descend');
+sampleEnd = sortedEnds(4) - 1;
 fprintf(['Navigation window: sampleStart=%g sampleEnd=%g' ...
     ' (epoch-wise LS, multi-segment TOW; need >=4 SV/epoch)\n'], ...
     sampleStart, sampleEnd);
@@ -238,7 +241,9 @@ navSolutions.raim.passed = false(1, max(measNrSum, 1));
 fprintf('Positions are being computed. Please wait... \n');
 for currMeasNr = 1:measNrSum
    
-    fprintf('Fix: Processing %02d of %02d \n', currMeasNr,measNrSum);
+    if currMeasNr <= 3 || mod(currMeasNr, 50) == 0 || currMeasNr == measNrSum
+        fprintf('Fix: Processing %d of %d\n', currMeasNr, measNrSum);
+    end
     
     %% Initialization of current measurement ==============================          
     % Exclude satellites, that are belove elevation mask 
@@ -276,6 +281,7 @@ for currMeasNr = 1:measNrSum
 
     % Drop REACQ / gap / no-segment channels this epoch (tt=inf)
     validPr = activeChnList(isfinite(transmitTime(activeChnList)));
+    navSolutions.validPrn{currMeasNr} = [trackResults(validPr).PRN];
     if numel(validPr) < numel(activeChnList) && (currMeasNr <= 3 || mod(currMeasNr, 50) == 0)
         fprintf('  Fix %d: %d/%d channels valid for PR (excluded REACQ/gap/no-TOW-seg)\n', ...
             currMeasNr, numel(validPr), numel(activeChnList));
@@ -310,6 +316,7 @@ for currMeasNr = 1:measNrSum
         % Calculate receiver position (optional RAIM 1/2-SV FDE)
         useRaim = ~isfield(settings, 'raim') || ~isfield(settings.raim, 'enable') ...
             || logical(settings.raim.enable);
+        raimPassed = ~useRaim;
         try
             if useRaim
                 [xyzdt, elAct, azAct, dopAct, raimInfo] = ...
@@ -334,6 +341,7 @@ for currMeasNr = 1:measNrSum
                     navSolutions.raim.usedPRN{currMeasNr} = raimInfo.usedPRN;
                 end
                 navSolutions.raim.passed(currMeasNr) = raimInfo.passed;
+                raimPassed = logical(raimInfo.passed);
                 if nEx > 0 && (currMeasNr <= 5 || mod(currMeasNr, 20) == 0 ...
                         || ~raimInfo.passed)
                     exPrn = [];
@@ -362,7 +370,8 @@ for currMeasNr = 1:measNrSum
         navSolutions.Y(currMeasNr)  = xyzdt(2);
         navSolutions.Z(currMeasNr)  = xyzdt(3);
         earthR = norm(xyzdt(1:3));
-        fixValid = all(isfinite(xyzdt(1:3))) && earthR > 5.5e6 && earthR < 7.5e6;
+        fixValid = all(isfinite(xyzdt(1:3))) && earthR > 5.5e6 ...
+            && earthR < 7.5e6 && raimPassed;
 		if ~useRaim
 			navSolutions.raim.passed(currMeasNr) = fixValid;
 		end
@@ -383,7 +392,9 @@ for currMeasNr = 1:measNrSum
         navSolutions.currMeasSample(currMeasNr) = currMeasSample;
         % Update the satellites elevations vector
         if fixValid
-            satElev = abs(navSolutions.el(:, currMeasNr)');
+            epochElev = abs(navSolutions.el(:, currMeasNr)');
+            finiteElev = isfinite(epochElev);
+            satElev(finiteElev) = epochElev(finiteElev);
         end
 
         %=== Correct pseudorange measurements for clocks errors ===========

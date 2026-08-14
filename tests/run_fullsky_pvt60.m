@@ -53,7 +53,8 @@ function report = run_fullsky_pvt60(varargin)
     cf = acqResults.carrFreq(:);
     pm = acqResults.peakMetric(:);
     n = min(numel(satList), numel(cf));
-    acqMask = isfinite(cf(1:n)) & (cf(1:n) ~= 0);
+    acqMaskAll = acquisitionDetectedMask(acqResults);
+    acqMask = acqMaskAll(1:n).';
     acquiredPrn = satList(acqMask);
     fprintf('Acq %.1f s: %d / %d PRNs\n', stage.acq_s, numel(acquiredPrn), n);
     for k = find(acqMask).'
@@ -165,6 +166,7 @@ function acqOut = sliceAcq(acqIn, fullList, keepPrn)
     n = numel(keepPrn);
     acqOut = struct();
     acqOut.carrFreq = zeros(1, n);
+    acqOut.detected = true(1, n);
     acqOut.codePhase = zeros(1, n);
     acqOut.codePhaseAbs = zeros(1, n);
     acqOut.peakMetric = zeros(1, n);

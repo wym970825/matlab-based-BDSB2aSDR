@@ -11,6 +11,8 @@ function results = run_B2a(varargin)
 %   'doNavigation'  (default true)
 %   'doPlot'        (default true)
 %   'saveResults'   (default true)
+%   'saveTrackingFigures' (default false)
+%   'openBaiduMap'  (default: use settings.plotBaiduMap)
 %   'tag'           result file tag string
 
     setupPaths();
@@ -21,6 +23,8 @@ function results = run_B2a(varargin)
     addParameter(p, 'doNavigation', true, @islogical);
     addParameter(p, 'doPlot', true, @islogical);
     addParameter(p, 'saveResults', true, @islogical);
+    addParameter(p, 'saveTrackingFigures', false, @islogical);
+    addParameter(p, 'openBaiduMap', [], @(x) isempty(x) || islogical(x));
     addParameter(p, 'tag', string(datetime('now'), 'yyMMdd_HHmmss'), @(x)ischar(x)||isstring(x));
     parse(p, varargin{:});
     pipe = p.Results;
@@ -43,7 +47,7 @@ function results = run_B2a(varargin)
             'skipAcquisition requires preloaded acqResults (not implemented).');
     end
 
-    if ~any(isfinite(acqResults.carrFreq) & (acqResults.carrFreq ~= 0))
+    if ~any(acquisitionDetectedMask(acqResults))
         disp('No GNSS signals detected — stopping.');
         results = struct('settings', settings, 'acqResults', acqResults, ...
             'trackResults', [], 'navSolutions', [], 'eph', []);
@@ -87,7 +91,19 @@ function results = run_B2a(varargin)
             activeIdx = find(arrayfun(@(c) c.PRN ~= 0, channel));
             if ~isempty(activeIdx)
                 try
-                    plotTracking_NHSMKF(activeIdx, trackResults, settings);
+                    isLongTracking = settings.msToProcess > 60000;
+                    if isLongTracking || pipe.saveTrackingFigures
+                        trkFigDir = fullfile(settings.resultRoot, ...
+                            sprintf('trkfigs_%s', pipe.tag));
+                        exportTrackingFiguresSequential(trackResults, ...
+                            settings, trkFigDir, ...
+                            'ChannelIndices', activeIdx, ...
+                            'Visible', false);
+                    else
+                        % Short interactive diagnostics retain the detailed
+                        % legacy plots; long runs always use bounded export.
+                        plotTracking_NHSMKF(activeIdx, trackResults, settings);
+                    end
                 catch ME
                     warning('run_B2a:PlotTrack', 'plotTracking failed: %s', ME.message);
                 end
@@ -96,10 +112,12 @@ function results = run_B2a(varargin)
         if ~isempty(navSolutions)
             try
                 figDir = fullfile(settings.resultRoot, sprintf('navfigs_%s', pipe.tag));
-                plotNavPost(navSolutions, settings, ...
+                navFigs = plotNavPost(navSolutions, settings, ...
                     'saveDir', figDir, ...
-                    'doLegacy', true, ...
-                    'openBaiduMap', []);  % honor settings.plotBaiduMap
+                    'doLegacy', false, ...
+                    'openBaiduMap', pipe.openBaiduMap);
+                closeFigureStruct(navFigs);
+                drawnow;
             catch ME
                 warning('run_B2a:PlotNav', 'plotNavPost failed: %s', ME.message);
                 try
@@ -121,11 +139,25 @@ function results = run_B2a(varargin)
 
     if pipe.saveResults
         outFile = fullfile(settings.resultRoot, sprintf('run_B2a_%s.mat', pipe.tag));
-        save(outFile, 'results', '-v7.3');
+        diskPayload.results = results;
+        diskPayload.results.trackResults = trackResultsToStruct(trackResults);
+        save(outFile, '-struct', 'diskPayload', '-v7.3');
+        clear diskPayload
         fprintf('Saved results: %s\n', outFile);
     end
 
     fprintf('========== Processing complete ==========\n');
+end
+
+function closeFigureStruct(figs)
+    if ~isstruct(figs), return; end
+    names = fieldnames(figs);
+    for idx = 1:numel(names)
+        fig = figs.(names{idx});
+        if ~isempty(fig) && all(isgraphics(fig))
+            close(fig);
+        end
+    end
 end
 
 function safeClose(fid)

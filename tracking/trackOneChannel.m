@@ -1,4 +1,4 @@
-function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
+function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFileOnly)
 %TRACKONECHANNEL Single-channel B2a tracking (private IF file handle).
 %
 %   [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
@@ -18,6 +18,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
 
     if nargin < 3 || isempty(c_i), c_i = 1; end
     if nargin < 4 || isempty(TrkedNr), TrkedNr = 1; end
+    if nargin < 5 || isempty(returnFileOnly), returnFileOnly = false; end
 
     finalTRes = TrackResults2.empty;
     if isempty(ch) || ~isfield(ch, 'PRN') || ch.PRN == 0
@@ -132,6 +133,39 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     fllInitRemain_ms = 0;
     prevNhStateStr = "";
     fllCorrHz = 0;
+    fllMaxAccumHz = inf;
+    fllMinCNoForAidDbHz = -inf;
+    pllMaxNcoHz = inf;
+    pllSaturationHoldMs = inf;
+    pllSaturationNcoRatio = 0.95;
+    pllSaturationRatio = 1;
+    pllSaturationCnt = 0;
+    pllSaturationWindowCnt = 0;
+    if isfield(settings, 'FLL') && isstruct(settings.FLL)
+        if isfield(settings.FLL, 'maxAccumHz') && ...
+                isfinite(settings.FLL.maxAccumHz)
+            fllMaxAccumHz = max(0, settings.FLL.maxAccumHz);
+        end
+        if isfield(settings.FLL, 'minCNoForAidDbHz') && ...
+                isfinite(settings.FLL.minCNoForAidDbHz)
+            fllMinCNoForAidDbHz = settings.FLL.minCNoForAidDbHz;
+        end
+    end
+    if isfield(settings, 'pllMaxNcoHz') && isfinite(settings.pllMaxNcoHz)
+        pllMaxNcoHz = max(0, settings.pllMaxNcoHz);
+    end
+    if isfield(settings, 'pllSaturationHoldMs') && ...
+            isfinite(settings.pllSaturationHoldMs)
+        pllSaturationHoldMs = max(1, round(settings.pllSaturationHoldMs));
+    end
+    if isfield(settings, 'pllSaturationNcoRatio') && ...
+            isfinite(settings.pllSaturationNcoRatio)
+        pllSaturationNcoRatio = min(max(settings.pllSaturationNcoRatio, 0), 1);
+    end
+    if isfield(settings, 'pllSaturationRatio') && ...
+            isfinite(settings.pllSaturationRatio)
+        pllSaturationRatio = min(max(settings.pllSaturationRatio, 0), 1);
+    end
 
     % --- optional carrier Kalman filter (1ms base tick) ---
     if useKF, kf = CarrierKF2(settings); else, kf = [];end
@@ -169,7 +203,12 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
 
     % Update in version 5, Feb-2026
     % re-acquisition
-    REACQbuff_size = Nin1ms*(settings.fineNoncoh + 1); % +1ms to allow fine stage window without wrap
+    coarseAcqMs = 1;
+    if isfield(settings, 'coarseNoncohMs') && ~isempty(settings.coarseNoncohMs)
+        coarseAcqMs = max(1, round(settings.coarseNoncohMs));
+    end
+    reacqBufferMs = max(coarseAcqMs, round(settings.fineNoncoh) + 1);
+    REACQbuff_size = Nin1ms * reacqBufferMs;
     REACQbuff = zeros(REACQbuff_size,1);
     REACQbuff_pointer = 0;
     % REACQbuff_isfull = false;
@@ -177,7 +216,13 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     % Update in Version 4, Feb-2026
     % Pulse blanker (PB) initialization
     if settings.EnablePB
-        pb = pulseBlanker(settings);
+        pbSettings = settings;
+        if isfield(settings, 'PB_settings') && ...
+                isfield(settings.PB_settings, 'Th_static_tracking')
+            pbSettings.PB_settings.Th_static = ...
+                settings.PB_settings.Th_static_tracking;
+        end
+        pb = pulseBlanker(pbSettings);
     end
     % force Aiding after acq
     forceInitAiding = true;
@@ -358,8 +403,8 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                         'REACQ acquisition failed for PRN %d: %s', ch.PRN, ME.message);
                     acqResults = struct('carrFreq', NaN);
                 end
-                if isfield(acqResults, 'carrFreq') && any(isfinite(acqResults.carrFreq(:))) ...
-                        && any(acqResults.carrFreq(:) ~= 0)
+                if isfield(acqResults, 'carrFreq') && ...
+                        any(acquisitionDetectedMask(acqResults))
                     % --- REACQ -> tracking handover ---
                     % 1) Ensure preRun2 PRN mapping is correct in STA='SING'
                     tmpSettings = settings;
@@ -406,6 +451,8 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                     pdiCnt = 0;
                     lastCarrError = 0.0;
                     lastCarrNco = 0.0;
+                    pllSaturationCnt = 0;
+                    pllSaturationWindowCnt = 0;
                     CNoValue = zeros(1,3);
                     tempCNoValue = -ones(1,3);
                     scintTrackAge_ms = 0;
@@ -575,6 +622,10 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
         %             pull-in (1ms update)
         % - LONG    : use PILOT prompt (NH wiped) with long coherent 
         %             accumulation
+        carrNco = lastCarrNco;
+        carrError = lastCarrError;
+        pf1 = nhsm.pf(1);
+        pllUpdated = false;
         if strncmpi(nhsm.STATE,'LONG',4)
             Pp_nhsm = nh*Pp;
             PDIcarr_ms = settings.longCoh_ms;
@@ -603,11 +654,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                     dCarrError  = d2CarrError + carrError * pf2 + dCarrError;
                     carrNco     = dCarrError + carrError * pf1;
                 end
-
-                lastCarrNco = carrNco;
-
-                % Modify carrier freq based on NCO command
-                carrFreq = carrFreqBasis + carrNco;
+                pllUpdated = true;
 
                 % reset coherent accumulator
                 PsumPilot = 0 + 1i*0;
@@ -638,14 +685,26 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                 dCarrError  = d2CarrError + carrError * pf2 + dCarrError;
                 carrNco     = dCarrError + carrError * pf1;
             end
-
-            lastCarrNco = carrNco;
-            carrFreq = carrFreqBasis + carrNco;
+            pllUpdated = true;
 
             % reset coherent accumulator
             PsumPilot = 0 + 1i*0;
             pdiCnt = 0;
         end
+
+        if pllUpdated
+            [carrNco, dCarrError, d2CarrError] = ...
+                limitCarrierNco(carrNco, dCarrError, d2CarrError, ...
+                carrError, pf1, pllMaxNcoHz);
+            lastCarrNco = carrNco;
+        end
+        carrFreq = carrFreqBasis + carrNco;
+        pllNearLimit = isfinite(pllMaxNcoHz) && pllMaxNcoHz > 0 && ...
+            abs(lastCarrNco) >= pllSaturationNcoRatio * pllMaxNcoHz;
+        if pllNearLimit
+            pllSaturationCnt = pllSaturationCnt + 1;
+        end
+        pllSaturationWindowCnt = pllSaturationWindowCnt + 1;
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Find DLL error and update code NCO -------------------------
@@ -728,6 +787,14 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
             cnoDrive = [tempCNoValue(3), tempCNoValue(3)];
         end
         nhsm.update(Pp_nhsm, cnoDrive, loopCnt, fllErrHz_filt);
+        if pllSaturationWindowCnt >= pllSaturationHoldMs
+            saturationOccupancy = pllSaturationCnt / pllSaturationWindowCnt;
+            if saturationOccupancy >= pllSaturationRatio
+                nhsm.requestReacq();
+            end
+            pllSaturationCnt = 0;
+            pllSaturationWindowCnt = 0;
+        end
         % --- NEW: forced INIT aiding window after acquisition/reacquisition ---
         if strlength(prevNhStateStr)==0
             prevNhStateStr = string(nhsm.STATE);
@@ -841,15 +908,24 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
                 isfield(settings.FLL,'aidingEnable') &&...
                 settings.FLL.aidingEnable;
             if doTraditionalAid 
+                cnoAllowsAid = ~isfinite(kf_lastCN0dB) || ...
+                    kf_lastCN0dB >= fllMinCNoForAidDbHz;
                 if strcmpi(nhsm.STATE,'LONG_FLL')
                     gain = settings.FLL.gainLong;
                 else
                     gain = settings.FLL.gainInit;
                 end
-                fllCorrHz = gain * fllErrHz_filt;
-                maxCorr = settings.FLL.maxCorrHz;
-                fllCorrHz = max(min(fllCorrHz, maxCorr), -maxCorr); % Bound correction
-                carrFreqBasis = carrFreqBasis + fllCorrHz; 
+                if cnoAllowsAid
+                    requestedCorrHz = gain * fllErrHz_filt;
+                    maxCorr = settings.FLL.maxCorrHz;
+                    requestedCorrHz = max(min(requestedCorrHz, maxCorr), -maxCorr);
+                    nextBasis = carrFreqBasis + requestedCorrHz;
+                    basisMin = ch.acquiredFreq - fllMaxAccumHz;
+                    basisMax = ch.acquiredFreq + fllMaxAccumHz;
+                    nextBasis = max(min(nextBasis, basisMax), basisMin);
+                    fllCorrHz = nextBasis - carrFreqBasis;
+                    carrFreqBasis = nextBasis;
+                end
                 carrFreq = carrFreqBasis + lastCarrNco;
             end
         end
@@ -889,8 +965,15 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
         TRfileName = sprintf('Trk_Prn_%02d_%03d.mat', targetPRN, file_ii);
         TRfileName = fullfile(settings.tempdataSvPth, TRfileName);
         if exist(TRfileName, "file")
-            tmpTrk = load(TRfileName);
-            tmpTrk = tmpTrk.obj;
+            stored = load(TRfileName);
+            if isfield(stored, 'chunk')
+                tmpTrk = stored.chunk;
+            elseif isfield(stored, 'obj')
+                tmpTrk = stored.obj;
+            else
+                error('tracking2_v6_fix2:BadChunk', ...
+                    'No chunk or legacy obj variable in %s.', TRfileName);
+            end
             succeed = finalTRes.copyFROM(tmpTrk, I_start);
             % Advance by actual sample length, not stale capacity (BUG-6)
             I_start = I_start + numel(tmpTrk.I_P);
@@ -935,9 +1018,13 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     % so far so good, try to save the result
     TRfileName = fullfile(settings.tempdataSvPth,sprintf('Trk_Prn_%02d_final.mat', targetPRN));
     try
-        save(TRfileName,"finalTRes",'-mat');
+        payload.finalTRes = finalTRes.toStruct();
+        save(TRfileName, '-struct', 'payload', '-v7.3');
+        clear payload
         succeed = true;
-    catch
+    catch ME
+        warning('tracking2_v6_fix2:FinalSaveFailed', ...
+            'Failed to save PRN %d final result: %s', ch.PRN, ME.message);
         succeed = false;
     end
     if ~succeed
@@ -945,6 +1032,12 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr)
     end
 
     fprintf('Channel %d PRN %02d tracking results collected.\n', c_i, ch.PRN);
+
+    if returnFileOnly
+        % Avoid serializing a million-sample handle object from a process
+        % worker. The client reloads this struct-backed MAT file instead.
+        finalTRes = string(TRfileName);
+    end
 
 
 end % trackOneChannel
@@ -966,6 +1059,19 @@ if e > 0.25
 elseif e < -0.25
     e = e + 0.5;
 end
+end
+
+function [nco, firstIntegrator, secondIntegrator, saturated] = ...
+        limitCarrierNco(nco, firstIntegrator, secondIntegrator, ...
+        phaseError, proportionalGain, maxNcoHz)
+% Bound the PLL residual while leaving acquisition/FLL Doppler in the basis.
+saturated = isfinite(maxNcoHz) && abs(nco) > maxNcoHz;
+if ~saturated
+    return;
+end
+nco = sign(nco) * maxNcoHz;
+firstIntegrator = nco - phaseError * proportionalGain;
+secondIntegrator = 0;
 end
 
 function [b, a] = designFLL2ndLPF(fc_Hz, zeta, fs_Hz)

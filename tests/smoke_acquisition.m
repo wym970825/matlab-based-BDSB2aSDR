@@ -43,7 +43,8 @@ function smoke = smoke_acquisition(varargin)
     satList = settings.acqSatelliteList;
     cf = acqResults.carrFreq(:).';
     pm = acqResults.peakMetric(:).';
-    acquired = isfinite(cf) & (cf ~= 0);
+    acquired = acquisitionDetectedMask(acqResults);
+    acquired = acquired(:).';
 
     fprintf('\n=== Acquisition smoke report (%.1f s) ===\n', elapsed);
     fprintf('Searched %d PRNs, acquired %d\n', numel(satList), nnz(acquired));

@@ -26,8 +26,9 @@ The default search is non-recursive *.bin. Useful options:
         'ContinueOnError', true, ...
         'OpenBaiduBrowser', false);
 
-Each input gets a numbered output directory with an independent config,
-temp directory, result MAT files, figures, NMEA, and report.json. The batch
+Each input gets a numbered output directory with an independent `ui_config.json`,
+temp directory, result MAT files, `figures/AcqResult`, `figures/trkResult`,
+`figures/navResult`, NMEA, and report.json. The batch
 root contains batch_report.json and batch_report.mat, updated after every
 file so completed progress remains visible after a later failure.
 

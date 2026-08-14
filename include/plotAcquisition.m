@@ -46,15 +46,13 @@ if numel(pm1) ~= n || numel(pm2) ~= n
     n = minLen;
 end
 
-% Detect acquired satellites (robust to legacy carrFreq==0 and new NaN)
-acqMask = false(1,n);
+% Detect acquired satellites (explicit flag for new results, legacy fallback).
 if isfield(acqResults, 'carrFreq') && ~isempty(acqResults.carrFreq)
-    cf = acqResults.carrFreq(:).';
-    if numel(cf) ~= n
-        cf = cf(1:n);
-    end
-    % robust: acquired if carrFreq is finite and non-zero (or at least not NaN)
-    acqMask = isfinite(cf) & (cf ~= 0);
+    detected = acquisitionDetectedMask(acqResults);
+    detected = detected(:).';
+    acqMask = false(1, n);
+    nDetected = min(n, numel(detected));
+    acqMask(1:nDetected) = detected(1:nDetected);
 else
     % fallback: use peakMetric finite as weak indicator
     acqMask = isfinite(pm1);

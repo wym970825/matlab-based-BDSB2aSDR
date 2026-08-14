@@ -14,6 +14,8 @@ function report = runNavigationFromTracking(resultPath, varargin)
 %   OutputFile   NMEA path (default <runDir>/pvt.nmea)
 %   SaveResults  Save <runDir>/navigation_replay.mat (default true)
 %   ForceNmea    Export even when settings.nmea.enable=false (default true)
+%   PlotNavigation Export and close offline PVT figures (default true)
+%   FigureDir    Figure directory (default <runDir>/figures/navResult)
 
     setupPaths();
     p = inputParser;
@@ -24,6 +26,9 @@ function report = runNavigationFromTracking(resultPath, varargin)
         (isstring(x) && isscalar(x)));
     addParameter(p, 'SaveResults', true, @localLogicalScalar);
     addParameter(p, 'ForceNmea', true, @localLogicalScalar);
+    addParameter(p, 'PlotNavigation', true, @localLogicalScalar);
+    addParameter(p, 'FigureDir', '', @(x) ischar(x) || ...
+        (isstring(x) && isscalar(x)));
     parse(p, varargin{:});
     opt = p.Results;
 
@@ -76,6 +81,28 @@ function report = runNavigationFromTracking(resultPath, varargin)
 
     validFix = isfinite(navSolutions.latitude) & ...
         isfinite(navSolutions.longitude);
+    [usageTable, usageSummary] = localUsageStatistics( ...
+        trackResults, navSolutions, eph);
+    usageCsv = fullfile(runDir, 'navigation_satellite_usage.csv');
+    writetable(usageTable, usageCsv);
+
+    figureDir = char(opt.FigureDir);
+    if isempty(figureDir)
+        figureDir = fullfile(runDir, 'figures', 'navResult');
+    elseif isempty(fileparts(figureDir))
+        figureDir = fullfile(runDir, figureDir);
+    end
+    figureFiles = {};
+    if logical(opt.PlotNavigation) && any(validFix)
+        settings.plotNavPost = true;
+        settings.plotBaiduMap = false;
+        navFigs = plotNavPost(navSolutions, settings, ...
+            'saveDir', figureDir, 'doLegacy', false, ...
+            'openBaiduMap', false, 'openBaiduBrowser', false);
+        figureFiles = localFigureFiles(figureDir);
+        localCloseFigureStruct(navFigs);
+        drawnow;
+    end
     report = struct();
     report.ok = true;
     report.runDir = runDir;
@@ -88,13 +115,18 @@ function report = runNavigationFromTracking(resultPath, varargin)
     report.nFixes = nnz(validFix);
     report.nmeaPath = outputFile;
     report.resultsPath = '';
+    report.figureDir = figureDir;
+    report.figureFiles = figureFiles;
+    report.usageCsv = usageCsv;
+    report.usage = usageSummary;
     report.elapsedSeconds = toc(started);
 
     if opt.SaveResults
         report.resultsPath = fullfile(runDir, 'navigation_replay.mat');
         generatedAt = datetime('now');
         save(report.resultsPath, 'navSolutions', 'eph', 'settings', ...
-            'prns', 'trackFiles', 'generatedAt', '-v7.3');
+            'prns', 'trackFiles', 'usageTable', 'usageSummary', ...
+            'generatedAt', '-v7.3');
     end
     fprintf('Navigation replay complete: fixes=%d/%d, NMEA=%s\n', ...
         report.nFixes, report.nEpochs, report.nmeaPath);
@@ -118,6 +150,11 @@ function [runDir, tempDir] = localResolveDirectories(resultPath)
     elseif isfolder(fullfile(path, 'temp'))
         runDir = path;
         tempDir = fullfile(path, 'temp');
+    elseif ~isempty(dir(fullfile(path, 'Trk_Prn_*_final.mat')))
+        % Interrupted/manual runs may use a timestamped directory directly
+        % below results/temp. Keep all replay outputs next to those finals.
+        runDir = path;
+        tempDir = path;
     else
         error('runNavigationFromTracking:MissingTemp', ...
             'No temp directory was found below %s.', path);
@@ -151,7 +188,9 @@ function [trackResults, prns, paths] = localLoadTracking(tempDir)
     for idx = 1:numel(files)
         paths{idx} = fullfile(files(idx).folder, files(idx).name);
         loaded = load(paths{idx});
-        channels{idx} = localFindChannel(loaded, prns(idx), paths{idx});
+        channel = localFindChannel(loaded, prns(idx), paths{idx});
+        channels{idx} = localNavigationChannel(channel);
+        clear loaded channel
         channels{idx}.PRN = prns(idx);
         channels{idx}.status = 'T';
     end
@@ -195,6 +234,62 @@ function output = localNormalizeStructs(channels)
         channels{idx} = orderfields(channels{idx}, fields);
     end
     output = [channels{:}];
+end
+
+function channel = localNavigationChannel(channel)
+    if isobject(channel) && ismethod(channel, 'toStruct')
+        channel = channel.toStruct();
+    end
+    keepNames = {'PRN', 'status', 'Nsize', 'CNoInterval', 'I_P', ...
+        'trk_state', 'reacqLoopCnt', 'absoluteSample', 'codeFreq', ...
+        'remCodePhase', 'B2a_CNo'};
+    output = struct();
+    for idx = 1:numel(keepNames)
+        name = keepNames{idx};
+        if isfield(channel, name), output.(name) = channel.(name); end
+    end
+    n = localValidTrackingLength(output);
+    cnoInterval = 200;
+    if isfield(output, 'CNoInterval') && isfinite(output.CNoInterval) ...
+            && output.CNoInterval > 0
+        cnoInterval = max(1, round(output.CNoInterval));
+    end
+    oneMsFields = {'I_P', 'trk_state', 'absoluteSample', 'codeFreq', ...
+        'remCodePhase'};
+    for idx = 1:numel(oneMsFields)
+        name = oneMsFields{idx};
+        if isfield(output, name) && isvector(output.(name))
+            value = output.(name);
+            output.(name) = value(1:min(n, numel(value)));
+        end
+    end
+    if isfield(output, 'B2a_CNo') && isvector(output.B2a_CNo)
+        nCno = min(numel(output.B2a_CNo), max(1, ceil(n / cnoInterval)));
+        output.B2a_CNo = output.B2a_CNo(1:nCno);
+    end
+    if isfield(output, 'reacqLoopCnt')
+        output.reacqLoopCnt = output.reacqLoopCnt( ...
+            isfinite(output.reacqLoopCnt) & output.reacqLoopCnt <= n);
+    end
+    output.Nsize = n;
+    channel = output;
+end
+
+function n = localValidTrackingLength(channel)
+    fields = {'absoluteSample', 'I_P', 'codeFreq', 'remCodePhase'};
+    last = [];
+    for idx = 1:numel(fields)
+        name = fields{idx};
+        if ~isfield(channel, name), continue; end
+        value = channel.(name);
+        lastFinite = find(isfinite(value), 1, 'last');
+        if ~isempty(lastFinite), last(end + 1) = lastFinite; end %#ok<AGROW>
+    end
+    if isempty(last)
+        n = max(1, floor(double(channel.Nsize)));
+    else
+        n = min(last);
+    end
 end
 
 function [settings, sources] = localLoadSettings(runDir, supplied)
@@ -354,4 +449,97 @@ end
 
 function localDeleteTemp(path)
     if isfile(path), delete(path); end
+end
+
+function [usageTable, summary] = localUsageStatistics(trackResults, nav, eph)
+    prns = double([trackResults.PRN]);
+    nPrn = numel(prns);
+    trackedSamples = zeros(nPrn, 1);
+    towSegments = zeros(nPrn, 1);
+    hasMsg10 = false(nPrn, 1);
+    hasMsg11 = false(nPrn, 1);
+    hasMsg30To34 = false(nPrn, 1);
+    candidateEpochs = zeros(nPrn, 1);
+    validPseudorangeEpochs = zeros(nPrn, 1);
+    raimUsedEpochs = zeros(nPrn, 1);
+    raimExcludedEpochs = zeros(nPrn, 1);
+
+    for idx = 1:nPrn
+        trackedSamples(idx) = localValidTrackingLength(trackResults(idx));
+        if isfield(nav, 'towSeg') && idx <= numel(nav.towSeg)
+            towSegments(idx) = numel(nav.towSeg{idx});
+        end
+        prn = prns(idx);
+        if prn >= 1 && prn <= numel(eph) && isfield(eph(prn), 'idValid')
+            ids = double(eph(prn).idValid(:).');
+            if ~isempty(ids), hasMsg10(idx) = ids(1) == 10; end
+            if numel(ids) >= 2, hasMsg11(idx) = ids(2) == 11; end
+            if numel(ids) >= 3
+                hasMsg30To34(idx) = any(ismember(ids(3:min(7, end)), 30:34));
+            end
+        end
+        if isfield(nav, 'PRN') && idx <= size(nav.PRN, 1)
+            candidateEpochs(idx) = nnz(nav.PRN(idx, :) == prn);
+        end
+        if isfield(nav, 'validPrn')
+            validPseudorangeEpochs(idx) = localCountCellPrn(nav.validPrn, prn);
+        end
+        if isfield(nav, 'raim') && isfield(nav.raim, 'usedPRN')
+            accepted = true(1, numel(nav.raim.usedPRN));
+            if isfield(nav.raim, 'passed')
+                nAccepted = min(numel(accepted), numel(nav.raim.passed));
+                accepted(1:nAccepted) = logical(nav.raim.passed(1:nAccepted));
+            end
+            raimUsedEpochs(idx) = localCountCellPrn( ...
+                nav.raim.usedPRN, prn, accepted);
+        end
+        if isfield(nav, 'raim') && isfield(nav.raim, 'excludedPRN')
+            raimExcludedEpochs(idx) = localCountCellPrn( ...
+                nav.raim.excludedPRN, prn);
+        end
+    end
+
+    ephemerisComplete = hasMsg10 & hasMsg11 & hasMsg30To34;
+    usageTable = table(prns(:), trackedSamples, towSegments, hasMsg10, ...
+        hasMsg11, hasMsg30To34, ephemerisComplete, candidateEpochs, ...
+        validPseudorangeEpochs, raimUsedEpochs, raimExcludedEpochs, ...
+        'VariableNames', {'PRN', 'TrackedSamples', 'TowSegments', ...
+        'HasMessage10', 'HasMessage11', 'HasMessage30To34', ...
+        'EphemerisComplete', 'CandidateEpochs', ...
+        'ValidPseudorangeEpochs', 'RaimUsedEpochs', ...
+        'RaimExcludedEpochs'});
+
+    summary = struct();
+    summary.trackedPrns = prns;
+    summary.towPrns = prns(towSegments > 0);
+    summary.ephemerisPrns = prns(ephemerisComplete);
+    summary.pseudorangePrns = prns(validPseudorangeEpochs > 0);
+    summary.raimUsedPrns = prns(raimUsedEpochs > 0);
+    summary.raimExcludedPrns = prns(raimExcludedEpochs > 0);
+end
+
+function count = localCountCellPrn(values, prn, mask)
+    if nargin < 3, mask = true(1, numel(values)); end
+    count = 0;
+    for idx = 1:numel(values)
+        if idx <= numel(mask) && mask(idx) && ~isempty(values{idx}) ...
+                && any(double(values{idx}(:)) == prn)
+            count = count + 1;
+        end
+    end
+end
+
+function files = localFigureFiles(figureDir)
+    entries = dir(fullfile(figureDir, '*.png'));
+    files = arrayfun(@(x) fullfile(x.folder, x.name), entries, ...
+        'UniformOutput', false);
+end
+
+function localCloseFigureStruct(figs)
+    if ~isstruct(figs), return; end
+    names = fieldnames(figs);
+    for idx = 1:numel(names)
+        fig = figs.(names{idx});
+        if ~isempty(fig) && all(isgraphics(fig)), close(fig); end
+    end
 end

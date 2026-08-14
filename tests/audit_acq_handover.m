@@ -34,12 +34,17 @@ function audit_acq_handover()
     fprintf('=== Acq buffer audit ===\n');
     fprintf('buffer length = %d samples (%.3f ms)\n', Nbuf, 1e3*Nbuf/fs);
     fprintf('samplesPerCode = %d  fineNoncoh = %d\n', samplesPerCode, fineNcoh);
-    fprintf('coarse uses TAIL 1ms of buffer (SoftGNSS-style)\n');
+    coarseMs = 1;
+    if isfield(settings, 'coarseNoncohMs')
+        coarseMs = settings.coarseNoncohMs;
+    end
+    fprintf('coarse noncoherently combines the TAIL %d ms of buffer\n', coarseMs);
     fprintf('track seek uses skipNumberOfBytes + (codePhase-1)*bytes  [NO + (Nbuf-samplesPerCode)]\n\n');
 
     % Acquired indices in ar (length 60, list 1:60)
     list = 1:60;
-    acqMask = isfinite(ar.carrFreq(:)) & (ar.carrFreq(:) ~= 0);
+    acqMask = acquisitionDetectedMask(ar);
+    acqMask = acqMask(:);
 
     fprintf('%-5s %8s %8s %10s %10s %10s %10s %10s %8s\n', ...
         'PRN', 'peak', 'CN0pAcq', 'P_tail', 'P_head', 'P_seek0', 'ratioT/H', 'ratioT/S', 'LONG%');

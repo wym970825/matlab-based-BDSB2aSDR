@@ -58,7 +58,8 @@ function report = run_fullsky_lock_diag(varargin)
         cf(end+1:numel(satList)) = NaN;
         pm(end+1:numel(satList)) = NaN;
     end
-    acquiredMask = isfinite(cf(1:numel(satList))) & (cf(1:numel(satList)) ~= 0);
+    acquiredMask = acquisitionDetectedMask(acqResults);
+    acquiredMask = acquiredMask(1:numel(satList)).';
     acquiredPrn = satList(acquiredMask);
     nAcq = numel(acquiredPrn);
 
@@ -169,6 +170,7 @@ function acqOut = sliceAcqResults(acqIn, fullList, keepPrn)
     n = numel(keepPrn);
     acqOut = struct();
     acqOut.carrFreq = zeros(1, n);
+    acqOut.detected = true(1, n);
     acqOut.codePhase = zeros(1, n);
     acqOut.codePhaseAbs = zeros(1, n);
     acqOut.peakMetric = zeros(1, n);

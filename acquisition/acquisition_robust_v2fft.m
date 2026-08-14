@@ -1,454 +1,405 @@
-
 function acqResults = acquisition_robust_v2fft(longSignal, settings, varargin)
-%ACQUISITION  BDS B2a acquisition (coarse 1ms + fine N ms pilot/Weil)
+%ACQUISITION_ROBUST_V2FFT Robust BDS B2a coarse/fine acquisition.
 %
-% 改进点：
-%   1) 粗捕获：1ms切 8 段(0.125ms)，单次翻转组合；显式 Nfft
-%   2) 精捕获：在 bestFineFreq / bestWeilPhase 下，对码相位做局部逐样点精细化（至少到码片/样点）
-%
-% Required:
-%   longSignal  - raw IF / IQ samples, must contain >= N ms data at least
-%   settings    - struct, receiver settings
-%
-% Optional name-value:
-%   'STA'  - 'INIT' (default) or 'SING'
-%   'PRN'  - scalar PRN, required if STA='SING'
-%
-% Output fields (per searched PRN):
-%   carrFreq     - estimated carrier frequency (Hz, at IF domain)
-%   codePhase    - code phase (sample index, 1-based)
-%   peakMetric   - CPPR-like metric
-%   peakMetric2  - CPPM-like metric
-%   weilPhase    - estimated Weil(100) start phase [0..99] (fine stage)
-%   polarityRef  - +1/-1 from pilot coherent sum (for ±pi / polarity ref)
-%   coarseMode   - which flip-mode won in coarse stage (0..7)
+% Coarse acquisition noncoherently combines independent 1-ms searches.
+% Within each millisecond, the pilot/data sign can either remain constant
+% or change once at the primary-code boundary. This handles any number of
+% secondary/data-symbol changes across a multi-ms observation without a
+% combinatorial sign search.
 
-% -----------------------------
-% Parse inputs
-% -----------------------------
+    p = inputParser;
+    p.FunctionName = mfilename;
+    addRequired(p, 'longSignal', ...
+        @(x) isnumeric(x) && isvector(x) && ~isempty(x));
+    addRequired(p, 'settings', @isstruct);
+    addParameter(p, 'STA', 'INIT', @(x) ischar(x) || isstring(x));
+    addParameter(p, 'ISSILENT', false, @islogical);
+    addParameter(p, 'USEFFT', false, @islogical);
+    addParameter(p, 'SHOWFFT', false, @islogical);
+    addParameter(p, 'PRN', [], ...
+        @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
+    parse(p, longSignal, settings, varargin{:});
 
-p = inputParser;
-p.FunctionName = mfilename;
+    sta = upper(string(p.Results.STA));
+    isSilent = p.Results.ISSILENT;
+    satList = localSatelliteList(sta, p.Results.PRN, settings, isSilent);
 
-addRequired(p, 'longSignal', @(x) isnumeric(x) && isvector(x) && ~isempty(x));
-addRequired(p, 'settings',   @(x) isstruct(x));
+    fs = settings.samplingFreq;
+    codeFreq = settings.codeFreqBasis;
+    codeLen = settings.codeLength;
+    samplesPerCode = round(fs / (codeFreq / codeLen));
+    fineMs = max(1, round(settings.fineNoncoh));
+    coarseMs = max(1, round(localSetting(settings, 'coarseNoncohMs', 5)));
+    nSeg = max(2, round(localSetting(settings, 'acqFlipSegments', 8)));
+    fineStepHz = localSetting(settings, 'fineStepHz', 2);
+    fineInitialHalfHz = localSetting(settings, ...
+        'fineSearchInitialHalfSpanHz', max(100, settings.acqStep));
+    fineMaxHalfHz = localSetting(settings, ...
+        'fineSearchMaxHalfSpanHz', max(1000, 10 * settings.acqStep));
 
-addParameter(p, 'STA', 'INIT', @(s) ischar(s) || isstring(s));
-addParameter(p, 'ISSILENT', false, @(x) islogical(x));
-addParameter(p, 'USEFFT', false, @(x) islogical(x));
-addParameter(p, 'SHOWFFT', false, @(x) islogical(x));
-addParameter(p, 'PRN', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
+    requiredSamples = max(coarseMs * samplesPerCode, ...
+        (fineMs + 1) * samplesPerCode);
+    if numel(longSignal) < requiredSamples
+        error('acquisition_robust:InputTooShort', ...
+            'Need at least %d samples (%d complete ms).', ...
+            requiredSamples, ceil(requiredSamples / samplesPerCode));
+    end
+    longSignal = longSignal(:).';
 
-parse(p, longSignal, settings, varargin{:});
-STA = upper(string(p.Results.STA));
-PRN = p.Results.PRN;
-issilent = p.Results.ISSILENT;
-usefft = p.Results.USEFFT;
-showfft = p.Results.SHOWFFT;
-
-% -----------------------------
-% STA logic (INIT / SING)
-% -----------------------------
-if STA == "INIT"
-    if isfield(settings,'acqSatelliteList') && ~isempty(settings.acqSatelliteList)
-        SatList = settings.acqSatelliteList;
+    if isfield(settings, 'fineCodeSearchHalfWinSamples')
+        halfWin = max(0, round(settings.fineCodeSearchHalfWinSamples));
     else
-        error('acquisition_robust:MissingAcqList',...
-            'settings.acqSatelliteList is empty but STA==''INIT''.');
+        halfWin = max(1, round(2 * fs / codeFreq));
     end
 
-elseif STA == "SING"
-    if ~isempty(PRN)
-        candidatePRN = PRN;
-    elseif isfield(settings,'acqSatelliteList') && ~isempty(settings.acqSatelliteList)
-        candidatePRN = settings.acqSatelliteList;
-    else
-        error('acquisition_robust:MissingPRN', ...
-            'STA="SING" requires a scalar PRN via ''PRN'' or settings.acqSatelliteList.');
-    end
+    ts = 1 / fs;
+    phase1ms = (0:samplesPerCode - 1) * 2 * pi * ts;
+    phaseFine = (0:fineMs * samplesPerCode - 1) * 2 * pi * ts;
+    numFreqBins = round(2 * settings.acqSearchBand / settings.acqStep) + 1;
+    freqBins = settings.IF - settings.acqSearchBand + ...
+        (0:numFreqBins - 1) * settings.acqStep;
 
-    if isstring(candidatePRN) || ischar(candidatePRN)
-        candidatePRN = str2num(candidatePRN); %#ok<ST2NM>
-    end
-    if ~isnumeric(candidatePRN) || isempty(candidatePRN)
-        error('acquisition_robust:InvalidPRN','Provided PRN invalid/empty.');
-    end
-    if numel(candidatePRN) ~= 1
-        error('acquisition_robust:PRNMustBeScalar','PRN must be scalar in SING.');
-    end
-    candidatePRN = double(candidatePRN);
-    if candidatePRN <= 0 || candidatePRN ~= floor(candidatePRN)
-        error('acquisition_robust:InvalidPRNValue','PRN must be positive integer.');
-    end
-    if isfield(settings,'acqSatelliteList') && ~isempty(settings.acqSatelliteList) && ...
-            ~ismember(candidatePRN, settings.acqSatelliteList)
-        warning('acquisition_robust:PRNNotInSettings',...
-            'PRN=%d not in settings.acqSatelliteList; proceeding anyway.', candidatePRN);
-    end
+    [segmentMask, flipSigns, flipModeByTau] = ...
+        localFlipModel(samplesPerCode, nSeg);
+    coarseStart = numel(longSignal) - coarseMs * samplesPerCode + 1;
+    coarseBlocks = reshape(longSignal(coarseStart:end), ...
+        samplesPerCode, coarseMs).';
 
-    SatList = candidatePRN;
-    if ~ issilent
-        fprintf('Single acquisition mode: PRN(%d) selected.\n', candidatePRN);
-    end
-else
-    error('acquisition_robust:InvalidSTA','Invalid STA: %s (use INIT or SING).', STA);
-end
+    nSat = numel(satList);
+    acqResults = localEmptyResults(nSat, coarseMs);
+    acqResults.coarseNoncohMs = coarseMs;
+    acqResults.satelliteList = satList;
 
-% -----------------------------
-% Basic parameters
-% -----------------------------
-fs = settings.samplingFreq;
-ts = 1/fs;
-fineNcoh = settings.fineNoncoh;
+    for satIdx = 1:nSat
+        prn = satList(satIdx);
+        pilotChips = generateB2aPilotCode(prn, settings);
+        dataChips = generateB2aDataCode(prn);
+        localPilot = localSampleCode(pilotChips, samplesPerCode, fs, codeFreq);
+        localData = localSampleCode(dataChips, samplesPerCode, fs, codeFreq);
+        pilotFft = conj(fft(localPilot, samplesPerCode));
+        dataFft = conj(fft(localData, samplesPerCode));
 
-codeFreq = settings.codeFreqBasis;   % 10.23e6
-codeLen  = settings.codeLength;      % 10230
+        coarseSurface = zeros(samplesPerCode, numFreqBins);
+        pilotModes = ones(coarseMs, numFreqBins, 'uint8');
+        dataModes = ones(coarseMs, numFreqBins, 'uint8');
 
-samplesPerCode = round(fs / (codeFreq / codeLen));  % samples in 1ms
+        for freqIdx = 1:numFreqBins
+            accumulatedPower = zeros(1, samplesPerCode);
+            selectedPilot = ones(coarseMs, samplesPerCode, 'uint8');
+            selectedData = ones(coarseMs, samplesPerCode, 'uint8');
+            carrier = exp(-1i * freqBins(freqIdx) * phase1ms);
 
-if isfield(settings,'fineCodeSearchHalfWinSamples')
-    halfWin = settings.fineCodeSearchHalfWinSamples;
-else
-    samplesPerChip = fs / codeFreq;
-    halfWin = max(1, round(2*samplesPerChip)); % default: +/-2 chips
-end
-delta_arr = -halfWin:halfWin;
-
-% Nfft = 2^(1+nextpow2(samplesPerCode));
-Nfft = samplesPerCode;
-
-if length(longSignal) < fineNcoh*samplesPerCode
-    error('Input signal is too short: need at least %d ms (%d samples).', ...
-        fineNcoh, fineNcoh*samplesPerCode);
-end
-
-% 粗捕获用尾部 1ms（保持你原结构）
-coarseStart = max(1, length(longSignal) - samplesPerCode + 1);
-sig1ms  = longSignal(coarseStart : coarseStart + samplesPerCode - 1);
-
-phasePoints1ms   = (0:samplesPerCode-1) * 2*pi*ts;
-phasePoints_N_ms = (0:fineNcoh*samplesPerCode-1) * 2*pi*ts;
-
-% -----------------------------
-% Noise branch: build a "virtual PRN" local code for rough noise power
-% -----------------------------
-% rng(64);
-noiseChips = sign(randn(1, codeLen));
-noiseChips(noiseChips==0) = 1;
-codeIdx1ms = floor((ts*(1:samplesPerCode)) / (1/codeFreq));
-noiseLocal1ms = noiseChips(rem(codeIdx1ms, codeLen) + 1);
-noiseLocal1ms = noiseLocal1ms(:).';
-
-% -----------------------------
-% Doppler bins (coarse)
-% -----------------------------
-numFrqBins = round(settings.acqSearchBand * 2 / settings.acqStep) + 1;
-frqBins = zeros(1, numFrqBins);
-
-% -----------------------------
-% N-slice masks
-% -----------------------------
-nSeg = 8;
-segEdges = round(linspace(0, samplesPerCode, nSeg+1)); % 0..N
-segMask = false(nSeg, samplesPerCode);
-for k = 1:nSeg
-    a = segEdges(k)+1;
-    b = segEdges(k+1);
-    segMask(k, a:b) = true;
-end
-
-% -----------------------------
-% single-flip sign patterns (mode=0..7)
-%   mode=0: + + + + + + + +
-%   mode=i: +...+ -...-  (flip after slice i)
-% -----------------------------
-flipSigns = ones(nSeg);            % [8 x 8]
-for mode = 2:nSeg                         % mode index 2..8 => report 1..7
-    flipSigns(mode, mode:nSeg) = -1;
-end
-
-% -----------------------------
-% Init output struct
-% -----------------------------
-nSat = length(SatList);
-acqResults.carrFreq     = nan(1, nSat);
-acqResults.codePhase    = nan(1, nSat);
-acqResults.codePhaseAbs = nan(1, nSat);
-acqResults.peakMetric   = nan(1, nSat);
-acqResults.peakMetric2  = nan(1, nSat);
-acqResults.weilPhase    = nan(1, nSat);
-acqResults.polarityRef  = nan(1, nSat);
-acqResults.coarseMode   = nan(2, nSat);
-acqResults.noisePow     = nan(1, nSat);
-acqResults.CN0_pilot    = nan(1, nSat);
-
-% -----------------------------
-% Main acquisition loop
-% -----------------------------
-for si = 1:nSat
-    tempRes = nan(Nfft,numFrqBins);
-    prn = SatList(si);
-
-    % --- Local pilot main-code (1ms sampled)
-    pilotChips = generateB2aPilotCode(prn, settings); % length=10230, +/-1
-    dataChips = generateB2aDataCode(prn); % length=10230, +/-1
-    codeIdx1ms = floor((ts*(1:samplesPerCode)) / (1/codeFreq));
-    localPilot1ms = pilotChips(rem(codeIdx1ms, codeLen) + 1);
-    localdata1ms = dataChips(rem(codeIdx1ms, codeLen) + 1);
-    localPilotFFT = conj(fft(localPilot1ms, Nfft));
-    localDataFFT = conj(fft(localdata1ms, Nfft));
-
-    EachModeRec = zeros(numFrqBins, 2);
-
-    % -------------------------
-    % Coarse: 1ms, 8-slice PCPS with single-flip model
-    % -------------------------
-    for bi = 1:numFrqBins
-        frqBins(bi) = settings.IF - settings.acqSearchBand + settings.acqStep*(bi-1);
-
-        carr = exp(-1i * frqBins(bi) * phasePoints1ms);
-        bb = sig1ms(:).' .* carr; % complex baseband
-
-        % C(k,tau): each slice PCPS
-        C_pilot = zeros(nSeg, samplesPerCode);
-        C_data = zeros(nSeg, samplesPerCode);
-        for k = 1:nSeg
-            xk = zeros(1, samplesPerCode);
-            xk(segMask(k,:)) = bb(segMask(k,:));
-            Xk = fft(xk, Nfft);
-            tmp_pilot = ifft(Xk .* localPilotFFT, Nfft);
-            tmp_data = ifft(Xk .* localDataFFT, Nfft);
-            C_pilot(k,:) = tmp_pilot(1:samplesPerCode);
-            C_data(k,:)  = tmp_data(1:samplesPerCode);
-        end
-
-        % Combine: S(mode,tau) = sum_k flipSigns(mode,k)*C(k,tau)
-        S_pilot = flipSigns * C_pilot;
-        S_data = flipSigns * C_data;
-
-        % pilot branch -- 0
-        [bestPerMode0, tauIdx0] = max(abs(S_pilot).^2, [], 2);
-        modefit0 = abs(1/2 + (tauIdx0/samplesPerCode*nSeg) - (1:nSeg).')<=0.5;
-        modefit0(1) = true; modefit0 = find(modefit0);
-        bestPerMode0 = bestPerMode0(modefit0);
-        % data branch -- 1
-        [bestPerMode1, tauIdx1] = max(abs(S_data).^2, [], 2);
-        modefit1 = abs(1/2 + (tauIdx1/samplesPerCode*nSeg) - (1:nSeg).')<=0.5;
-        modefit1(1) = true; modefit1 = find(modefit1);
-        bestPerMode1 = bestPerMode1(modefit1);
-        
-        [~, bestMode0Ind] = max(bestPerMode0);
-        [~, bestMode1Ind] = max(bestPerMode1);
-        bestMode0 = modefit0(bestMode0Ind);
-        bestMode1 = modefit1(bestMode1Ind);
-
-        EachModeRec(bi, :) = [bestMode0,bestMode1];
-        tempRes(:,bi) = 0.5 * (abs(S_pilot(bestMode0,:).').^2 +...
-            abs(S_data(bestMode1,:).').^2);
-
-    end
-
-    % Pick best bin
-    [peakPerFB, bestTauPerFB] = max(tempRes,[],1);
-    [peakCoarse, bestFBIndex] = max(peakPerFB,[],2);
-
-    coarseCodePhase = bestTauPerFB(bestFBIndex);
-    coarseMode      = EachModeRec(bestFBIndex,:);
-    coarseCarrFreq  = frqBins(bestFBIndex);
-    bestFB_Corr     = tempRes(:,bestFBIndex);
-
-    % CPPR-like metric: second peak excluding +/- ~2 chips
-    samplesPerChip2 = ceil(fs / codeFreq)*2;
-    exclude1 = coarseCodePhase - samplesPerChip2;
-    exclude2 = coarseCodePhase + samplesPerChip2;
-    validIdx = true(1, samplesPerCode);
-    if exclude1>0 && exclude2<samplesPerCode
-        validIdx(exclude1 : exclude2) = false;
-    elseif exclude1<0
-        validIdx(samplesPerCode + exclude1 : samplesPerCode) = false;
-        validIdx(1:exclude2) = false;
-    elseif exclude2>=samplesPerCode
-        validIdx(exclude1:samplesPerCode) = false;
-        validIdx(1:exclude2-samplesPerCode) = false;
-    end
-
-    secondPeak = max(bestFB_Corr(validIdx));
-    meanMetric = mean(bestFB_Corr(validIdx));
-
-    acqResults.peakMetric(si)  = peakCoarse / secondPeak;
-    acqResults.peakMetric2(si) = peakCoarse / meanMetric;
-    acqResults.coarseMode(:,si)  = coarseMode.';
-
-    if acqResults.peakMetric(si) < settings.acqThreshold && ~issilent
-        fprintf('PRN(%02d) acquisition failed.\n', prn);
-        continue;
-    end
-
-    if ~ issilent
-        fprintf('PRN(%02d) coarse acquired: codePhase=%d, f=%.1fHz, mode=%1d and %1d for pilot and data\n', ...
-            prn, coarseCodePhase, coarseCarrFreq, coarseMode(1), coarseMode(2));
-    end
-    % -------------------------
-    % Fine: N ms, pilot + Weil(100) enumeration + fine Doppler
-    % -------------------------
-    % Fine window ends at tail 1ms, aligned to coarseCodePhase
-    edAbs = length(longSignal)-samplesPerCode + (coarseCodePhase-1);
-    stAbs = edAbs-fineNcoh*samplesPerCode+1;
-    sigFine = longSignal(stAbs:edAbs).';
-    if iscolumn(sigFine); sigFine = sigFine.'; end
-
-    fineSpan = max(100, 2 * settings.acqStep); % Hz
-    fineStep = 2;                      % Hz
-    fineBins = (coarseCarrFreq - fineSpan/2) : fineStep : (coarseCarrFreq + fineSpan/2);
-
-    localPilot1ms = localPilot1ms(:).'; % row
-    localdata1ms = localdata1ms(:).';
-    weil100 = GenWeil(prn);             % length 100, +/-1
-    
-    if usefft
-        Nfft2 = 2^(nextpow2(samplesPerCode)+3);
-        FFT_acc = zeros(1,Nfft2);
-        Faxis = (0:Nfft2-1)*(fs/Nfft2) - fs/2;
-        for slice_ii = 1:fineNcoh
-            shortsig = sigFine(((slice_ii-1) * samplesPerCode) + 1:...
-                slice_ii* samplesPerCode);
-            FFT_acc = FFT_acc + ...
-                abs(fftshift(fft(shortsig .* (localdata1ms + 1j*localPilot1ms),Nfft2)));
-        end
-        ind = abs(Faxis)<1e4;
-        Faxis = Faxis(ind);
-        FFT_acc = FFT_acc(ind);
-        [Fmax,ind] = max(FFT_acc);
-        fmax = Faxis(ind);
-
-        if showfft
-            figure('Units','centimeters','Position',[3,3,10,10],'Color','w');
-            ax = newplot(); plot(ax, Faxis, FFT_acc,'-*','Color','b')
-            hold on;scatter(ax, fmax,Fmax,20,'r','o');
-            text(ax,fmax,Fmax,sprintf('f_m = %.1f(Hz)',fmax),'FontName',...
-                'Time New Roman', 'FontSize',9,'HorizontalAlignment','left');
-            grid on; set(gca,'Yscale','log','YLim',[min(FFT_acc),Fmax]);
-        end
-        
-        fRange = [min([coarseCarrFreq,fmax]) - fineSpan/2,...
-            max([coarseCarrFreq,fmax]) + - fineSpan/2];
-        fineBins = (fRange(1) - fineSpan/2) : fineStep :...
-            (fRange(2) + fineSpan/2);
-    end
-    
-    bestZ = -inf;
-    bestFineFreq  = coarseCarrFreq;
-    bestWeilPhase = 0;
-    bestPsum      = 0;
-    bestNoisePow  = NaN;
-
-    En = zeros(length(fineBins),1);
-    for fb = 1:length(fineBins)
-        f = fineBins(fb);
-        carr_long = exp(-1i * f * phasePoints_N_ms);
-        bb_long = sigFine .* carr_long;
-
-        % per-ms pilot correlator outputs
-        P = zeros(1,fineNcoh);
-        for l = 1:fineNcoh
-            idx = (l-1)*samplesPerCode + (1:samplesPerCode);
-            P(l) = sum(bb_long(idx) .* localPilot1ms);
-        end
-        En(fb) = sqrt(sum(abs(P).^2)/fineNcoh);
-
-        % noise branch
-        Pnoise = zeros(1,fineNcoh);
-        for l = 1:fineNcoh
-            idx = (l-1)*samplesPerCode + (1:samplesPerCode);
-            Pnoise(l) = sum(bb_long(idx) .* noiseLocal1ms);
-        end
-        NoisePowFb = mean(abs(Pnoise).^2);
-
-        % Weil start phase
-        for s = 0:99
-            w = zeros(1,fineNcoh);
-            for l = 1:fineNcoh
-                w(l) = weil100(mod(s + (l-1), 100) + 1);
+            for msIdx = 1:coarseMs
+                baseband = coarseBlocks(msIdx, :) .* carrier;
+                [pilotPower, selectedPilot(msIdx, :)] = ...
+                    localFlipRobustPower(baseband, pilotFft, segmentMask, ...
+                    flipSigns, flipModeByTau);
+                [dataPower, selectedData(msIdx, :)] = ...
+                    localFlipRobustPower(baseband, dataFft, segmentMask, ...
+                    flipSigns, flipModeByTau);
+                accumulatedPower = accumulatedPower + ...
+                    0.5 * (pilotPower + dataPower);
             end
-            Psum = sum(w .* P);
-            Z = abs(Psum);
-            if Z > bestZ
-                bestZ = Z;
-                bestFineFreq  = f;
-                bestWeilPhase = s;
-                bestPsum      = Psum;
-                bestNoisePow  = NoisePowFb;
+
+            coarseSurface(:, freqIdx) = accumulatedPower.';
+            [~, tauAtFreq] = max(accumulatedPower);
+            pilotModes(:, freqIdx) = selectedPilot(:, tauAtFreq);
+            dataModes(:, freqIdx) = selectedData(:, tauAtFreq);
+        end
+
+        [peakByFreq, tauByFreq] = max(coarseSurface, [], 1);
+        [peakCoarse, bestFreqIdx] = max(peakByFreq);
+        coarseCodePhase = tauByFreq(bestFreqIdx);
+        coarseFreq = freqBins(bestFreqIdx);
+        bestCurve = coarseSurface(:, bestFreqIdx).';
+        [peakMetric, meanMetric] = localPeakMetrics( ...
+            bestCurve, coarseCodePhase, fs, codeFreq);
+
+        acqResults.peakMetric(satIdx) = peakMetric;
+        acqResults.peakMetric2(satIdx) = meanMetric;
+        acqResults.coarsePeak(satIdx) = peakCoarse;
+        acqResults.coarseFreq(satIdx) = coarseFreq;
+        modes = [pilotModes(:, bestFreqIdx).'; dataModes(:, bestFreqIdx).'];
+        acqResults.coarseModes{satIdx} = modes;
+        acqResults.coarseMode(:, satIdx) = modes(:, end);
+
+        passed = isfinite(peakMetric) && peakMetric >= settings.acqThreshold;
+        if ~passed
+            if ~isSilent
+                fprintf('PRN(%02d) acquisition failed (metric %.3f < %.3f).\n', ...
+                    prn, peakMetric, settings.acqThreshold);
             end
+            continue;
         end
-    end
 
-    % Polarity reference: force real(Psum) >= 0
-    polarityRef = 1;
-    if real(bestPsum) < 0
-        polarityRef = -1;
-        bestPsum = -bestPsum;
-    end
-
-    % -------------------------
-    % Fine code-phase refinement (sample-level)
-    % -------------------------
-    idxWeil = mod((0:fineNcoh-1) + bestWeilPhase, 100) + 1;
-    w = weil100(idxWeil);
-
-    carr_best = exp(-1i * bestFineFreq * phasePoints_N_ms);
-    bb_best = sigFine .* carr_best;
-
-    bestDelta = 0;
-    bestMag = -inf;
-
-    % tempSig = nan(size(bb_best));
-    for d_ii = 1:2*halfWin+1
-        delta = delta_arr(d_ii);
-        pilotShift = circshift(localPilot1ms, -delta); % 循环左移d_ii，相当于右移sig d_ii
-        Pdelta = 0;
-        for l = 1:fineNcoh
-            idx = (l-1)*samplesPerCode + (1:samplesPerCode);
-            P_l = sum(bb_best(idx) .* pilotShift);
-            Pdelta = Pdelta + w(l) * P_l;
-            % tempSig(idx) = w(l) * sigFine(idx) .* pilotShift;
+        if ~isSilent
+            fprintf(['PRN(%02d) coarse acquired: codePhase=%d, f=%.1fHz, ' ...
+                'metric=%.3f, %d-ms modes(P/D)=%s/%s\n'], ...
+                prn, coarseCodePhase, coarseFreq, peakMetric, coarseMs, ...
+                mat2str(modes(1, :)), mat2str(modes(2, :)));
         end
-        mag = abs(Pdelta);
-        temp(d_ii) = mag;
-        if mag > bestMag
-            bestMag = mag;
-            bestDelta = delta;
+
+        % Use complete primary-code periods immediately before the boundary
+        % detected in the final 1-ms block.
+        boundaryAbs = numel(longSignal) - samplesPerCode + coarseCodePhase;
+        fineStart = boundaryAbs - fineMs * samplesPerCode;
+        fineEnd = boundaryAbs - 1;
+        if fineStart < 1 || fineEnd > numel(longSignal)
+            error('acquisition_robust:FineWindowOutOfRange', ...
+                'Fine window [%d,%d] is outside input [1,%d].', ...
+                fineStart, fineEnd, numel(longSignal));
         end
-    end
+        fineSignal = longSignal(fineStart:fineEnd);
 
-    refinedCodePhase = coarseCodePhase + bestDelta;
-    refinedCodePhase = mod(refinedCodePhase-1, samplesPerCode) + 1; % in a range of (1...N)
+        weil100 = GenWeil(prn);
+        noiseLocal = localNoiseCode(codeLen, samplesPerCode, ...
+            fs, codeFreq, prn);
+        fine = localFineSearch(fineSignal, localPilot, noiseLocal, ...
+            weil100, phaseFine, coarseFreq, fineStepHz, ...
+            fineInitialHalfHz, fineMaxHalfHz);
 
-    % -------------------------
-    % CN0 estimate (optional)
-    % -------------------------
-    N = fineNcoh;
-    Tcoh = 1e-3;
-    Ttotal = N * Tcoh;
-    NoisePow = bestNoisePow;
-    acqResults.noisePow(si) = NoisePow;
-    if ~isnan(NoisePow) && NoisePow > 0
-        SNRlin = (abs(bestPsum)^2 - N*NoisePow) / (N*NoisePow);
-        SNRlin = max(SNRlin, 1e-12);
-        acqResults.CN0_pilot(si) = 10*log10(SNRlin / Ttotal);
-    else
-        acqResults.CN0_pilot(si) = nan;
-    end
+        deltaValues = -halfWin:halfWin;
+        weilIndices = mod((0:fineMs - 1) + fine.weilPhase, 100) + 1;
+        weilSigns = weil100(weilIndices);
+        carrier = exp(-1i * fine.frequency * phaseFine);
+        fineBaseband = fineSignal .* carrier;
+        refineMagnitude = zeros(size(deltaValues));
+        for deltaIdx = 1:numel(deltaValues)
+            shiftedPilot = circshift(localPilot, -deltaValues(deltaIdx));
+            coherent = 0;
+            for msIdx = 1:fineMs
+                idx = (msIdx - 1) * samplesPerCode + (1:samplesPerCode);
+                coherent = coherent + weilSigns(msIdx) * ...
+                    sum(fineBaseband(idx) .* shiftedPilot);
+            end
+            refineMagnitude(deltaIdx) = abs(coherent);
+        end
+        [~, bestDeltaIdx] = max(refineMagnitude);
+        bestDelta = deltaValues(bestDeltaIdx);
+        refinedCodePhase = mod(coarseCodePhase + bestDelta - 1, ...
+            samplesPerCode) + 1;
 
-    % Store results
-    % 注意：这里沿用你函数原先的符号习惯（如果你 IF/多普勒定义不同，自行统一）
-    acqResults.carrFreq(si)     = -bestFineFreq;
-    acqResults.codePhase(si)    = refinedCodePhase;
-    acqResults.codePhaseAbs(si) = edAbs + 1 - bestDelta;
-    acqResults.weilPhase(si)    = bestWeilPhase;
-    acqResults.polarityRef(si)  = polarityRef;
-    if ~issilent
-        fprintf('PRN(%02d) fine: f=%.1fHz, fineCodePhase=%d, WeilPhase=%d, polarityRef=%+d\n', ...
-            prn, bestFineFreq, refinedCodePhase, bestWeilPhase, polarityRef);
+        polarityRef = 1;
+        bestPsum = fine.coherentSum;
+        if real(bestPsum) < 0
+            polarityRef = -1;
+            bestPsum = -bestPsum;
+        end
+
+        noisePower = fine.noisePower;
+        totalTime = fineMs * 1e-3;
+        if isfinite(noisePower) && noisePower > 0
+            snrLinear = (abs(bestPsum)^2 - fineMs * noisePower) / ...
+                (fineMs * noisePower);
+            snrLinear = max(snrLinear, 1e-12);
+            acqResults.CN0_pilot(satIdx) = ...
+                10 * log10(snrLinear / totalTime);
+        end
+
+        acqResults.carrFreq(satIdx) = -fine.frequency;
+        acqResults.detected(satIdx) = true;
+        acqResults.codePhase(satIdx) = refinedCodePhase;
+        acqResults.codePhaseAbs(satIdx) = boundaryAbs - bestDelta;
+        acqResults.weilPhase(satIdx) = fine.weilPhase;
+        acqResults.polarityRef(satIdx) = polarityRef;
+        acqResults.noisePow(satIdx) = noisePower;
+        acqResults.fineAtSearchLimit(satIdx) = fine.atSearchLimit;
+        acqResults.fineSearchHalfSpanHz(satIdx) = fine.halfSpanHz;
+
+        if ~isSilent
+            fprintf(['PRN(%02d) fine: f=%.1fHz, codePhase=%d, ' ...
+                'WeilPhase=%d, polarityRef=%+d, span=+/-%.0fHz\n'], ...
+                prn, fine.frequency, refinedCodePhase, fine.weilPhase, ...
+                polarityRef, fine.halfSpanHz);
+        end
     end
 end
+
+function satList = localSatelliteList(sta, prn, settings, isSilent)
+    if sta == "INIT"
+        if ~isfield(settings, 'acqSatelliteList') || ...
+                isempty(settings.acqSatelliteList)
+            error('acquisition_robust:MissingAcqList', ...
+                'settings.acqSatelliteList is required for INIT.');
+        end
+        satList = double(settings.acqSatelliteList(:).');
+        return;
+    end
+    if sta ~= "SING"
+        error('acquisition_robust:InvalidSTA', ...
+            'STA must be INIT or SING, not %s.', sta);
+    end
+    if isempty(prn)
+        if isfield(settings, 'acqSatelliteList') && ...
+                isscalar(settings.acqSatelliteList)
+            prn = settings.acqSatelliteList;
+        else
+            error('acquisition_robust:MissingPRN', ...
+                'SING requires a scalar PRN.');
+        end
+    end
+    validateattributes(prn, {'numeric'}, ...
+        {'scalar', 'integer', 'positive', '<=', 63});
+    satList = double(prn);
+    if ~isSilent
+        fprintf('Single acquisition mode: PRN(%d) selected.\n', prn);
+    end
+end
+
+function results = localEmptyResults(nSat, coarseMs)
+    results = struct();
+    names = {'carrFreq', 'codePhase', 'codePhaseAbs', 'peakMetric', ...
+        'peakMetric2', 'weilPhase', 'polarityRef', 'noisePow', ...
+        'CN0_pilot', 'coarsePeak', 'coarseFreq', ...
+        'fineSearchHalfSpanHz'};
+    for idx = 1:numel(names)
+        results.(names{idx}) = nan(1, nSat);
+    end
+    results.coarseMode = nan(2, nSat);
+    results.coarseModes = repmat({nan(2, coarseMs)}, 1, nSat);
+    results.detected = false(1, nSat);
+    results.fineAtSearchLimit = false(1, nSat);
+end
+
+function value = localSetting(settings, name, defaultValue)
+    value = defaultValue;
+    if isfield(settings, name) && ~isempty(settings.(name)) && ...
+            isfinite(settings.(name))
+        value = double(settings.(name));
+    end
+end
+
+function sampled = localSampleCode(chips, nSamples, fs, codeFreq)
+    % Preserve the established acquisition coordinate convention. A
+    % dedicated acquisition-to-tracking sample-origin test should precede
+    % any change to this indexing rule.
+    indices = floor(((1:nSamples) / fs) * codeFreq);
+    sampled = chips(mod(indices, numel(chips)) + 1);
+    sampled = sampled(:).';
+end
+
+function [mask, signs, flipModeByTau] = localFlipModel(nSamples, nSeg)
+    edges = round(linspace(0, nSamples, nSeg + 1));
+    mask = false(nSeg, nSamples);
+    for idx = 1:nSeg
+        mask(idx, edges(idx) + 1:edges(idx + 1)) = true;
+    end
+    signs = ones(nSeg);
+    for mode = 2:nSeg
+        signs(mode, mode:nSeg) = -1;
+    end
+
+    internalEdges = edges(2:end - 1);
+    offsets = 0:nSamples - 1;
+    flipModeByTau = ones(1, nSamples, 'uint8');
+    if isempty(internalEdges), return; end
+    [distance, nearest] = min(abs(offsets(:) - internalEdges), [], 2);
+    endpointDistance = min(offsets(:), nSamples - offsets(:));
+    useInternalFlip = distance < endpointDistance;
+    flipModeByTau(useInternalFlip) = uint8(nearest(useInternalFlip) + 1);
+end
+
+function [power, selectedMode] = localFlipRobustPower( ...
+        baseband, localFft, segmentMask, flipSigns, flipModeByTau)
+    [nSeg, nSamples] = size(segmentMask);
+    correlations = complex(zeros(nSeg, nSamples));
+    for segment = 1:nSeg
+        sliced = zeros(1, nSamples);
+        sliced(segmentMask(segment, :)) = ...
+            baseband(segmentMask(segment, :));
+        correlations(segment, :) = ifft(fft(sliced) .* localFft);
+    end
+    combined = flipSigns * correlations;
+    noFlipPower = abs(combined(1, :)).^2;
+    columns = 1:nSamples;
+    flipLinear = sub2ind(size(combined), double(flipModeByTau), columns);
+    flipPower = abs(combined(flipLinear)).^2;
+    useFlip = flipModeByTau > 1 & flipPower > noFlipPower;
+    power = noFlipPower;
+    power(useFlip) = flipPower(useFlip);
+    selectedMode = ones(1, nSamples, 'uint8');
+    selectedMode(useFlip) = flipModeByTau(useFlip);
+end
+
+function [peakRatio, peakToMean] = localPeakMetrics( ...
+        curve, peakIndex, fs, codeFreq)
+    nSamples = numel(curve);
+    indices = 1:nSamples;
+    circularDistance = abs(indices - peakIndex);
+    circularDistance = min(circularDistance, nSamples - circularDistance);
+    exclusion = max(1, 2 * ceil(fs / codeFreq));
+    valid = circularDistance > exclusion & isfinite(curve);
+    if ~any(valid) || ~isfinite(curve(peakIndex))
+        peakRatio = NaN;
+        peakToMean = NaN;
+        return;
+    end
+    secondPeak = max(curve(valid));
+    noiseMean = mean(curve(valid));
+    if secondPeak <= 0 || noiseMean <= 0
+        peakRatio = NaN;
+        peakToMean = NaN;
+        return;
+    end
+    peakRatio = curve(peakIndex) / secondPeak;
+    peakToMean = curve(peakIndex) / noiseMean;
+end
+
+function noiseCode = localNoiseCode(codeLen, nSamples, fs, codeFreq, prn)
+    stream = RandStream('mt19937ar', 'Seed', 6400 + round(prn));
+    chips = sign(randn(stream, 1, codeLen));
+    chips(chips == 0) = 1;
+    noiseCode = localSampleCode(chips, nSamples, fs, codeFreq);
+end
+
+function fine = localFineSearch(signal, localPilot, noiseLocal, weil100, ...
+        phase, coarseFreq, stepHz, initialHalfHz, maxHalfHz)
+    nSamples = numel(localPilot);
+    nMs = numel(signal) / nSamples;
+    weilMatrix = zeros(100, nMs);
+    for phaseIdx = 0:99
+        weilMatrix(phaseIdx + 1, :) = weil100( ...
+            mod(phaseIdx + (0:nMs - 1), 100) + 1);
+    end
+
+    initialHalfHz = max(stepHz, abs(initialHalfHz));
+    maxHalfHz = max(initialHalfHz, abs(maxHalfHz));
+    halfSpan = initialHalfHz;
+    while true
+        bins = (coarseFreq - halfSpan):stepHz:(coarseFreq + halfSpan);
+        z = -inf(size(bins));
+        phaseByBin = zeros(size(bins));
+        sumByBin = complex(zeros(size(bins)));
+        noiseByBin = nan(size(bins));
+        for binIdx = 1:numel(bins)
+            baseband = signal .* exp(-1i * bins(binIdx) * phase);
+            prompt = complex(zeros(1, nMs));
+            noisePrompt = complex(zeros(1, nMs));
+            for msIdx = 1:nMs
+                idx = (msIdx - 1) * nSamples + (1:nSamples);
+                prompt(msIdx) = sum(baseband(idx) .* localPilot);
+                noisePrompt(msIdx) = sum(baseband(idx) .* noiseLocal);
+            end
+            coherentByPhase = weilMatrix * prompt.';
+            [z(binIdx), phaseIndex] = max(abs(coherentByPhase));
+            phaseByBin(binIdx) = phaseIndex - 1;
+            sumByBin(binIdx) = coherentByPhase(phaseIndex);
+            noiseByBin(binIdx) = mean(abs(noisePrompt).^2);
+        end
+        [~, bestBin] = max(z);
+        onEdge = bestBin <= 2 || bestBin >= numel(bins) - 1;
+        if ~onEdge || halfSpan >= maxHalfHz
+            atLimit = onEdge && halfSpan >= maxHalfHz;
+            break;
+        end
+        halfSpan = min(maxHalfHz, halfSpan + initialHalfHz);
+    end
+
+    fine = struct( ...
+        'frequency', bins(bestBin), ...
+        'weilPhase', phaseByBin(bestBin), ...
+        'coherentSum', sumByBin(bestBin), ...
+        'noisePower', noiseByBin(bestBin), ...
+        'halfSpanHz', halfSpan, ...
+        'atSearchLimit', atLimit);
 end

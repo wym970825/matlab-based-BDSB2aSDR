@@ -33,6 +33,9 @@ classdef NH_stateMachine < handle
 
         % CN0 threshold for REACQ
         CN0_Th double = 35; % default; overwritten from settings
+        CN0_recoverTh double = 38;
+        CN0_updateInterval double = 200;
+        CN0_reacqConsecutive double = 1;
 
         % Filter coefficient storage (PF_arr struct)
         PF_arr struct
@@ -65,6 +68,7 @@ classdef NH_stateMachine < handle
         % FLL hysteresis counters
         fllCntOn  double = 0;
         fllCntOff double = 0;
+        lowCnoCnt double = 0;
     end
 
     methods
@@ -100,6 +104,21 @@ classdef NH_stateMachine < handle
                 obj.CN0_Th = settings.TrkCN0Th;
             else
                 obj.CN0_Th = 35;
+            end
+            obj.CN0_recoverTh = obj.CN0_Th + 3;
+            if isfield(settings, 'reacqCnoRecoverDbHz') && ...
+                    isfinite(settings.reacqCnoRecoverDbHz)
+                obj.CN0_recoverTh = max(obj.CN0_Th, ...
+                    settings.reacqCnoRecoverDbHz);
+            end
+            if isfield(settings, 'CNoInterval') && ...
+                    isfinite(settings.CNoInterval)
+                obj.CN0_updateInterval = max(1, round(settings.CNoInterval));
+            end
+            if isfield(settings, 'reacqCnoConsecutive') && ...
+                    isfinite(settings.reacqCnoConsecutive)
+                obj.CN0_reacqConsecutive = max(1, ...
+                    round(settings.reacqCnoConsecutive));
             end
 
             % --- FLL config (optional) ---
@@ -236,6 +255,7 @@ classdef NH_stateMachine < handle
             obj.LastFllErrHz = 0;
             obj.fllCntOn  = 0;
             obj.fllCntOff = 0;
+            obj.lowCnoCnt = 0;
         end
 
 
@@ -276,8 +296,9 @@ classdef NH_stateMachine < handle
                         obj.pf = obj.PF_arr.pf_pull;
                     end
 
-                    % REACQ trigger (only when CN0 valid)
-                    if any(obj.LastCN0 < obj.CN0_Th) && all(obj.LastCN0 > 0)
+                    % REACQ uses independent C/N0 updates, not repeated 1-ms
+                    % reads of the same 200-ms estimate.
+                    if obj.updateLowCnoCounter(loopCnt)
                         obj.enterReacq();
                         return;
                     end
@@ -327,8 +348,7 @@ classdef NH_stateMachine < handle
                     obj.T_long = obj.T_long + 1;
                     obj.pf = obj.PF_arr.pf_long;
 
-                    % REACQ trigger
-                    if any(obj.LastCN0 < obj.CN0_Th) && all(obj.LastCN0 > 0)
+                    if obj.updateLowCnoCounter(loopCnt)
                         obj.enterReacq();
                         return;
                     end
@@ -339,6 +359,7 @@ classdef NH_stateMachine < handle
                         obj.T_long = 0;
                         obj.LastCN0 = [-1,-1];
                         obj.fllCntOn = 0; obj.fllCntOff = 0;
+                        obj.lowCnoCnt = 0;
                     else
                         % FLL-aided substate switching (optional)
                         if obj.FLL_enable
@@ -383,6 +404,7 @@ classdef NH_stateMachine < handle
                         obj.pf = obj.PF_arr.pf_pull;
                         obj.clearBuffer();
                         obj.fllCntOn = 0; obj.fllCntOff = 0;
+                        obj.lowCnoCnt = 0;
                     end
 
                 otherwise
@@ -403,6 +425,7 @@ classdef NH_stateMachine < handle
                     obj.T_long = 0;
                     obj.LastCN0 = [-1, -1];
                     obj.pf = obj.PF_arr.pf_long;
+                    obj.lowCnoCnt = 0;
                 else
                     % failure -> INIT
                     obj.NH_estimator.WeilPhase = -1;
@@ -412,6 +435,7 @@ classdef NH_stateMachine < handle
                     obj.T_init = 0;
                     obj.LastCN0 = [-1, -1];
                     obj.pf = obj.PF_arr.pf_pull;
+                    obj.lowCnoCnt = 0;
                 end
 
                 obj.clearBuffer();
@@ -447,6 +471,13 @@ classdef NH_stateMachine < handle
             end
         end
 
+        function requestReacq(obj)
+            %REQUESTREACQ Enter re-acquisition on an external lock alarm.
+            if ~strcmpi(obj.STATE, 'REACQ')
+                obj.enterReacq();
+            end
+        end
+
     end % methods
 
 
@@ -460,6 +491,21 @@ classdef NH_stateMachine < handle
             obj.N_att = 0;
             obj.pf = obj.PF_arr.pf_pull;
             obj.fllCntOn = 0; obj.fllCntOff = 0;
+            obj.lowCnoCnt = 0;
+        end
+
+        function trigger = updateLowCnoCounter(obj, loopCnt)
+            trigger = false;
+            if mod(loopCnt, obj.CN0_updateInterval) ~= 0 || ...
+                    ~all(isfinite(obj.LastCN0)) || ~all(obj.LastCN0 > 0)
+                return;
+            end
+            if any(obj.LastCN0 < obj.CN0_Th)
+                obj.lowCnoCnt = obj.lowCnoCnt + 1;
+            elseif all(obj.LastCN0 >= obj.CN0_recoverTh)
+                obj.lowCnoCnt = 0;
+            end
+            trigger = obj.lowCnoCnt >= obj.CN0_reacqConsecutive;
         end
 
         function clearBuffer(obj)

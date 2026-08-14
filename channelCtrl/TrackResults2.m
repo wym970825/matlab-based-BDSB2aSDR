@@ -391,9 +391,14 @@ classdef TrackResults2 < handle
             sv_tg = fullfile(obj.SvPth, sprintf('Trk_Prn_%02d_%03d.mat', ...
                 obj.PRN, obj.Svtimes + 1));
             try
-                save(sv_tg, 'obj', '-mat');
+                % Saving a handle object invokes MATLAB subsystem-data
+                % serialization and can exhaust memory in process workers.
+                chunk = obj.toStruct();
+                save(sv_tg, 'chunk', '-v7.3');
                 succeed = true;
-            catch
+            catch ME
+                warning('TrackResults2:ChunkSaveFailed', ...
+                    'Failed to save %s: %s', sv_tg, ME.message);
                 succeed = false;
             end
             if succeed
@@ -426,7 +431,8 @@ classdef TrackResults2 < handle
             if isempty(cnoInt) || cnoInt <= 0
                 cnoInt = 200;
             end
-            if isprop(other_obj, 'CNoInterval') && ~isempty(other_obj.CNoInterval) ...
+            if TrackResults2.hasStoredField(other_obj, 'CNoInterval') && ...
+                    ~isempty(other_obj.CNoInterval) ...
                     && other_obj.CNoInterval > 0
                 cnoIntSrc = other_obj.CNoInterval;
             else
@@ -442,7 +448,7 @@ classdef TrackResults2 < handle
             copied_prop = 0;
             for p_ii = 1:numel(all_properties)
                 pname = all_properties{p_ii};
-                if ~isprop(other_obj, pname)
+                if ~TrackResults2.hasStoredField(other_obj, pname)
                     continue;
                 end
                 if ismember(pname, skipFields)
@@ -532,10 +538,13 @@ classdef TrackResults2 < handle
             sv_tg = fullfile(obj.SvPth, sprintf('Trk_Prn_%02d_%03d.mat', ...
                 obj.PRN, obj.Svtimes + 1));
             try
-                save(sv_tg, 'obj', '-mat');
+                chunk = obj.toStruct();
+                save(sv_tg, 'chunk', '-v7.3');
                 succeed = true;
                 obj.Svtimes = obj.Svtimes + 1;
-            catch
+            catch ME
+                warning('TrackResults2:ChunkSaveFailed', ...
+                    'Failed to save %s: %s', sv_tg, ME.message);
                 succeed = false;
             end
         end
@@ -1002,6 +1011,31 @@ classdef TrackResults2 < handle
     end
 
     methods (Static)
+        function obj = fromStruct(value)
+            %FROMSTRUCT Restore public tracking data without deserializing a handle.
+            if isa(value, 'TrackResults2')
+                obj = value;
+                return;
+            end
+            if ~isstruct(value) || ~isscalar(value)
+                error('TrackResults2:fromStruct', ...
+                    'Input must be a scalar struct or TrackResults2 object.');
+            end
+            obj = TrackResults2();
+            names = fieldnames(value);
+            for idx = 1:numel(names)
+                name = names{idx};
+                if isprop(obj, name)
+                    obj.(name) = value.(name);
+                end
+            end
+        end
+
+        function tf = hasStoredField(value, name)
+            tf = (isstruct(value) && isfield(value, name)) || ...
+                (isobject(value) && isprop(value, name));
+        end
+
         function arr = createArray(settings, nChan)
             % createArray - create an array of independent TrackResults2 objects.
             if nargin < 2 || isempty(nChan)
@@ -1010,6 +1044,17 @@ classdef TrackResults2 < handle
             arr(1,nChan) = TrackResults2(settings); %#ok<AGROW>
             for k = 1:nChan
                 arr(k) = TrackResults2(settings);
+            end
+        end
+
+        function arr = createEmptyArray(nChan)
+            %CREATEEMPTYARRAY Allocate channel slots without sample buffers.
+            if nargin < 1 || isempty(nChan)
+                nChan = 1;
+            end
+            arr(1, nChan) = TrackResults2();
+            for idx = 1:nChan
+                arr(idx) = TrackResults2();
             end
         end
 

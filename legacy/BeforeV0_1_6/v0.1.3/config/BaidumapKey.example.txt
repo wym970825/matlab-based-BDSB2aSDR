@@ -1,0 +1,7 @@
+# Baidu Map JSAPI browser AK (one key per file)
+# 1) Copy this file to BaidumapKey.txt
+# 2) Paste your key from https://lbsyun.baidu.com/apiconsole/key
+# 3) Enable "JavaScript API" for the key
+# BaidumapKey.txt is gitignored.
+
+YOUR_BAIDU_MAP_AK_HERE

@@ -163,7 +163,7 @@ function batchReport = batchDirForOneSettings(inputDir, settingsSource, varargin
                 settings.fileName = files(i).name;
                 settings.resultRoot = item.outDir;
                 settings.tempdataSvPth = fullfile(item.outDir, 'temp');
-                item.configPath = fullfile(item.outDir, 'settings_config.json');
+                item.configPath = fullfile(item.outDir, 'ui_config.json');
                 localWriteJson(item.configPath, settings);
                 if opt.DryRun
                     runReport = localPlannedReport(item.outDir);
@@ -314,6 +314,11 @@ function localPrepareOutputRoot(outputRoot)
 end
 
 function report = localPlannedReport(outDir)
+    for name = {'figures', fullfile('figures', 'AcqResult'), ...
+            fullfile('figures', 'trkResult'), fullfile('figures', 'navResult'), 'temp'}
+        path = fullfile(outDir, name{1});
+        if ~exist(path, 'dir'), mkdir(path); end
+    end
     report = struct('ok', true, 'stage', 'planned', 'error', '', ...
         'outDir', outDir, 'nAcquired', 0, ...
         'navSummary', struct('nFixes', 0));

@@ -73,6 +73,16 @@ function trk = navTrackTimeOrder(navSolutions, settings)
     trk.E   = E(idx);
     trk.N   = N(idx);
     trk.U   = U(idx);
+    % cart2utm changes coordinates discontinuously at UTM zone boundaries.
+    % Use one ECEF-referenced local frame for plots and speed checks so a
+    % valid flight crossing a meridian is not mistaken for a position jump.
+    [localE, localN, localU, hasLocalEnu] = localEcefEnu( ...
+        navSolutions, idx, lat, lon);
+    if hasLocalEnu
+        trk.E = localE;
+        trk.N = localN;
+        trk.U = localU;
+    end
 
     gdop = nan(nEp, 1); pdop = gdop; hdop = gdop; vdop = gdop; tdop = gdop;
     if isfield(navSolutions, 'DOP') && ~isempty(navSolutions.DOP)
@@ -99,6 +109,40 @@ function trk = navTrackTimeOrder(navSolutions, settings)
             '(|vE| or |vN| or |vU| > %.0f m/s); kept %d\n'], ...
             trk.nRemovedJump, vMax, trk.n);
     end
+end
+
+function [east, north, up, ok] = localEcefEnu(nav, idx, lat, lon)
+    east = [];
+    north = [];
+    up = [];
+    ok = false;
+    if ~all(isfield(nav, {'X', 'Y', 'Z'}))
+        return;
+    end
+    xAll = nav.X(:);
+    yAll = nav.Y(:);
+    zAll = nav.Z(:);
+    if max(idx) > min([numel(xAll), numel(yAll), numel(zAll)])
+        return;
+    end
+    x = xAll(idx);
+    y = yAll(idx);
+    z = zAll(idx);
+    if ~all(isfinite(x) & isfinite(y) & isfinite(z))
+        return;
+    end
+
+    lat0 = lat(idx(1)) * pi / 180;
+    lon0 = lon(idx(1)) * pi / 180;
+    dx = x - x(1);
+    dy = y - y(1);
+    dz = z - z(1);
+    east = -sin(lon0) .* dx + cos(lon0) .* dy;
+    north = -sin(lat0) * cos(lon0) .* dx ...
+        - sin(lat0) * sin(lon0) .* dy + cos(lat0) .* dz;
+    up = cos(lat0) * cos(lon0) .* dx ...
+        + cos(lat0) * sin(lon0) .* dy + sin(lat0) .* dz;
+    ok = true;
 end
 
 function trk = removeEnuVelocityJumps(trk, vMax)

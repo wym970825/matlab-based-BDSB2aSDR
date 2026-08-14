@@ -56,9 +56,15 @@ function report = runFromJsonConfig(jsonPath, varargin)
     end
     if ~exist(outDir, 'dir'), mkdir(outDir); end
     figDir = fullfile(outDir, 'figures');
+    acqFigDir = fullfile(figDir, 'AcqResult');
+    trkFigDir = fullfile(figDir, 'trkResult');
+    navFigDir = fullfile(figDir, 'navResult');
     tempDir = fullfile(outDir, 'temp');
     if ~exist(tempDir, 'dir'), mkdir(tempDir); end
     if ~exist(figDir, 'dir'), mkdir(figDir); end
+    if ~exist(acqFigDir, 'dir'), mkdir(acqFigDir); end
+    if ~exist(trkFigDir, 'dir'), mkdir(trkFigDir); end
+    if ~exist(navFigDir, 'dir'), mkdir(navFigDir); end
 
     if settingsSource
         settings = raw;
@@ -76,6 +82,21 @@ function report = runFromJsonConfig(jsonPath, varargin)
         settings.nmea = struct('enable', doNmea);
     end
     settings.nmea.enable = doNmea;
+    % Keep a replayable configuration next to every result, including calls
+    % made directly with a MATLAB settings struct.
+    configSnapshot = raw;
+    configSnapshot.outDir = strrep(outDir, '\', '/');
+    configSnapshot.tag = tag;
+    configSnapshot.doNavigation = doNav;
+    configSnapshot.doPlot = doPlot;
+    configSnapshot.doNmea = doNmea;
+    configSnapshot.doBaiduMap = doBaidu;
+    try
+        localWriteJson(fullfile(outDir, 'ui_config.json'), configSnapshot);
+    catch ME
+        warning('runFromJsonConfig:ConfigSnapshot', ...
+            'Could not write ui_config.json: %s', ME.message);
+    end
     figuresBefore = [];
     if p.Results.closeFigures
         figuresBefore = findall(groot, 'Type', 'figure');
@@ -94,6 +115,9 @@ function report = runFromJsonConfig(jsonPath, varargin)
     report.ok = false;
     report.outDir = outDir;
     report.figDir = figDir;
+    report.acqFigDir = acqFigDir;
+    report.trkFigDir = trkFigDir;
+    report.navFigDir = navFigDir;
     report.tag = tag;
     report.stage = 'start';
     report.errorIdentifier = '';
@@ -102,11 +126,8 @@ function report = runFromJsonConfig(jsonPath, varargin)
     report.nAcquired = 0;
     report.navSummary = struct('nFixes', 0, 'meanLat', NaN, 'meanLon', NaN, 'meanH', NaN);
 
-    acqResults = [];
-    trackResults = [];
     navSolutions = [];
     eph = [];
-    channel = [];
 
     try
         [fid, dataAdaptCoeff] = openIfFile(settings);
@@ -122,10 +143,13 @@ function report = runFromJsonConfig(jsonPath, varargin)
         acqResults = runAcquisition(fid, settings, dataAdaptCoeff);
         nAcq = 0;
         if isfield(acqResults, 'carrFreq')
-            nAcq = nnz(isfinite(acqResults.carrFreq) & acqResults.carrFreq ~= 0);
+            nAcq = nnz(acquisitionDetectedMask(acqResults));
         end
         report.nAcquired = nAcq;
         fprintf('Acquired SV count: %d\n', nAcq);
+        if doPlot
+            localExportAcquisitionFigure(acqResults, settings, acqFigDir);
+        end
         if nAcq < 1
             error('runFromJsonConfig:NoAcq', 'No GNSS signals detected');
         end
@@ -139,6 +163,16 @@ function report = runFromJsonConfig(jsonPath, varargin)
         t0 = datetime('now');
         [trackResults, channel] = tracking2_v6_fix2(fid, channel, settings);
         fprintf('Tracking done (%s)\n', char(string(datetime('now') - t0)));
+        if doPlot && isfield(settings, 'plotTracking') && ...
+                logical(settings.plotTracking) && ~isempty(trackResults)
+            activeIdx = find(arrayfun(@(c) localChannelPrn(c) > 0, channel));
+            if ~isempty(activeIdx)
+                trackingReport = exportTrackingFiguresSequential( ...
+                    trackResults, settings, trkFigDir, ...
+                    'ChannelIndices', activeIdx, 'Visible', false);
+                report.trackingFigures = trackingReport.figureFiles;
+            end
+        end
 
         %% Navigation
         if doNav
@@ -156,13 +190,13 @@ function report = runFromJsonConfig(jsonPath, varargin)
             end
         end
 
-        %% Plot (Python/UI path always uses fixed figDir)
+        %% Plot (all entry points use the same figure subdirectories)
         if doPlot && ~isempty(navSolutions)
             report.stage = 'plot';
             fprintf('--- Plot / Baidu ---\n');
             try
                 plotNavPost(navSolutions, settings, ...
-                    'saveDir', figDir, ...
+                    'saveDir', navFigDir, ...
                     'doLegacy', false, ...
                     'openBaiduMap', doBaidu, ...
                     'openBaiduBrowser', p.Results.openBaiduBrowser);
@@ -191,8 +225,15 @@ function report = runFromJsonConfig(jsonPath, varargin)
             'trackResults', trackResults, ...
             'navSolutions', navSolutions, ...
             'eph', eph);
-        save(fullfile(outDir, 'ui_results.mat'), 'results', 'settings', '-v7.3');
-        save(fullfile(outDir, sprintf('run_B2a_%s.mat', tag)), 'results', '-v7.3');
+        diskPayload.results = results;
+        diskPayload.results.trackResults = trackResultsToStruct(trackResults);
+        diskPayload.settings = settings;
+        save(fullfile(outDir, 'ui_results.mat'), ...
+            '-struct', 'diskPayload', '-v7.3');
+        diskPayload = rmfield(diskPayload, 'settings');
+        save(fullfile(outDir, sprintf('run_B2a_%s.mat', tag)), ...
+            '-struct', 'diskPayload', '-v7.3');
+        clear diskPayload
 
         report.ok = true;
         report.stage = 'done';
@@ -216,7 +257,43 @@ end
 
 function localClose(fid)
     if ~isempty(fid) && fid > 0
-        try, fclose(fid); catch, end %#ok<CTCH>
+        try
+            fclose(fid);
+        catch
+        end
+    end
+end
+
+function prn = localChannelPrn(channel)
+    prn = 0;
+    if isstruct(channel) && isfield(channel, 'PRN') && ...
+            isnumeric(channel.PRN) && isscalar(channel.PRN)
+        prn = double(channel.PRN);
+    elseif isobject(channel) && isprop(channel, 'PRN')
+        value = channel.PRN;
+        if isnumeric(value) && isscalar(value), prn = double(value); end
+    end
+end
+
+function localExportAcquisitionFigure(acqResults, settings, outputDir)
+    figuresBefore = findall(groot, 'Type', 'figure');
+    try
+        plotAcquisition(acqResults, settings.acqSatelliteList);
+        figuresAfter = findall(groot, 'Type', 'figure');
+        newFigures = figuresAfter(~ismember(figuresAfter, figuresBefore));
+        if ~isempty(newFigures)
+            fig = newFigures(1);
+            set(findall(fig, '-property', 'FontSize'), 'FontSize', 14);
+            saveas(fig, fullfile(outputDir, 'acquisition_metrics.png'));
+            close(fig);
+        end
+    catch ME
+        figuresAfter = findall(groot, 'Type', 'figure');
+        for idx = 1:numel(figuresAfter)
+            fig = figuresAfter(idx);
+            if isempty(figuresBefore) || ~any(fig == figuresBefore), close(fig); end
+        end
+        warning('runFromJsonConfig:PlotAcquisition', '%s', ME.message);
     end
 end
 
@@ -240,7 +317,9 @@ end
 function settings = localApplyNested(settings, raw)
     flat = { ...
         'samplingFreq','IF','dataType','fileType','acqSearchBand','acqThreshold', ...
-        'acqStep','fineNoncoh','fineCodeSearchHalfWinSamples','resamplingThreshold', ...
+        'acqStep','coarseNoncohMs','acqFlipSegments','fineNoncoh', ...
+        'fineStepHz','fineSearchInitialHalfSpanHz','fineSearchMaxHalfSpanHz', ...
+        'fineCodeSearchHalfWinSamples','resamplingThreshold', ...
         'resamplingflag','dllNoiseBandwidth_pull','dllNoiseBandwidth_stab', ...
         'pllNoiseBandwidth_pull','pllNoiseBandwidth_stab','filter_pullinMS', ...
         'trackInit_MS','carrierAidCode','carrierAidCodeMaxHz','TrkCN0Th','CNo_Th', ...
@@ -524,6 +603,20 @@ function writeReportJson(path, report)
     if fid < 0, return; end
     cleaner = onCleanup(@() fclose(fid));
     fwrite(fid, txt, 'char');
+end
+
+function localWriteJson(path, value)
+    try
+        text = jsonencode(value, 'PrettyPrint', true);
+    catch
+        text = jsonencode(value);
+    end
+    fid = fopen(path, 'w', 'n', 'UTF-8');
+    if fid < 0
+        error('runFromJsonConfig:WriteJson', 'Cannot write JSON file: %s', path);
+    end
+    cleaner = onCleanup(@() fclose(fid));
+    fwrite(fid, text, 'char');
 end
 
 function t = localEsc(s)

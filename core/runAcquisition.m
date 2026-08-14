@@ -1,7 +1,11 @@
 function acqResults = runAcquisition(fid, settings, dataAdaptCoeff)
 %RUNACQUISITION B2a acquisition stage with optional pulse blanking.
 
-    samplesNeededMs = settings.fineNoncoh + 2;
+    coarseMs = 1;
+    if isfield(settings, 'coarseNoncohMs') && ~isempty(settings.coarseNoncohMs)
+        coarseMs = max(1, round(settings.coarseNoncohMs));
+    end
+    samplesNeededMs = max(coarseMs, round(settings.fineNoncoh) + 1);
     data = readIfBlock(fid, settings, dataAdaptCoeff, samplesNeededMs);
 
     if isfield(settings, 'EnablePB') && settings.EnablePB
@@ -14,7 +18,9 @@ function acqResults = runAcquisition(fid, settings, dataAdaptCoeff)
                 settings.usrp.gain, settings.samplingFreq);
             cleaner = onCleanup(@() localCloseFigure(fig));
             if isfield(settings, 'resultRoot') && ~isempty(settings.resultRoot)
-                saveas(fig, fullfile(settings.resultRoot, 'pb_acquisition.png'));
+                acqFigDir = fullfile(settings.resultRoot, 'figures', 'AcqResult');
+                if ~exist(acqFigDir, 'dir'), mkdir(acqFigDir); end
+                saveas(fig, fullfile(acqFigDir, 'pb_acquisition.png'));
             end
         else
             data = pb.mitigate(data);

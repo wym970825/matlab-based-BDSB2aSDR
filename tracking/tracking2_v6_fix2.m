@@ -32,7 +32,9 @@ function [Tres, Ch] = tracking2_v6_fix2(fid, Ch, settings)
         end
     end
 
-    Tres = TrackResults2.createArray(settings, nCh);
+    % Inactive slots need no 60-second sample buffers. Full results are
+    % assigned only for active channels after tracking finishes.
+    Tres = TrackResults2.createEmptyArray(nCh);
 
     % Parallel policy
     useParfor = true;
@@ -69,12 +71,14 @@ function [Tres, Ch] = tracking2_v6_fix2(fid, Ch, settings)
         parfor c_i = 1:nCh
             if ChSnap(c_i).PRN ~= 0
                 [trCell{c_i}, chCell{c_i}] = trackOneChannel( ...
-                    ChSnap(c_i), settings, c_i, TrkedNr);
+                    ChSnap(c_i), settings, c_i, TrkedNr, true);
             end
         end
         for c_i = 1:nCh
             if ~isempty(trCell{c_i})
-                Tres(c_i) = trCell{c_i};
+                stored = load(char(trCell{c_i}), 'finalTRes');
+                Tres(c_i) = TrackResults2.fromStruct(stored.finalTRes);
+                clear stored
             end
             if ~isempty(chCell{c_i})
                 Ch(c_i) = mergeChannelStruct(Ch(c_i), chCell{c_i});

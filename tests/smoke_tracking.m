@@ -28,7 +28,7 @@ function smoke = smoke_tracking(varargin)
     cleaner = onCleanup(@() safeClose(fid)); %#ok<NASGU>
 
     acqResults = runAcquisition(fid, settings, dataAdaptCoeff);
-    if ~any(isfinite(acqResults.carrFreq) & acqResults.carrFreq ~= 0)
+    if ~any(acquisitionDetectedMask(acqResults))
         error('smoke_tracking:NoAcq', 'No satellite acquired — abort tracking smoke.');
     end
 

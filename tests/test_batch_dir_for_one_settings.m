@@ -51,6 +51,15 @@ function result = test_batch_dir_for_one_settings()
     assert(settingsReport.nPlanned == 3);
     assert(isequaln(settings, settingsBefore));
     assert(all(strcmp({settingsReport.items.status}, 'planned')));
+    for i = 1:settingsReport.nFiles
+        itemDir = settingsReport.items(i).outDir;
+        assert(strcmp(settingsReport.items(i).configPath, ...
+            fullfile(itemDir, 'ui_config.json')));
+        assert(isfolder(fullfile(itemDir, 'temp')));
+        assert(isfolder(fullfile(itemDir, 'figures', 'AcqResult')));
+        assert(isfolder(fullfile(itemDir, 'figures', 'trkResult')));
+        assert(isfolder(fullfile(itemDir, 'figures', 'navResult')));
+    end
 
     outScript = fullfile(root, 'out_script');
     settingsSource = jsonPath;
