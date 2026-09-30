@@ -135,6 +135,9 @@ function report = runProbeIf(jsonPath, varargin)
         end
 
         % Invisible figures for batch/UI
+        priorFigureVisibility=get(groot,'DefaultFigureVisible');
+        figureVisibilityCleanup=onCleanup(@() set(groot, ...
+            'DefaultFigureVisible',priorFigureVisibility));
         set(0, 'DefaultFigureVisible', 'off');
 
         pathSpec = fullfile(figDir, 'probe_spectrum.png');
@@ -192,10 +195,9 @@ function report = runProbeIf(jsonPath, varargin)
             localSaveFig(figT, pathTime); close(figT);
 
             figF = figure('Color', 'w', 'Position', [50 50 900 400], 'Visible', 'off');
-            [sigspec, freqv] = pwelch(z, 32768, 2048, 32768, settings.samplingFreq, 'twosided');
-            half = floor(numel(freqv)/2);
-            fplot = [-(freqv(half:-1:1)); freqv(1:half)] / 1e6;
-            pplot = 10*log10([sigspec(half+1:end); sigspec(1:half)]);
+            [sigspec, freqv] = pwelch(z, 32768, 2048, 32768, settings.samplingFreq, 'centered');
+            fplot = freqv / 1e6;
+            pplot = 10*log10(sigspec);
             plot(fplot, pplot, 'Color', [0.1 0.3 0.55], 'LineWidth', 0.8);
             grid on; box on;
             title('Power spectral density (two-sided Welch)');
