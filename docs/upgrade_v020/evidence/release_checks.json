@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "sourceChangesSinceFullRun": [
+    "core\\runProbeIf.m"
+  ],
+  "sourceChangePurpose": "Probe display cleanup only; long-run receiver unchanged",
+  "probeOk": true,
+  "figureVisibilityRestorationPassed": true,
+  "zeroFrequencyPeakPassed": true,
+  "originalCaseConfigUnchanged": true,
+  "fullRunStatus": "complete"
+}

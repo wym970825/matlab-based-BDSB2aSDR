@@ -49,6 +49,7 @@ B2a/
   init_B2a.m            legacy-named entry → run_B2a
   config/               initSettings (+ overrides)
   core/                 pipeline orchestration
+  frontend/             exclusive off/PB/TF v1, IQ source and sample alignment
   acquisition/          robust PCPS + fine Weil acq
   tracking/             FLL-aided tracking loop
   navigation/           BCNAV2 decode + PVT
@@ -68,11 +69,33 @@ B2a/
 setupPaths
   → initSettings(Name,Value)
   → openIfFile
-  → runAcquisition  (optional PB → acquisition_robust_v2fft)
+  → runAcquisition  (IFSource → selected frontend → acquisition_robust_v2fft)
   → preRun2
   → tracking2_v6_fix2   **returns full TrackResults2 array**
   → runNavigation       **uses live trackResults (no stale load)**
   → plot* / save
+```
+
+In v0.2.0 each tracking worker constructs a private `IFSource`. Its logical
+cursor identifies physical complex samples; TF halo reads never advance the
+observation time. Acquisition, tracking, and reacquisition use the same fixed
+TF threshold and coefficients. Reacquisition buffers already contain processed
+IF and are not filtered again. The frontend has no satellite or loop state.
+See [v0.2.0 configuration and validation](upgrade_v020/USAGE.md).
+
+```mermaid
+flowchart LR
+    IQ[Raw interleaved IQ] --> Source[IFSource: logical sample ranges]
+    Source --> Choice{Frontend.mode}
+    Choice --> Off[off]
+    Choice --> PB[pulseBlanker]
+    Choice --> TF[TFBlankerV1: detector, weights, complex FIR]
+    Off --> Samples[Processed core samples and validity]
+    PB --> Samples
+    TF --> Samples
+    Samples --> Acq[Acquisition / REACQ]
+    Samples --> Correlator[Existing correlator and loops]
+    Correlator --> Monitor[Existing C/N0 and S4 estimators]
 ```
 
 ### Critical legacy bug fixed
@@ -87,10 +110,19 @@ setupPaths
 | Field | Meaning |
 |-------|---------|
 | carrFreq | IF-domain carrier [Hz] |
-| codePhase | sample index (1-based) |
+| codePhase | sample index relative to acquisition input (1-based) |
+| acqInputStartAbs | actual input start in the file (zero-based complex sample) |
+| trackStartAbs | authoritative physical channel start; initial capture uses acqInputStartAbs + codePhase - 1 |
+| codePhaseAbs | historical fine-acquisition array coordinate, not a file timestamp |
 | weilPhase | Weil(100) phase 0..99 |
 | polarityRef | ±1 pilot polarity |
 | peakMetric | detection statistic |
+
+REACQ preserves the receiver's tail-period handover: for buffer end `E`
+(exclusive) and one-period length `N`, the resumed start is
+`E - N + codePhase - 1`. `acqInputStartAbs` still identifies the beginning of
+the entire acquisition buffer; it must not be substituted for the tail start.
+No FIR delay or halo offset is added to either mapping.
 
 ### Tracking → Navigation
 
@@ -98,19 +130,25 @@ setupPaths
 |-------|---------|
 | PRN, status | channel id / 'T' or '-' |
 | I_P | data prompt I (bit stream for BCNAV2) |
-| absoluteSample | IF sample index per ms |
+| absoluteSample | physical file complex-sample start per integration, zero-based |
+| frontendInfo / frontend* | effective filter provenance and core validity/weight statistics |
 | Pilot_* / codeFreq / carrFreq | observations |
 
 Navigation requires ≥24 s of tracking and ≥4 SVs with message types 10, 11, and one of 30–34.
 
 ## 6. Configuration baseline (`initSettings`)
 
-Matches original `init_B2a` smoke dataset:
+The current `config/initSettings.m` defaults are dataset-specific:
 
-- File: `F:\Data\DME_BDSB2a\Experiment\2022BJ\DATA1020\300sData_@111407_…ZeroIF.bin`
-- fs = 20 MHz, IQ int16, IF = 0
-- Default PRN list: `[24, 38, 39, 41]`
+- File: `D:\KLHP\IFData\230919110036.B.gns`
+- fs = 30.69 MHz, interleaved IQ int8, IF = 0; initial skip = 3005 seconds
+- Acquisition list: `[16 19 20 21 22 29 30 36 38 39 40 45 46]`
 - PB enabled; FLL aiding enabled; KF default off
+
+Use the appropriate JSON/configuration for a different recording. The v0.2.0
+semiphysical validation uses its original 25 MHz/int16 configuration with
+zero skip; it does not inherit the file/format/offset values above. Format,
+sampling rate, and byte-offset overrides are applied before duration capping.
 
 ## 7. How to run
 

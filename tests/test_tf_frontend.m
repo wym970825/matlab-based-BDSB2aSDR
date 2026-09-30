@@ -31,7 +31,9 @@ function testEightFormatRateBandwidthCombinations(testCase)
                 verifyLessThan(testCase,max(abs(whole(valid)-reference(valid)))/max(abs(x)),1e-12);
                 verifyEqual(testCase,find(meta.valid),valid);
                 verifyEqual(testCase,whole(~meta.valid),x(~meta.valid));
-                lengths=[1 7 641 997 223]; start=H; assembled=[]; counter=0;
+                stream=RandStream('mt19937ar','Seed',20261001);
+                lengths=[1 7 641 997 223 randi(stream,[1 1800],1,24)];
+                start=H; assembled=[]; counter=0;
                 while start<numel(x)-H
                     counter=counter+1; count=min(lengths(mod(counter-1,numel(lengths))+1),numel(x)-H-start);
                     [piece,m0]=source.readRange(start,count);
@@ -55,6 +57,13 @@ function testEightFormatRateBandwidthCombinations(testCase)
                 % Negative control uses independently misaligned reference.
                 nf=conv(x,h,'same'); wrong=(1-w(valid)).*x(valid)+w(valid).*nf(valid+1);
                 verifyGreaterThan(testCase,max(abs(wrong-reference(valid)))/max(abs(x)),1e-4);
+                % Negative control: independently process a short block with
+                % zero extension instead of its real neighboring samples.
+                cut=1800:2050; rawCut=x(cut);
+                maskCut=abs(rawCut)>=s.PB_settings.Th_static_tracking;
+                weightCut=conv(movmax(double(maskCut),[D+t.P+K D+t.P+K]),g,'same');
+                noHalo=(1-weightCut).*rawCut+weightCut.*conv(rawCut,h,'same');
+                verifyGreaterThan(testCase,max(abs(noHalo-reference(cut)))/max(abs(x)),1e-4);
                 clear cleaner
             end
         end

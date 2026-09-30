@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "faultInjection": "TrkCN0Th=80 dB-Hz; not a scientific comparison",
+  "reacqMs": 18,
+  "successfulHandovers": 3,
+  "columns": [
+    "epoch",
+    "logicalBefore",
+    "logicalAfter",
+    "rewindSamples"
+  ],
+  "handoverEvidence": [
+    [
+      606,
+      1.5165476E+7,
+      1.5140476E+7,
+      25000
+    ],
+    [
+      1206,
+      3.014047E+7,
+      3.011547E+7,
+      25000
+    ],
+    [
+      1806,
+      4.5115464E+7,
+      4.5090464E+7,
+      25000
+    ]
+  ]
+}

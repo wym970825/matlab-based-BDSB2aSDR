@@ -1,0 +1,338 @@
+[
+  {
+    "name": "test_NH_stateMachine_reacq/testThreeIndependentLowCnoUpdatesRequired",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.053968800000000004
+  },
+  {
+    "name": "test_NH_stateMachine_reacq/testRecoveredCnoClearsConsecutiveCount",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0074188
+  },
+  {
+    "name": "test_NH_stateMachine_reacq/testObservedZeroCarrierTriggersReacquisition",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0050266
+  },
+  {
+    "name": "test_NH_stateMachine_reacq/testMissingObservationSentinelDoesNotCount",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0049337
+  },
+  {
+    "name": "test_algorithm_diagnostics/testInvalidVsmMomentIsNotAValidCarrier",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.012577600000000001
+  },
+  {
+    "name": "test_algorithm_diagnostics/testZeroSignalHasZeroCarrierPower",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0027616
+  },
+  {
+    "name": "test_algorithm_diagnostics/testNonfiniteWindowIsUnavailable",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0016178999999999998
+  },
+  {
+    "name": "test_algorithm_diagnostics/testHealthyCarrierEstimatePreserved",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.1541138
+  },
+  {
+    "name": "test_algorithm_diagnostics/testDopUsesLocalHorizontalAndVerticalAxes",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.062571200000000007
+  },
+  {
+    "name": "test_bcnavigation_gaps/testKnownFrame",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.1043931
+  },
+  {
+    "name": "test_bcnavigation_gaps/testNanTailDoesNotEraseGoodFrame",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.014233800000000001
+  },
+  {
+    "name": "test_bcnavigation_gaps/testReacquisitionKeepsSeparateTimeAnchors",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0405876
+  },
+  {
+    "name": "test_bcnavigation_gaps/testUnknownTimeRemainsUnknown",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0017628
+  },
+  {
+    "name": "test_bcnavigation_gaps/testMissingTailNotMarkedAsLocked",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0149877
+  },
+  {
+    "name": "test_nav_track_time_order/testCrossUtmBoundaryUsesEcefEnu",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.031552
+  },
+  {
+    "name": "test_nmea_sentences/testZdaFieldsAndChecksum",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0602119
+  },
+  {
+    "name": "test_nmea_sentences/testGsaUsesOnlyPassedSatelliteIds",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.023705499999999997
+  },
+  {
+    "name": "test_nmea_sentences/testBuildersHaveGenericFallbackTalker",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0084137
+  },
+  {
+    "name": "test_nmea_sentences/testSatelliteIdsAbove99AreNotTruncated",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0257696
+  },
+  {
+    "name": "test_nmea_sentences/testExportUsesRaimAndAbsoluteDate",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.17374720000000002
+  },
+  {
+    "name": "test_nmea_sentences/testExportSkipsZdaWithoutValidFix",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0420213
+  },
+  {
+    "name": "test_optional_tracking_classes/testIakfUsesCurrentSettings",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0179087
+  },
+  {
+    "name": "test_optional_tracking_classes/testConkerVariantCanBeConstructedAndReset",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.07780659999999999
+  },
+  {
+    "name": "test_pll_thermal_branch/testPilotLoopUsesPilotPower",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.026300999999999998
+  },
+  {
+    "name": "test_pll_thermal_branch/testUnknownPilotPowerDoesNotBorrowDataPower",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0025486000000000003
+  },
+  {
+    "name": "test_pseudorange_sample_bounds/testWithinRecordedPeriod",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0207137
+  },
+  {
+    "name": "test_pseudorange_sample_bounds/testBeforeFirstSample",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.015375100000000001
+  },
+  {
+    "name": "test_pseudorange_sample_bounds/testAfterLastRecordedPeriod",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.013263800000000001
+  },
+  {
+    "name": "test_pseudorange_sample_bounds/testGapIsNotExtrapolated",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0121559
+  },
+  {
+    "name": "test_pseudorange_sample_bounds/testEarlierReplayResetsSearch",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.017929599999999997
+  },
+  {
+    "name": "test_scint_intensity_definition/testNoOutputBeforeWarmupAndFullWindow",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.12137569999999999
+  },
+  {
+    "name": "test_scint_intensity_definition/testKnownSinusoidalIntensity",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0817534
+  },
+  {
+    "name": "test_scint_intensity_definition/testNativeOneMsNoiseTerm",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0918654
+  },
+  {
+    "name": "test_tf_frontend/testEightFormatRateBandwidthCombinations",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 3.0675108
+  },
+  {
+    "name": "test_tf_frontend/testQuietIdentityAndThresholdTie",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.060539699999999995
+  },
+  {
+    "name": "test_tf_frontend/testImpulseAndSingleSidedFrequency",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0458351
+  },
+  {
+    "name": "test_tf_frontend/testExplicitOverrideAndValidation",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.031535299999999995
+  },
+  {
+    "name": "test_tf_frontend/testLegacyOffAndPbNumericCompatibility",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.084719
+  },
+  {
+    "name": "test_tf_frontend/testInvalidOffsetsAndIncompleteIq",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.043371900000000005
+  },
+  {
+    "name": "test_tf_frontend/testInitOverridesPrecedeDurationCap",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0216825
+  },
+  {
+    "name": "test_tf_frontend/testAcquisitionOriginPropagation",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0064914
+  },
+  {
+    "name": "test_tf_frontend/testMetadataChunkRoundTrip",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.16439109999999998
+  },
+  {
+    "name": "test_tf_frontend/testJsonFrontendSelectionIsPreserved",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 1.8096829
+  },
+  {
+    "name": "test_track_result_serialization/testStructChunksRoundTrip",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 1.8958449000000002
+  },
+  {
+    "name": "test_track_result_serialization/testLightweightInactiveChannels",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.014947399999999998
+  },
+  {
+    "name": "test_track_result_serialization/testStructRestoresObject",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0355789
+  },
+  {
+    "name": "test_tracking_eof/testTruncatedIqKeepsOnlyCompletedEpochs",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.47776209999999997
+  },
+  {
+    "name": "test_tracking_eof/testFullyBlankedEpochDoesNotBreakCodeLoop",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.2238733
+  }
+]

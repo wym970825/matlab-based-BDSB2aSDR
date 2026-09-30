@@ -1,0 +1,59 @@
+{
+  "scriptHash": "b042e19eb705ac6910e4be28429ef2d3245c3211ffe721548439f5157caba3a6",
+  "note": "Guard consistency from saved NCO; no truth claim or threshold retuning.",
+  "runs": [
+    {
+      "mode": "pb",
+      "eventCount": 0,
+      "pllMaxNcoHz": 1000,
+      "pllSaturationHoldMs": 200,
+      "pllSaturationNcoRatio": 0.95,
+      "pllSaturationRatio": 0.7,
+      "TrkCN0Th": 25,
+      "events": []
+    },
+    {
+      "mode": "tf400",
+      "eventCount": 1,
+      "pllMaxNcoHz": 1000,
+      "pllSaturationHoldMs": 200,
+      "pllSaturationNcoRatio": 0.95,
+      "pllSaturationRatio": 0.7,
+      "TrkCN0Th": 25,
+      "events": [
+        {
+          "firstEpoch": 575601,
+          "lastEpoch": 575606,
+          "durationMs": 6,
+          "physicalStartSeconds": 575.60043608,
+          "precedingGuardWindowEpochs": [
+            575401,
+            575600
+          ],
+          "nearLimitOccupancy": 1,
+          "guardOccupancyThreshold": 0.7,
+          "consistentWithPllSaturationGuard": true,
+          "precedingStoredTotalCno": [
+            38.013576033932949,
+            37.28529537111821,
+            37.407181781679427
+          ],
+          "logicalBefore": 1.4390160902E+10,
+          "logicalResume": 1.4390135903E+10,
+          "rewindSamples": 24999,
+          "invalidFrontendMs": 0
+        }
+      ]
+    },
+    {
+      "mode": "tf600",
+      "eventCount": 0,
+      "pllMaxNcoHz": 1000,
+      "pllSaturationHoldMs": 200,
+      "pllSaturationNcoRatio": 0.95,
+      "pllSaturationRatio": 0.7,
+      "TrkCN0Th": 25,
+      "events": []
+    }
+  ]
+}

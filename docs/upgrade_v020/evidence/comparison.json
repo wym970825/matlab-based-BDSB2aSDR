@@ -1,0 +1,387 @@
+{
+  "warmupExclusionSeconds": 150,
+  "minimumNativeWindowOverlap": 0.99,
+  "nativeUpdateIntervalMs": 200,
+  "storedCnoSupportMs": 400,
+  "analysisScriptHash": "d7b8db742764cb9638941c900c510a4c42b07fbbef41d342746426513ac30552",
+  "pairing": "Nearest physical 200-ms bin, >=99% overlap; separate <=2-sample subset; no interpolation.",
+  "notes": "Single file/PRN; overlapping S4 outputs are descriptive, not independent trials. No S4 truth.",
+  "runs": [
+    {
+      "mode": "pb",
+      "outDir": "results\\upgrade_v020\\full_01\\pb",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2808,
+      "reacqMs": 0,
+      "meanWeight": 0.038611129683453614,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12316058397651293,
+      "pllDiscriminatorStdCycles": 0.057069360722302766,
+      "promptPowerMean": 3.3666402533654838E+9,
+      "promptPowerCV": 0.59135272955962159,
+      "medianPilotCno": 45.241879970141866,
+      "medianTotalCno": 48.327168582661251,
+      "finiteS4Updates": 114,
+      "medianS4": 0.55625029192908215,
+      "medianS4Raw": 0.63982464741121126
+    },
+    {
+      "mode": "tf400",
+      "outDir": "results\\upgrade_v020\\full_01\\tf400",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2807,
+      "reacqMs": 6,
+      "meanWeight": 0.17506298403494533,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12305535921732169,
+      "pllDiscriminatorStdCycles": 0.057730929024062676,
+      "promptPowerMean": 3.6106789169633489E+9,
+      "promptPowerCV": 0.59785169803895533,
+      "medianPilotCno": 45.266758293557295,
+      "medianTotalCno": 48.3752728264505,
+      "finiteS4Updates": 86,
+      "medianS4": 0.52606331739304424,
+      "medianS4Raw": 0.60614080020780892
+    },
+    {
+      "mode": "tf600",
+      "outDir": "results\\upgrade_v020\\full_01\\tf600",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2824,
+      "reacqMs": 0,
+      "meanWeight": 0.17506298390221917,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12279785210892449,
+      "pllDiscriminatorStdCycles": 0.056895485802177154,
+      "promptPowerMean": 3.5756678251624303E+9,
+      "promptPowerCV": 0.59481118238837838,
+      "medianPilotCno": 45.643514185549009,
+      "medianTotalCno": 48.749559823991959,
+      "finiteS4Updates": 114,
+      "medianS4": 0.5580536335069437,
+      "medianS4Raw": 0.6360671866918638
+    }
+  ],
+  "pairs": [
+    {
+      "comparison": "tf400 minus pb",
+      "commonCnoWindows": 2791,
+      "matchedCoverageSec": 558.2,
+      "maxWindowEdgeMismatchUs": 1000.00000009004,
+      "minimumWindowOverlapFraction": 0.99749999924977462,
+      "meanPilotDifferenceDb": 0.036075060526587988,
+      "medianPilotDifferenceDb": 0.031928230007473246,
+      "meanTotalDifferenceDb": 0.049446063544650219,
+      "commonS4Updates": 85,
+      "meanS4Difference": -0.0026070318063068443,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          0.044625076131005317,
+          0.029868593370088851,
+          0.028124072194113694,
+          0.050215301799344067,
+          0.031777940692357634,
+          0.040562477164276488,
+          0.046542285644630824,
+          0.030478087251100662
+        ],
+        "meanDb": 0.0377742292808647,
+        "minimumBlockDb": 0.028124072194113694,
+        "maximumBlockDb": 0.050215301799344067,
+        "stdAcrossBlocksDb": 0.0087110873762738465
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.037222158357970304,
+          0.039169686996728882,
+          0.036170208928317064
+        ],
+        "meanDb": 0.037520684761005417,
+        "minimumBlockDb": 0.036170208928317064,
+        "maximumBlockDb": 0.039169686996728882,
+        "stdAcrossBlocksDb": 0.0015218592841332881
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2127,
+      "strictMeanPilotDifferenceDb": 0.0387633690621186,
+      "strictMeanTotalDifferenceDb": 0.052778308216742988,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 7,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570
+        ],
+        "pilotMeanDifferencesDb": [
+          0.044625076131005317,
+          0.029868593370088851,
+          0.028124072194113694,
+          0.050215301799344067,
+          0.031777940692357634,
+          0.040562477164276488,
+          0.046542285644630824
+        ],
+        "meanDb": 0.0388165352851167,
+        "minimumBlockDb": 0.028124072194113694,
+        "maximumBlockDb": 0.050215301799344067,
+        "stdAcrossBlocksDb": 0.008853839108691355
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.037222158357970304,
+          0.039169686996728882,
+          0.036170208928317064
+        ],
+        "meanDb": 0.037520684761005417,
+        "minimumBlockDb": 0.036170208928317064,
+        "maximumBlockDb": 0.039169686996728882,
+        "stdAcrossBlocksDb": 0.0015218592841332881
+      }
+    },
+    {
+      "comparison": "tf600 minus pb",
+      "commonCnoWindows": 2808,
+      "matchedCoverageSec": 561.6,
+      "maxWindowEdgeMismatchUs": 0.04000003173132427,
+      "minimumWindowOverlapFraction": 0.9999998999998907,
+      "meanPilotDifferenceDb": 0.40250431721500812,
+      "medianPilotDifferenceDb": 0.39613444949332433,
+      "meanTotalDifferenceDb": 0.40699666956779235,
+      "commonS4Updates": 112,
+      "meanS4Difference": 0.0021827029545181558,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          0.44323267795858418,
+          0.44020024049327444,
+          0.40295664482371046,
+          0.39563550290839494,
+          0.37705591976958985,
+          0.38568038171948282,
+          0.40270859813105819,
+          0.39765084057099953
+        ],
+        "meanDb": 0.40564010079688678,
+        "minimumBlockDb": 0.37705591976958985,
+        "maximumBlockDb": 0.44323267795858418,
+        "stdAcrossBlocksDb": 0.023912835184266519
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.44171138826026835,
+          0.39929607386605265,
+          0.38136815074453634
+        ],
+        "meanDb": 0.40745853762361911,
+        "minimumBlockDb": 0.38136815074453634,
+        "maximumBlockDb": 0.44171138826026835,
+        "stdAcrossBlocksDb": 0.030988642103441724
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2808,
+      "strictMeanPilotDifferenceDb": 0.40250431721500812,
+      "strictMeanTotalDifferenceDb": 0.40699666956779235,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          0.44323267795858418,
+          0.44020024049327444,
+          0.40295664482371046,
+          0.39563550290839494,
+          0.37705591976958985,
+          0.38568038171948282,
+          0.40270859813105819,
+          0.39765084057099953
+        ],
+        "meanDb": 0.40564010079688678,
+        "minimumBlockDb": 0.37705591976958985,
+        "maximumBlockDb": 0.44323267795858418,
+        "stdAcrossBlocksDb": 0.023912835184266519
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.44171138826026835,
+          0.39929607386605265,
+          0.38136815074453634
+        ],
+        "meanDb": 0.40745853762361911,
+        "minimumBlockDb": 0.38136815074453634,
+        "maximumBlockDb": 0.44171138826026835,
+        "stdAcrossBlocksDb": 0.030988642103441724
+      }
+    },
+    {
+      "comparison": "tf600 minus tf400",
+      "commonCnoWindows": 2807,
+      "matchedCoverageSec": 561.4,
+      "maxWindowEdgeMismatchUs": 1000.00000009004,
+      "minimumWindowOverlapFraction": 0.99749999924977462,
+      "meanPilotDifferenceDb": 0.36564971089927994,
+      "medianPilotDifferenceDb": 0.3667410779188458,
+      "meanTotalDifferenceDb": 0.3569799907734803,
+      "commonS4Updates": 85,
+      "meanS4Difference": 0.0040678202855733911,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          0.39860760182757893,
+          0.41033164712318559,
+          0.37483257262959685,
+          0.34542020110905092,
+          0.34527797907723223,
+          0.34511790455520641,
+          0.35616631248642744,
+          0.36717275331989885
+        ],
+        "meanDb": 0.36786587151602218,
+        "minimumBlockDb": 0.34511790455520641,
+        "maximumBlockDb": 0.41033164712318559,
+        "stdAcrossBlocksDb": 0.025258045690965174
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.404489229902298,
+          0.36012638686932374,
+          0.34519794181621932
+        ],
+        "meanDb": 0.36993785286261377,
+        "minimumBlockDb": 0.34519794181621932,
+        "maximumBlockDb": 0.404489229902298,
+        "stdAcrossBlocksDb": 0.030839307051710944
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2127,
+      "strictMeanPilotDifferenceDb": 0.36791812424241421,
+      "strictMeanTotalDifferenceDb": 0.35999920857403472,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 7,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570
+        ],
+        "pilotMeanDifferencesDb": [
+          0.39860760182757893,
+          0.41033164712318559,
+          0.37483257262959685,
+          0.34542020110905092,
+          0.34527797907723223,
+          0.34511790455520641,
+          0.35616631248642744
+        ],
+        "meanDb": 0.36796488840118263,
+        "minimumBlockDb": 0.34511790455520641,
+        "maximumBlockDb": 0.41033164712318559,
+        "stdAcrossBlocksDb": 0.027280130319976979
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.404489229902298,
+          0.36012638686932374,
+          0.34519794181621932
+        ],
+        "meanDb": 0.36993785286261377,
+        "minimumBlockDb": 0.34519794181621932,
+        "maximumBlockDb": 0.404489229902298,
+        "stdAcrossBlocksDb": 0.030839307051710944
+      }
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "prn": 11,
+  "durationMs": 20,
+  "oversampling": 32,
+  "configPath": "F:\\matlab-GNSSsdr\\BDS\\B2a\\docs\\semiphysical_recompute\\configs\\04_2700_n50dBm.json",
+  "dllHalfSpacingChips": 0.5,
+  "scriptHash": "33eaf44d9426ff1970e2e34cc1a652995106cd4669aaee2a450f9781f8068b7b",
+  "note": "Frozen-weight useful component; no receiver loops/noise/S4 truth.",
+  "cases": [
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -6.591949208711867E-17,
+      "promptPhaseRad": -1.0068439266208702E-16,
+      "promptGainDb": 3.8573098662131478E-15,
+      "fs": 2.5E+7,
+      "bandwidthHz": 400000,
+      "scenario": "quiet",
+      "meanWeight": 0,
+      "relativeReferenceError": 0,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": -6.591949208711867E-17,
+        "promptPhaseRad": -1.0068439266208702E-16,
+        "promptGainDb": 3.8573098662131478E-15
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": 0,
+      "promptPhaseRad": 3.8997756270594128E-17,
+      "promptGainDb": -0.50028523690697,
+      "fs": 2.5E+7,
+      "bandwidthHz": 400000,
+      "scenario": "continuous",
+      "meanWeight": 1,
+      "relativeReferenceError": 6.2293801668761181E-15,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": -8.803721640582296E-17,
+        "promptPhaseRad": 5.1317896725857551E-18,
+        "promptGainDb": -0.50028523690697
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -1.3284079216737462E-6,
+      "promptPhaseRad": -1.0028745144192937E-5,
+      "promptGainDb": -0.0801076800439825,
+      "fs": 2.5E+7,
+      "bandwidthHz": 400000,
+      "scenario": "gated",
+      "meanWeight": 0.162092,
+      "relativeReferenceError": 8.986317558520353E-16,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": 0.00022341925633984633,
+        "promptPhaseRad": 0.00182103276573338,
+        "promptGainDb": -0.05781995578952788
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -6.591949208711867E-17,
+      "promptPhaseRad": -1.0068439266208702E-16,
+      "promptGainDb": 3.8573098662131478E-15,
+      "fs": 2.5E+7,
+      "bandwidthHz": 600000,
+      "scenario": "quiet",
+      "meanWeight": 0,
+      "relativeReferenceError": 0,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": -6.591949208711867E-17,
+        "promptPhaseRad": -1.0068439266208702E-16,
+        "promptGainDb": 3.8573098662131478E-15
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": 0,
+      "promptPhaseRad": 2.5578838336198364E-18,
+      "promptGainDb": -0.6839031593212096,
+      "fs": 2.5E+7,
+      "bandwidthHz": 600000,
+      "scenario": "continuous",
+      "meanWeight": 1,
+      "relativeReferenceError": 7.1088959579333461E-15,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": 4.4073969877812793E-17,
+        "promptPhaseRad": 1.026957019170209E-18,
+        "promptGainDb": -0.6839031593212096
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -3.2909625455540895E-7,
+      "promptPhaseRad": 6.0578249148406146E-8,
+      "promptGainDb": -0.10817397456563904,
+      "fs": 2.5E+7,
+      "bandwidthHz": 600000,
+      "scenario": "gated",
+      "meanWeight": 0.162092,
+      "relativeReferenceError": 8.857976225116461E-16,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": -2.7720594043337266E-5,
+        "promptPhaseRad": -0.00016579621080505864,
+        "promptGainDb": -0.10939853814668199
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": 0,
+      "promptPhaseRad": -8.2698766289269588E-17,
+      "promptGainDb": 1.9286549331065743E-15,
+      "fs": 3.069E+7,
+      "bandwidthHz": 400000,
+      "scenario": "quiet",
+      "meanWeight": 0,
+      "relativeReferenceError": 0,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": 0,
+        "promptPhaseRad": -8.2698766289269588E-17,
+        "promptGainDb": 1.9286549331065743E-15
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -6.0064800355696946E-17,
+      "promptPhaseRad": -9.1416825641155638E-19,
+      "promptGainDb": -0.48131075981676086,
+      "fs": 3.069E+7,
+      "bandwidthHz": 400000,
+      "scenario": "continuous",
+      "meanWeight": 1,
+      "relativeReferenceError": 6.4736570491389371E-15,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": -3.0140820395097023E-17,
+        "promptPhaseRad": 6.052968197987044E-19,
+        "promptGainDb": -0.48131075981676086
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -1.5221805310134274E-6,
+      "promptPhaseRad": -6.0474981344456125E-6,
+      "promptGainDb": -0.076968996325559036,
+      "fs": 3.069E+7,
+      "bandwidthHz": 400000,
+      "scenario": "gated",
+      "meanWeight": 0.16202346041055715,
+      "relativeReferenceError": 6.7581897272458889E-16,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": 0.00053829344839254338,
+        "promptPhaseRad": 0.0030149133976118997,
+        "promptGainDb": -0.058543355207949087
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": 0,
+      "promptPhaseRad": -8.2698766289269588E-17,
+      "promptGainDb": 1.9286549331065743E-15,
+      "fs": 3.069E+7,
+      "bandwidthHz": 600000,
+      "scenario": "quiet",
+      "meanWeight": 0,
+      "relativeReferenceError": 0,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": 0,
+        "promptPhaseRad": -8.2698766289269588E-17,
+        "promptGainDb": 1.9286549331065743E-15
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": 6.0112105040007261E-17,
+      "promptPhaseRad": -2.2097075339209412E-18,
+      "promptGainDb": -0.66136317307285031,
+      "fs": 3.069E+7,
+      "bandwidthHz": 600000,
+      "scenario": "continuous",
+      "meanWeight": 1,
+      "relativeReferenceError": 6.8976933351767873E-15,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": 9.01681575600136E-17,
+        "promptPhaseRad": -1.4876904311257107E-18,
+        "promptGainDb": -0.66136317307285142
+      },
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -4.4392574757032635E-7,
+      "promptPhaseRad": 1.1978367757873975E-6,
+      "promptGainDb": -0.10468734677632779,
+      "fs": 3.069E+7,
+      "bandwidthHz": 600000,
+      "scenario": "gated",
+      "meanWeight": 0.16202346041055715,
+      "relativeReferenceError": 6.2521740040332053E-16,
+      "observedWithResidual": {
+        "peakSamples": 0,
+        "dllZeroChips": -3.0005300727166634E-5,
+        "promptPhaseRad": -0.00012116610696851771,
+        "promptGainDb": -0.10620374932974461
+      },
+      "shiftedPeakSamples": 1
+    }
+  ]
+}

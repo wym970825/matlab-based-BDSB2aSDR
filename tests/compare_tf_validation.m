@@ -1,6 +1,7 @@
 function summary=compare_tf_validation(runDirs,outputRoot)
 %COMPARE_TF_VALIDATION Physical-time matched native outputs, without resampling.
-% Match 200-ms windows within 1 ms, report actual edge mismatch. Inferential
+% Match native windows with >=99% overlap; also report a <=2-sample subset.
+% Report actual edge mismatch. Inferential
 % observations are >=60-second blocks, not overlapping 5-second S4 updates.
     setupPaths();
     if ischar(runDirs) || isstring(runDirs)
@@ -21,18 +22,22 @@ function summary=compare_tf_validation(runDirs,outputRoot)
         ends=step:step:count; starts=ends-step+1;
         normal=tr.trk_state~=9 & tr.frontendValidCount==tr.frontendSampleCount & ...
             ~tr.frontendBoundaryFlag & tr.frontendSampleCount>0;
-        valid=all(reshape(normal(1:ends(end)),step,[]),1);
-        startTime=tr.absoluteSample(starts)/fs;
+        stable=normal & tr.cur_state;
+        valid=all(reshape(stable(1:ends(end)),step,[]),1);
+        % The receiver saves (current + previous) C/N0 / 2 every 200 ms.
+        % Its stored estimate therefore has two-window temporal support.
+        valid=valid & [false valid(1:end-1)];
+        startTime=tr.absoluteSample(max(1,starts-step))/fs;
         endTime=(tr.absoluteSample(ends)+tr.frontendSampleCount(ends))/fs;
         valid=valid & startTime>=150 & isfinite(tr.PilotCNo(1:numel(ends))) & tr.PilotCNo(1:numel(ends))>0;
         [~,label]=fileparts(rd);
         power=tr.Pilot_I_P.^2+tr.Pilot_Q_P.^2;
         steady=normal & tr.cur_state & tr.absoluteSample/fs>=150;
         p=power(steady);
-        stats{k}=struct('mode',label,'recordedMs',count,'validSteadyCnoWindows',nnz(valid), ...
+        stats{k}=struct('mode',label,'outDir',rd,'recordedMs',count,'validSteadyCnoWindows',nnz(valid), ...
             'reacqMs',nnz(tr.trk_state==9),'meanWeight',mean(tr.frontendMeanWeight), ...
             'frontendBoundaryMs',nnz(tr.frontendBoundaryFlag), ...
-            'dllDiscriminatorStdChips',std(tr.dllDiscr(steady),0,'omitnan'), ...
+            'dllDiscriminatorStdDimensionless',std(tr.dllDiscr(steady),0,'omitnan'), ...
             'pllDiscriminatorStdCycles',std(tr.pllDiscr(steady),0,'omitnan'), ...
             'promptPowerMean',mean(p),'promptPowerCV',std(p)/mean(p), ...
             'medianPilotCno',median(tr.PilotCNo(valid)), ...
@@ -54,13 +59,18 @@ function summary=compare_tf_validation(runDirs,outputRoot)
             x=series{a}; y=series{b};
             [~,ix,iy]=intersect(x.key,y.key);
             mismatch=max(abs(x.startTime(ix)-y.startTime(iy)),abs(x.endTime(ix)-y.endTime(iy)));
-            use=x.valid(ix)&y.valid(iy)&mismatch<.001;
+            overlap=max(0,min(x.endTime(ix),y.endTime(iy))-max(x.startTime(ix),y.startTime(iy)));
+            duration=max(x.endTime(ix)-x.startTime(ix),y.endTime(iy)-y.startTime(iy));
+            overlapFraction=overlap./duration;
+            use=x.valid(ix)&y.valid(iy)&overlapFraction>=.99;
             ix=ix(use); iy=iy(use); mismatch=mismatch(use);
+            overlapFraction=overlapFraction(use);
             time=max(x.endTime(ix),y.endTime(iy));
             diffPilot=y.pilot(iy)-x.pilot(ix); diffTotal=y.total(iy)-x.total(ix);
             q=struct('comparison',[y.mode ' minus ' x.mode], ...
                 'commonCnoWindows',numel(ix),'matchedCoverageSec',numel(ix)*step/1000, ...
                 'maxWindowEdgeMismatchUs',max(mismatch)*1e6, ...
+                'minimumWindowOverlapFraction',min(overlapFraction), ...
                 'meanPilotDifferenceDb',mean(diffPilot),'medianPilotDifferenceDb',median(diffPilot), ...
                 'meanTotalDifferenceDb',mean(diffTotal));
             % Native S4 only; NaN indicates no update, never interpolate it.
@@ -69,11 +79,19 @@ function summary=compare_tf_validation(runDirs,outputRoot)
             q.meanS4Difference=mean(y.s4(iy(haveS4))-x.s4(ix(haveS4)));
             q.blocks60=blockStats(time,diffPilot,60);
             q.blocks120=blockStats(time,diffPilot,120);
+            strict=mismatch<=2/min(x.fs,y.fs)+1e-12;
+            q.strictToleranceSamples=2; q.strictCommonCnoWindows=nnz(strict);
+            q.strictMeanPilotDifferenceDb=mean(diffPilot(strict));
+            q.strictMeanTotalDifferenceDb=mean(diffTotal(strict));
+            q.strictBlocks60=blockStats(time(strict),diffPilot(strict),60);
+            q.strictBlocks120=blockStats(time(strict),diffPilot(strict),120);
             pairs{end+1}=q; %#ok<AGROW>
         end
     end
-    summary=struct('warmupExclusionSeconds',150,'pairingToleranceSeconds',.001, ...
-        'pairing','Nearest physical 200-ms bin, no interpolation; actual start/end mismatch reported.', ...
+    summary=struct('warmupExclusionSeconds',150,'minimumNativeWindowOverlap',.99, ...
+        'nativeUpdateIntervalMs',step,'storedCnoSupportMs',2*step, ...
+        'analysisScriptHash',frontendHash(fileread([mfilename('fullpath') '.m'])), ...
+        'pairing','Nearest physical 200-ms bin, >=99% overlap; separate <=2-sample subset; no interpolation.', ...
         'notes','Single file/PRN; overlapping S4 outputs are descriptive, not independent trials. No S4 truth.', ...
         'runs',{stats},'pairs',{pairs});
     fid=fopen(fullfile(outputRoot,'comparison.json'),'w','n','UTF-8'); cl=onCleanup(@() fclose(fid));
@@ -84,8 +102,8 @@ function summary=compare_tf_validation(runDirs,outputRoot)
     for field={'pilot','s4','s4Raw','power'}
         nexttile; hold on;
         for k=1:numel(series)
-            x=series{k}; keep=x.valid & isfinite(x.(field{1}));
-            plot(x.endTime(keep),x.(field{1})(keep),'.-','DisplayName',x.mode);
+            x=series{k}; value=x.(field{1}); value(~x.valid | ~isfinite(value))=NaN;
+            plot(x.endTime,value,'.-','DisplayName',x.mode);
         end
         xlabel('Physical file time (s)'); title(field{1},'Interpreter','none');
         grid on; legend('Location','best','Interpreter','none');

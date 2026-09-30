@@ -6,11 +6,15 @@ function summary=verify_tf_correlation_fidelity(outputRoot)
     if nargin<1, outputRoot=fullfile(root,'results','upgrade_v020','correlation'); end
     assert(~isfolder(outputRoot),'Fidelity:OutputExists','Use a fresh output folder.');
     mkdir(outputRoot); rows={}; curves={};
+    referenceConfig=fullfile(root,'docs','semiphysical_recompute','configs','04_2700_n50dBm.json');
+    config=jsondecode(fileread(referenceConfig));
+    halfSpacing=config.dllCorrelatorSpacing; % Receiver uses +/- this value.
     for fs=[25e6 30.69e6]
         N=round(fs/1000); Hmax=1000; periods=20;
         n=-Hmax:periods*N+Hmax-1;
         chips=generateB2aPilotCode(11,struct('codeLength',10230));
-        clean=chips(mod(floor(n*10.23e6/fs),10230)+1)*exp(1i*.37);
+        % Match the receiver's ceil convention at exact chip boundaries.
+        clean=chips(mod(ceil(mod(n,N)*(10.23e6/fs))-1,10230)+1)*exp(1i*.37);
         pulse=zeros(size(n));
         % Deterministic DME-like pairs; peak/threshold ratio 10, spacing 12 us.
         for t0=.00023:1/2700:.02
@@ -37,9 +41,9 @@ function summary=verify_tf_correlation_fidelity(outputRoot)
                 assert(relativeError<1e-12,'Fidelity:Reference','Independent branch reference mismatch.');
                 useful=(1-w).*clean+w.*conv(clean,tf.Notch,'same');
                 base=clean(core); useful=useful(core);
-                [metric,curve]=measure(useful,base,N,fs);
-                [totalMetric,~]=measure(z,base,N,fs);
-                [shifted,~]=measure(circshift(useful,1),base,N,fs);
+                [metric,curve]=measure(useful,base,N,fs,halfSpacing);
+                [totalMetric,~]=measure(z,base,N,fs,halfSpacing);
+                [shifted,~]=measure(circshift(useful,1),base,N,fs,halfSpacing);
                 assert(abs(shifted.peakSamples-metric.peakSamples-1)<.07, ...
                     'Fidelity:NegativeControl','One-sample shift must be detected.');
                 if strcmp(label,'quiet'), assert(isequal(z,base)); end
@@ -51,6 +55,8 @@ function summary=verify_tf_correlation_fidelity(outputRoot)
         end
     end
     summary=struct('prn',11,'durationMs',20,'oversampling',32, ...
+        'configPath',referenceConfig,'dllHalfSpacingChips',halfSpacing, ...
+        'scriptHash',frontendHash(fileread([mfilename('fullpath') '.m'])), ...
         'note','Frozen-weight useful component; no receiver loops/noise/S4 truth.', ...
         'cases',{rows});
     fid=fopen(fullfile(outputRoot,'correlation_summary.json'),'w','n','UTF-8');
@@ -71,12 +77,13 @@ function summary=verify_tf_correlation_fidelity(outputRoot)
             c=curves{ix}; plot(c.dllLag,c.dll,'DisplayName', ...
                 sprintf('%s / %g kHz',rows{ix}.scenario,rows{ix}.bandwidthHz/1000));
         end
-        grid on; legend('Location','best'); xlabel('Lag (chips)'); ylabel('(E-L)/(E+L)'); title('DLL, 0.5-chip total spacing');
+        grid on; legend('Location','best'); xlabel('Lag (chips)'); ylabel('(E-L)/(E+L)');
+        title(sprintf('DLL, %.2f-chip total spacing',2*halfSpacing));
     end
     exportgraphics(f,fullfile(outputRoot,'correlation_fidelity.png'),'Resolution',150);
 end
 
-function [m,c]=measure(y,reference,N,fs)
+function [m,c]=measure(y,reference,N,fs,halfSpacing)
     folded=mean(reshape(y,N,[]),2).'; ref=reference(1:N);
     corr=ifft(fft(folded).*conj(fft(ref)))/N;
     M=32; dense=fftshift(interpft(corr,N*M));
@@ -84,7 +91,7 @@ function [m,c]=measure(y,reference,N,fs)
     center=abs(lag)<4;
     selected=lag(center); [~,i]=max(abs(dense(center))); peak=selected(i);
     chips=lag*10.23e6/fs; tau=-.8:.001:.8;
-    e=interp1(chips,abs(dense),tau+.25); l=interp1(chips,abs(dense),tau-.25);
+    e=interp1(chips,abs(dense),tau+halfSpacing); l=interp1(chips,abs(dense),tau-halfSpacing);
     dll=(e-l)./max(e+l,eps);
     crossings=find(dll(1:end-1).*dll(2:end)<=0);
     [~,k]=min(abs(tau(crossings))); ix=crossings(k);

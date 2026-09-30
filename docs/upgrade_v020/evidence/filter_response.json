@@ -1,0 +1,46 @@
+[
+  {
+    "samplingFreq": 2.5E+7,
+    "bandwidthHz": 400000,
+    "taps": 641,
+    "D": 320,
+    "K": 150,
+    "P": 50,
+    "H": 670,
+    "worstStopbandDbOn4001PointGrid": -59.202568823032884,
+    "coefficientHash": "93aad5e11bc00821aa5a31b288bfb6114486a2c380f33cf1da8a8e35ec6750ab"
+  },
+  {
+    "samplingFreq": 2.5E+7,
+    "bandwidthHz": 600000,
+    "taps": 641,
+    "D": 320,
+    "K": 150,
+    "P": 50,
+    "H": 670,
+    "worstStopbandDbOn4001PointGrid": -59.712402506455518,
+    "coefficientHash": "3683ae598158f3c28765d65530c4a0aae26dd4c75c9fffc8d235891bb58cdbd6"
+  },
+  {
+    "samplingFreq": 3.069E+7,
+    "bandwidthHz": 400000,
+    "taps": 787,
+    "D": 393,
+    "K": 184,
+    "P": 61,
+    "H": 822,
+    "worstStopbandDbOn4001PointGrid": -59.153890408221024,
+    "coefficientHash": "336e307eb886e53e0a0684308d304750f95aaa45a707508f79ee211b1eefccf5"
+  },
+  {
+    "samplingFreq": 3.069E+7,
+    "bandwidthHz": 600000,
+    "taps": 787,
+    "D": 393,
+    "K": 184,
+    "P": 61,
+    "H": 822,
+    "worstStopbandDbOn4001PointGrid": -59.697626249949217,
+    "coefficientHash": "02a3034e1ad0c61b2c4a0413eca5ff7c01fb264d48ca65dcf2797dfcefe1ad84"
+  }
+]
