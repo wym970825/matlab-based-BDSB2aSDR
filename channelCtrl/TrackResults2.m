@@ -758,7 +758,18 @@ classdef TrackResults2 < handle
                     end
                 end
 
-                sigmaPLL(k) = (180/pi) * sqrt( (B_l_pll ./ CN0_lin) .* (1 + 1 ./ (2 .* T_coh .* CN0_lin)) );
+                % The carrier discriminator tracks the pilot branch.
+                % Summing pilot+data C/N0 overstates its available signal power.
+                if isfield(settings,'pilotTRKflag') && settings.pilotTRKflag == 1
+                    branchCno = obj.PilotCNo(k);
+                else
+                    branchCno = obj.DataCNo(k);
+                end
+                if isfinite(branchCno) && branchCno > 0
+                    pllCN0 = 10^(branchCno/10);
+                    sigmaPLL(k) = (180/pi) * sqrt((B_l_pll/pllCN0) * ...
+                        (1 + 1/(2*T_coh*pllCN0)));
+                end
             end
 
             obj.sigma_DLL = sigmaDLL;

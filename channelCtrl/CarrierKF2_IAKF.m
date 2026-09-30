@@ -1,5 +1,5 @@
 
-classdef CarrierKF2 < handle
+classdef CarrierKF2_IAKF < handle
     % IAKF-based Carrier Tracking Kalman Filter
 
     properties
@@ -16,7 +16,7 @@ classdef CarrierKF2 < handle
     end
 
     methods
-        function obj = CarrierKF2(settings)
+        function obj = CarrierKF2_IAKF(settings)
             T = settings.intTime;
 
             obj.F = [1 T 0.5*T^2;
@@ -26,7 +26,11 @@ classdef CarrierKF2 < handle
             obj.H = [1 0 0;
                      0 1 0];
 
-            q = settings.kf_qJerk;
+            if isfield(settings, 'kf_qJerk')
+                q = settings.kf_qJerk;
+            else
+                q = settings.KF.qJerk;
+            end
             obj.Q = q * [T^5/20 T^4/8 T^3/6;
                          T^4/8  T^3/3 T^2/2;
                          T^3/6  T^2/2 T];

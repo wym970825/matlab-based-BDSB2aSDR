@@ -12,14 +12,14 @@ classdef scint_calculator < handle
     %   * computeScint() reads the circular registers and performs purely
     %     statistical operations (S4, phi60, tau0, rho_phi1).  No filtering
     %     is done here.
-    %   * S4 thermal-noise correction (Conker et al. 2003) is NOT applied
+    %   * Native-rate white-Gaussian S4 thermal-noise approximation is NOT applied
     %     inside computeScint().  The result struct carries S4_ori and
     %     S4_corr separately.  The caller (computeKF_R) applies the
     %     correction:  S4 = sqrt(max(S4_ori^2 - S4_corr^2 , 0))
     %
     % S4 thermal-noise correction formula
     % ------------------------------------
-    %   S4_corr = sqrt( (100/CN0) * (1 + 500/(19*CN0)) )
+    %   S4_corr = sqrt((2/rho + 1/rho^2)/M), rho=CN0/fs, M=longCoh_ms
     %   where CN0 is in Hz (linear).
     %   Corrected S4 = sqrt( max(S4_ori^2 - S4_corr^2, 0) )   [done in caller]
     %
@@ -60,7 +60,7 @@ classdef scint_calculator < handle
     %% ===== Private properties =====
     properties (Access = private)
         % ---------- Filtered circular registers ----------
-        SI_buf          double   % normalised amplitude after de-trending
+        SI_buf          double   % normalised intensity after de-trending
         phiHP_buf       double   % high-pass carrier phase (rad)
         stateBuf        logical  % LONG / LONG_FLL flag per sample
 
@@ -115,6 +115,8 @@ classdef scint_calculator < handle
         accumCnt        double  = 0
 
         % ---------- Update timing ----------
+        processedTicks double = 0
+        warmupMs double = 150000
         tickSinceUpdate double  = 0
         newResultFlag   logical = false
 
@@ -150,6 +152,9 @@ classdef scint_calculator < handle
             else
                 error('Initialization need a settings struct as input.')
             end
+            if isfield(settings,'KF') && isfield(settings.KF,'scintWarmup_ms')
+                obj.warmupMs = max(0, settings.KF.scintWarmup_ms);
+            end
             obj.SI_buf    = nan(obj.bufLen, 1);
             obj.phiHP_buf = nan(obj.bufLen, 1);
             obj.stateBuf  = false(obj.bufLen, 1);
@@ -180,7 +185,7 @@ classdef scint_calculator < handle
             % push  Called every 1 ms.  Only accumulates raw data; no filtering.
             %
             % Inputs:
-            %   Ip, Qp          pilot prompt correlator outputs
+            %   Ip, Qp          pilot prompt correlator outputs (converted to intensity)
             %   remCarrPhase    residual carrier phase from the tracking loop (rad)
             %   ~               carrFreq placeholder (unused, kept for API compat)
             %   isLong          true when state is LONG or LONG_FLL
@@ -196,7 +201,7 @@ classdef scint_calculator < handle
                 obj.appendOriBuf(NaN, NaN, isLong);
                 obj.resetPhaseTracking();
             else
-                A   = sqrt(Ip*Ip + Qp*Qp);
+                A   = Ip*Ip + Qp*Qp; % intensity (power), not voltage amplitude
                 phi = obj.integratePhase(remCarrPhase);
                 obj.appendOriBuf(A, phi, isLong);
             end
@@ -249,6 +254,7 @@ classdef scint_calculator < handle
             obj.resetPhaseTracking();
             obj.tickSinceUpdate = 0;
             obj.newResultFlag   = false;
+            obj.processedTicks = 0;
             obj.result          = scint_calculator.emptyResult();
         end
 
@@ -299,6 +305,7 @@ classdef scint_calculator < handle
             % Advance the tick counter.  When updateInterval ticks have
             % elapsed: batch-filter the raw buffer, write results into the
             % circular registers, then compute scintillation statistics.
+            obj.processedTicks = obj.processedTicks + 1;
             obj.tickSinceUpdate = obj.tickSinceUpdate + 1;
             if obj.tickSinceUpdate >= obj.updateInterval
                 obj.tickSinceUpdate = 0;
@@ -347,7 +354,7 @@ classdef scint_calculator < handle
                     % Run the 3-section cascade for both amplitude LP and phase HP.
                     % filter() preserves the zi state between batches.
 
-                    % Amplitude low-pass (extract trend)
+                    % Intensity low-pass (extract trend)
                     A_trend = A_batch;
                     for s = 1:3
                         [A_trend, obj.zi_lp(s,:)] = ...
@@ -361,7 +368,7 @@ classdef scint_calculator < handle
                             filter(obj.B_hp(s,:), obj.A_hp(s,:), phi_hp, obj.zi_hp(s,:));
                     end
 
-                    % Normalised amplitude: SI = A / A_trend
+                    % Normalised intensity: SI = power / lowpass(power)
                     SI = A_batch ./ max(abs(A_trend), 1e-12);
 
                     % Write all n samples to the circular register at once
@@ -495,14 +502,19 @@ classdef scint_calculator < handle
             %
             % Outputs stored in obj.result:
             %   S4_ori   — raw S4 (not noise-corrected)
-            %   S4_corr  — thermal-noise correction term (Conker et al. 2003)
+            %   S4_corr  — native-rate white-Gaussian thermal approximation
             %              Correction:  S4 = sqrt(max(S4_ori^2 - S4_corr^2, 0))
             %              This step is performed by the CALLER (computeKF_R).
             %   phi60    — RMS of high-pass phase (>fCutoff Hz), rad
             %   tau0     — amplitude de-correlation time (1/e), s
             %   rho_phi1 — lag-1 phase autocorrelation coefficient
 
-            if obj.ptr < 200, return; end   % need at least 200 samples
+            % Require a full window and exclude filter startup after reset.
+            if obj.ptr < obj.bufLen || obj.processedTicks < obj.warmupMs*obj.fs/1000
+                obj.result = scint_calculator.emptyResult();
+                obj.newResultFlag = true;
+                return;
+            end
 
             % Read the circular buffer in chronological order
             if obj.isFull
@@ -524,18 +536,23 @@ classdef scint_calculator < handle
 
             allLong = all(st_seq);
 
-            % ---- S4_ori  (raw amplitude scintillation index) ----
+            % ---- S4_ori  (raw intensity scintillation index) ----
             % S4^2 = Var(SI) / E[SI]^2 = (E[SI^2] - E[SI]^2) / E[SI]^2
             mSI2     = mean(SI_seq .^ 2);
             mSI      = mean(SI_seq);
             S4sq_ori = max((mSI2 - mSI^2) / max(mSI^2, 1e-12), 0);
             S4_ori   = sqrt(S4sq_ori);
 
-            % ---- S4_corr  (Conker et al. 2003 thermal-noise term) ----
-            % S4_corr = sqrt( (100/CN0) * (1 + 500/(19*CN0)) )
+            % ---- S4_corr  (native-rate white-Gaussian thermal-noise term) ----
+            % S4_corr = sqrt((2/rho + 1/rho^2)/M); native coherent T=1/fs
             CN0_lin  = 10^(obj.lastCN0dB / 10);
-            S4corrsq = (100 / max(CN0_lin, 1e-6)) * ...
-                       (1 + 500 / max(19 * CN0_lin, 1e-6));
+            % Native-rate, complex white-Gaussian approximation:
+            % Var(|s+n|^2)/|s|^4 = 2/rho + 1/rho^2, rho=(C/N0)*T.
+            % Downsampled samples average M POWERS noncoherently, so their
+            % independent thermal variance scales by 1/M, not T -> M*T.
+            % DME/PB noise is not guaranteed Gaussian; retain raw S4 too.
+            rho = max(CN0_lin / obj.fs, 1e-12);
+            S4corrsq = (2/rho + 1/rho^2) / max(obj.longCoh_ms,1);
             S4_corr  = sqrt(max(S4corrsq, 0));
 
             % ---- phi60  (phase RMS above fCutoff, rad) ----
@@ -588,7 +605,7 @@ classdef scint_calculator < handle
                 tau0_samp = maxLag;
             else
                 % Linear interpolation around the crossing point
-                l0   = max(crossIdx - 2, 1);
+                l0   = max(crossIdx - 2, 0);
                 l1   = crossIdx - 1;
                 acf0 = acf(l0 + 1);
                 acf1 = acf(l1 + 1);
@@ -600,9 +617,9 @@ classdef scint_calculator < handle
             end
 
             % Convert from sample lag to seconds
-            dt = 1e-3;
+            dt = 1/obj.fs;
             if allLong && obj.longCoh_ms > 1
-                dt = obj.longCoh_ms * 1e-3;
+                dt = obj.longCoh_ms / obj.fs;
             end
             tau0 = tau0_samp * dt;
         end

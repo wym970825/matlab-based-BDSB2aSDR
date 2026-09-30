@@ -32,6 +32,22 @@ nhsm.update(1, [20, 20], 1200, 0);
 verifyEqual(testCase, nhsm.STATE, 'REACQ');
 end
 
+function testObservedZeroCarrierTriggersReacquisition(testCase)
+nhsm = makeStateMachine();
+for tick = [200 400 600]
+    nhsm.update(0, [0, 0], tick, 0);
+end
+verifyEqual(testCase, nhsm.STATE, 'REACQ');
+end
+
+function testMissingObservationSentinelDoesNotCount(testCase)
+nhsm = makeStateMachine();
+for tick = [200 400 600]
+    nhsm.update(0, [-1, -1], tick, 0);
+end
+verifyEqual(testCase, nhsm.STATE, 'INIT');
+end
+
 function nhsm = makeStateMachine()
 settings = struct( ...
     'trackInit_MS', 1e6, ...

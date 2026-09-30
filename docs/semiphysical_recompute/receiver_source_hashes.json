@@ -1,0 +1,34 @@
+﻿[
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\core\\runFromJsonConfig.m",
+        "SHA256":  "80F5294871AEACA0095571CD4FA760164E932C27F62D7E034FAE116FCD18AD83"
+    },
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\core\\writeUiResultsMat.m",
+        "SHA256":  "B53900A679D8FDDF31ACED3B5D04C237CF28FBA9D794B60AC13AC276B52EA52D"
+    },
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\config\\initSettings.m",
+        "SHA256":  "591DFBB1EA44D3B43337B44E30855B0D15361AD48BB77208D24E763ED356142D"
+    },
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\tracking\\tracking2_v6_fix2.m",
+        "SHA256":  "B8CDDD96728D606D75307C8CAA45861004C8A2E859E448B1FDD431FAD777E6FE"
+    },
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\tracking\\trackOneChannel.m",
+        "SHA256":  "19FCE652D8C56AA44515F98CDD0462FE39D999BEE1A9CC8AF11FB359646ACACD"
+    },
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\channelCtrl\\TrackResults2.m",
+        "SHA256":  "2093961854E33E121E6E538C802DE2F0C5C6A7E1B0429D6286717058A33CC121"
+    },
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\setupPaths.m",
+        "SHA256":  "ED89183F6A3988416F638872FCEC1A2DFC2F7CFD3D6AFF933B32C05BEE1951AB"
+    },
+    {
+        "Path":  "F:\\matlab-GNSSsdr\\BDS\\B2a\\VERSION",
+        "SHA256":  "6968573B1E1D5B61659DD9FA7AEF9711CD445861D8F47BBCF4E2663A9FD86D3C"
+    }
+]

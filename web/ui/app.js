@@ -400,9 +400,9 @@
       $('verBadge').textContent = 'v' + (health.version || '0.1.6');
       const mb = $('matlabBadge');
       if (health.matlabFound) {
-        mb.textContent = 'MATLAB OK';
+        mb.textContent = 'MATLAB 已发现';
         mb.className = 'badge badge-ok';
-        mb.title = health.matlab || '';
+        mb.title = (health.matlab || '') + '（运行时仍会执行启动探测）';
       } else {
         mb.textContent = 'MATLAB 未找到';
         mb.className = 'badge badge-err';

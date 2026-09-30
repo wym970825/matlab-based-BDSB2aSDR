@@ -35,17 +35,19 @@ function [eph, segments, subFrameStart, TOW] = decodeEphWithReacqResync(trackCh)
         return;
     end
 
-    minNeed = 24000; % B-CNAV2: need several 6 s messages
+    % One complete 600-symbol B-CNAV2 message supplies a TOW anchor.
+    % Complete ephemerides are checked separately by postNavigation.
+    minNeed = 3000;
 
     % --- Contiguous lock runs (exclude REACQ state == 9) ---------------
-    valid = true(1, n);
+    valid = isfinite(I_P);
     if isfield(trackCh, 'trk_state') && ~isempty(trackCh.trk_state)
         st = trackCh.trk_state(:).';
         st = st(1:min(numel(st), n));
         if numel(st) < n
-            st(end+1:n) = st(end);
+            st(end+1:n) = 0;
         end
-        valid(st == 9) = false;
+        valid(st == 9 | st == 0) = false;
     end
     % Honour explicit reacqLoopCnt ticks as gap points
     if isfield(trackCh, 'reacqLoopCnt') && ~isempty(trackCh.reacqLoopCnt)
@@ -98,27 +100,13 @@ function [eph, segments, subFrameStart, TOW] = decodeEphWithReacqResync(trackCh)
             eph = ephR;
             bestEphOk = true;
             bestEphIdx = numel(segments);
-        elseif ~bestEphOk && ir == 1
+        elseif ~bestEphOk && numel(segments) == 1
             eph = ephR; % keep partial for diagnostics
         end
     end
 
-    % Fallback: whole stream once (no REACQ split or all runs too short)
-    if isempty(segments)
-        try
-            [eph, sf0, tow0] = BCNAV2decoding(I_P);
-        catch
-            return;
-        end
-        if isfinite(sf0) && isfinite(tow0)
-            seg = struct();
-            seg.indexStart    = 1;
-            seg.indexEnd      = n;
-            seg.subFrameStart = sf0;
-            seg.TOW           = tow0;
-            segments = seg;
-        end
-    end
+    % Never fall back to a whole-stream anchor across a REACQ/NaN gap.
+    % A segment without a decodable frame has unknown transmit time.
 
     if ~isempty(segments)
         subFrameStart = segments(1).subFrameStart;

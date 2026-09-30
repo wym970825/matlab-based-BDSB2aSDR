@@ -39,7 +39,22 @@ function report = runProbeIf(jsonPath, varargin)
     for k = {'filePath','fileName','msToProcess','numberOfChannels'}
         if isfield(raw, k{1}), nv{end+1} = k{1}; nv{end+1} = raw.(k{1}); end %#ok<AGROW>
     end
-    settings = initSettings(nv{:});
+    % initSettings also consults the user's default skip setting while it
+    % estimates processable milliseconds.  The Web probe supplies its own
+    % byte offset below, so suppress that intermediate cap warning and
+    % restore the warning state even if initialization fails.
+    capWarning = warning('query', 'initSettings:CapMs');
+    warning('off', 'initSettings:CapMs');
+    try
+        settings = initSettings(nv{:});
+    catch ME
+        warning(capWarning.state, 'initSettings:CapMs');
+        rethrow(ME);
+    end
+    warning(capWarning.state, 'initSettings:CapMs');
+    if isfield(raw, 'msToProcess')
+        settings.msToProcess = raw.msToProcess;
+    end
     for k = {'samplingFreq','IF','dataType','fileType','EnablePB','Th_static_dBm'}
         if isfield(raw, k{1}), settings.(k{1}) = raw.(k{1}); end
     end

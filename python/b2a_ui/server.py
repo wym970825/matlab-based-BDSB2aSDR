@@ -4,7 +4,8 @@ B2a Web UI server (stdlib only).
   python -m b2a_ui.server
   python launch_b2a_ui.py
 
-Serves schema + static UI, runs MATLAB via -batch, streams log, returns report.
+Serves schema + static UI, runs MATLAB with guarded launch fallbacks, streams
+logs, and returns the receiver report.
 """
 from __future__ import annotations
 

@@ -196,7 +196,6 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
 
     % initial
     % NH state machine initial
-    if exist('nhsm','var'),delete(nhsm);end
     nhsm = NH_stateMachine(settings,ch.PRN);
     % Data subcode (length-5) for B2a data channel: 00010 (map 0->-1, 1->+1)
     % dataNH5 = [-1 -1 -1 +1 -1];
@@ -267,6 +266,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
     % + k + gain - 10*log10(fs);
     PwrK = settings.usrp.scaleK + settings.usrp.gain - 10*log10(settings.samplingFreq);
     %=== Process the number of specified code periods =================
+    completedPeriods = 0;
     for loopCnt =  1 : codePeriods
         
         % Record NH state (update from v5(3 state) to v6 (5-state))
@@ -386,6 +386,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
             tick.kf_corrHz = NaN; tick.kf_nisPhi = NaN; tick.kf_nisOmega = NaN;
             tick.kf_rmsNuPhiRad = NaN; tick.kf_rmsNuOmegaHz = NaN;
             trkBuf.writeTick(TRii, tick);
+            completedPeriods = loopCnt;
             if rem(loopCnt, trkBuf.ChunkCapacity) == 0
                 if ~trkBuf.save()
                     error('tracking2_v6_fix2:ChunkSave', ...
@@ -509,15 +510,17 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
         blksize = ceil((settings.codeLength - remCodePhase) / codePhaseStep);
         [rawSignal, samplesRead] = fread(fid, ...
             dataAdaptCoeff*blksize, settings.dataType);
+        if samplesRead ~= dataAdaptCoeff*blksize
+            warning('trackOneChannel:EOF', ...
+                'PRN %d reached EOF after %d complete code periods.', ...
+                ch.PRN, completedPeriods);
+            break;
+        end
         rawSignal = rawSignal.';
         if (dataAdaptCoeff==2)
             rawSignalIdat = rawSignal(1:2:end);
             rawSignalQdat = rawSignal(2:2:end);
             rawSignal = rawSignalIdat + 1j * rawSignalQdat;
-        end
-        if (samplesRead ~= dataAdaptCoeff*blksize)
-            warning('Not able to read the specified number of samples for tracking, exiting channel early!')
-            break
         end
         if settings.EnablePB
             rawSignal = pb.mitigate(rawSignal);
@@ -563,7 +566,11 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
             % save last S4 result
             latestScintRes = S4result; % save last
             latestScintResValid = isstruct(S4result) && isfield(S4result,'valid') && logical(S4result.valid);
-            S4 = sqrt(max(0,S4result.S4_ori.^2 - S4result.S4_corr.^2));
+            if latestScintResValid && isfinite(S4result.S4_ori) && isfinite(S4result.S4_corr)
+                S4 = sqrt(max(0,S4result.S4_ori.^2 - S4result.S4_corr.^2));
+            else
+                S4 = NaN; % max(0,NaN) must not turn unavailable data into zero S4.
+            end
             CNoCnt = max(1, ceil(TRii / settings.CNoInterval));
             if ~mod(TRii,settings.CNoInterval)
                 trkBuf.writeS4(CNoCnt, S4result.S4_ori, S4result.S4_corr, S4);
@@ -716,19 +723,23 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
             tau1code = tau1code_stab;
             tau2code = tau2code_stab;
         end
-        % Pilot-only DLL discriminator (E-L / E+L)
+        % Average data/pilot E-L / E+L. A fully blanked epoch provides no
+        % DLL observation: hold the loop memory instead of feeding it 0/0.
         E = sqrt(pilot_I_E * pilot_I_E + pilot_Q_E * pilot_Q_E);
         L = sqrt(pilot_I_L * pilot_I_L + pilot_Q_L * pilot_Q_L);
-        codeError_Pilot = (E - L) / (E + L)  ;   % In chips
-        codeError_Data = (sqrt(I_E * I_E + Q_E * Q_E) - sqrt(I_L * I_L + Q_L * Q_L)) / ...
-            (sqrt(I_E * I_E + Q_E * Q_E) + sqrt(I_L * I_L + Q_L * Q_L)) ;   % In chips
-        codeError = (codeError_Pilot + codeError_Data)/2;
-
-        % Implement code loop filter and generate NCO command
-        codeNco = oldCodeNco + (tau2code/tau1code) * ...
-            (codeError - oldCodeError) + codeError * (PDIcode/tau1code);
-        oldCodeNco   = codeNco;
-        oldCodeError = codeError;
+        dataE = hypot(I_E, Q_E);
+        dataL = hypot(I_L, Q_L);
+        codeError = NaN;
+        codeNco = oldCodeNco;
+        if isfinite(E + L) && E + L > 0 && ...
+                isfinite(dataE + dataL) && dataE + dataL > 0
+            codeError = ((E - L)/(E + L) + ...
+                (dataE - dataL)/(dataE + dataL))/2;
+            codeNco = oldCodeNco + (tau2code/tau1code) * ...
+                (codeError - oldCodeError) + codeError * (PDIcode/tau1code);
+            oldCodeNco = codeNco;
+            oldCodeError = codeError;
+        end
         % Log the code frequency used for THIS correlation, then update NCO
         % Carrier-aided: f_code = f0 + clamp(-carrFreq*f0/fL) - codeNco
         logCodeFreq = codeFreq;
@@ -783,8 +794,14 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
         % which may cause false REACQ triggers if we use [data,pilot].
         % Use TOTAL C/No (CNo(3)) for both entries to drive REACQ decision more robustly.
         cnoDrive = [-1, -1];
-        if all(isfinite(tempCNoValue)) && numel(tempCNoValue) >= 3 && (tempCNoValue(3) > 0)
-            cnoDrive = [tempCNoValue(3), tempCNoValue(3)];
+        if numel(tempCNoValue) >= 3
+            if isfinite(tempCNoValue(3)) && tempCNoValue(3) > 0
+                cnoDrive = [tempCNoValue(3), tempCNoValue(3)];
+            elseif mod(loopCnt, settings.CNoInterval) == 0
+                % A completed unusable/zero-power window is evidence of lost
+                % signal. -1 remains reserved for no observation yet.
+                cnoDrive = [0, 0];
+            end
         end
         nhsm.update(Pp_nhsm, cnoDrive, loopCnt, fllErrHz_filt);
         if pllSaturationWindowCnt >= pllSaturationHoldMs
@@ -930,6 +947,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
             end
         end
         trkBuf.fllCorrHz(TRii) = fllCorrHz;
+        completedPeriods = loopCnt;
         % reset KF phase-meas flag for next tick
         kf_phiMeasValid = false;
         % save and clear buffer when it is full
@@ -943,9 +961,14 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
         end
 
     end % for loopCnt
-    % Tail partial chunk only when last loopCnt is NOT a full-chunk boundary (BUG-5)
-    if rem(loopCnt, trkBuf.ChunkCapacity) ~= 0
-        succeed = trkBuf.partsave(settings, TRii);
+    if completedPeriods == 0
+        error('trackOneChannel:NoSamples', ...
+            'PRN %d did not read a complete code period.', ch.PRN);
+    end
+    % An EOF iteration has no new tick, including at chunk boundaries.
+    tailCount = rem(completedPeriods, trkBuf.ChunkCapacity);
+    if tailCount ~= 0
+        succeed = trkBuf.partsave(settings, tailCount);
         if ~succeed
             error('tracking2_v6_fix2:ChunkSave', ...
                 'Failed to save final tracking chunk for PRN %d', ch.PRN);
@@ -958,8 +981,8 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
     if isempty(chunkCap) || chunkCap <= 0
         chunkCap = min(codePeriods, 6e4);
     end
-    FileNum = ceil(codePeriods / chunkCap);
-    finalTRes = TrackResults2(settings, codePeriods);
+    FileNum = ceil(completedPeriods / chunkCap);
+    finalTRes = TrackResults2(settings, completedPeriods);
     I_start = 1;
     for file_ii = 1:FileNum
         TRfileName = sprintf('Trk_Prn_%02d_%03d.mat', targetPRN, file_ii);
@@ -981,29 +1004,20 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
                 disp(TRfileName);
             end
         else
-            warning('tracking2_v6_fix2:MissingChunk', 'Missing %s', TRfileName);
+            error('tracking2_v6_fix2:MissingChunk', 'Missing %s', TRfileName);
         end
     end
     finalTRes.PRN = ch.PRN;
     finalTRes.status  = ch.status;
-    finalTRes.Nsize = codePeriods;
+    finalTRes.Nsize = completedPeriods;
     %% Extract the time stamp for each measurement (best-effort)
     % Full TOW alignment requires valid B-CNAV2 preamble; short smoke
     % runs may not decode — leave Timestamp as NaN in that case.
     try
-        [~, subFrameStart, towVal] = BCNAV2decoding(finalTRes.I_P);
-        validTow = isnumeric(towVal) && isscalar(towVal) && isfinite(towVal);
-        validStart = isnumeric(subFrameStart) && isscalar(subFrameStart) && ...
-            isfinite(subFrameStart);
-        if validTow && validStart
-            TOW_first_tracking_result = towVal ...
-                - subFrameStart * settings.intTime;
-            tracking_result_time = TOW_first_tracking_result + settings.intTime : ...
-                settings.intTime : ...
-                (TOW_first_tracking_result + settings.msToProcess / 1000);
-            nTs = min(numel(tracking_result_time), finalTRes.Nsize);
-            finalTRes.Timestamp(1:nTs) = tracking_result_time(1:nTs);
-        end
+        timeInput = struct('I_P', finalTRes.I_P, 'trk_state', finalTRes.trk_state);
+        [~, timeSegments] = decodeEphWithReacqResync(timeInput);
+        finalTRes.Timestamp = trackingTimestampsFromSegments( ...
+            completedPeriods, timeSegments, settings.intTime);
     catch ME
         warning('tracking2_v6_fix2:BCnavDecode', ...
             'PRN %d BCNAV2 decode/timestamp skipped: %s', ch.PRN, ME.message);
@@ -1023,12 +1037,8 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
         clear payload
         succeed = true;
     catch ME
-        warning('tracking2_v6_fix2:FinalSaveFailed', ...
+        error('tracking2_v6_fix2:FinalSaveFailed', ...
             'Failed to save PRN %d final result: %s', ch.PRN, ME.message);
-        succeed = false;
-    end
-    if ~succeed
-        warning('tracking2_v6_fix2 final result of PRN %d failed', ch.PRN);
     end
 
     fprintf('Channel %d PRN %02d tracking results collected.\n', c_i, ch.PRN);

@@ -497,7 +497,7 @@ classdef NH_stateMachine < handle
         function trigger = updateLowCnoCounter(obj, loopCnt)
             trigger = false;
             if mod(loopCnt, obj.CN0_updateInterval) ~= 0 || ...
-                    ~all(isfinite(obj.LastCN0)) || ~all(obj.LastCN0 > 0)
+                    ~all(isfinite(obj.LastCN0)) || ~all(obj.LastCN0 >= 0)
                 return;
             end
             if any(obj.LastCN0 < obj.CN0_Th)

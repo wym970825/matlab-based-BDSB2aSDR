@@ -1,0 +1,147 @@
+﻿{
+    "VerifiedAt":  "2026-09-30T23:32:13.4920244+08:00",
+    "Revision":  "R3",
+    "SnapshotFiles":  732,
+    "ChangedCodeOrConfigFiles":  [
+
+                                 ],
+    "MissingLocalLinks":  [
+
+                          ],
+    "InvalidDisplayMathPairs":  [
+
+                                ],
+    "Documents":  [
+                      {
+                          "File":  "01_方案评估报告.md",
+                          "Characters":  9383,
+                          "Links":  15,
+                          "DisplayMathPairs":  3,
+                          "SHA256":  "67B08B6198BB8DF3102115ECE728980E287EEC0D644A467FDA481A6D29632C66"
+                      },
+                      {
+                          "File":  "02_代码改写计划.md",
+                          "Characters":  7057,
+                          "Links":  18,
+                          "DisplayMathPairs":  0,
+                          "SHA256":  "32A327623ED30E68ADD24C131043A9B5AB21C7BECA618B0B5D66CAC1C8EFB1E6"
+                      },
+                      {
+                          "File":  "03_算法设计报告.md",
+                          "Characters":  11408,
+                          "Links":  7,
+                          "DisplayMathPairs":  16,
+                          "SHA256":  "E05E73ADAC25E62D33C7E5239903A327AC4FC259D8885D57EF6049DD91C0B874"
+                      },
+                      {
+                          "File":  "04_LLM软件接收机升级Prompt.md",
+                          "Characters":  7284,
+                          "Links":  0,
+                          "DisplayMathPairs":  0,
+                          "SHA256":  "C1FC386A7075D91CE571AE43794AAFF98775BD21F9BBE100FBCAA2730D1A1DF4"
+                      },
+                      {
+                          "File":  "05_IQ格式与延迟对齐验证简报.md",
+                          "Characters":  2848,
+                          "Links":  4,
+                          "DisplayMathPairs":  2,
+                          "SHA256":  "A6C9AEAEF4C65E47D25F0AFF13A3847D13A88CAC023F8C07B43516621B7ED832"
+                      }
+                  ],
+    "PreviousR2Artifacts":  [
+                                {
+                                    "File":  "baseline_verification.json",
+                                    "Bytes":  161,
+                                    "SHA256":  "7CBB28DDDA198565B80AD8BCE995D818AD886B25591C6B7939C6524EB96C4697"
+                                },
+                                {
+                                    "File":  "contract_verification.json",
+                                    "Bytes":  1600,
+                                    "SHA256":  "DC9540ADF9C3557199EF80C6607D40574560E5432C1D034EACC46CFC34DA9E13"
+                                },
+                                {
+                                    "File":  "design_review.json",
+                                    "Bytes":  57986,
+                                    "SHA256":  "5C4A27726DF3AEAC4F20F7387C3A5CE2F1CEA7868588D7F3155D3AD39ACDD001"
+                                },
+                                {
+                                    "File":  "design_review.mat",
+                                    "Bytes":  13106,
+                                    "SHA256":  "0B395D3BC99ED9016EC6F7C526357189EC803324B4C625AFBD026A747A89612C"
+                                },
+                                {
+                                    "File":  "paired_bandwidth_summary.png",
+                                    "Bytes":  83734,
+                                    "SHA256":  "4B0C6365D34CA82A2EC6A308F40AA3F79152BF3BC2A3BDC086F786DD24E4DF8E"
+                                },
+                                {
+                                    "File":  "progress.log",
+                                    "Bytes":  5643,
+                                    "SHA256":  "5A4837A37F17C32E03446906EE5E74815814B9C66121F3A109959291C5EE9784"
+                                },
+                                {
+                                    "File":  "run_design_review.m",
+                                    "Bytes":  14125,
+                                    "SHA256":  "A936EF137F93905CDA2E6B573CC69BBA1CB7E2555040DAFF9E56EBBB58FFA41C"
+                                },
+                                {
+                                    "File":  "threshold_boundary_check.json",
+                                    "Bytes":  740,
+                                    "SHA256":  "3239850DD583622F4EFDBBE501B09E8FEAA879982DB79C6135B975A83B991BFB"
+                                },
+                                {
+                                    "File":  "trial_checkpoint.json",
+                                    "Bytes":  49511,
+                                    "SHA256":  "8C72DA735F7538ABCF85F1DC721D5909B539EEF5DC3970AE70767C38F27FA842"
+                                }
+                            ],
+    "ChangedR2Artifacts":  [
+
+                           ],
+    "R3LabArtifacts":  [
+                           {
+                               "File":  "alignment_verification.json",
+                               "Bytes":  8751,
+                               "SHA256":  "65A5058093E09803445EE51F46E77BB15F80E38DF6397C2A9E6BF22749867E9A"
+                           },
+                           {
+                               "File":  "alignment_verification.mat",
+                               "Bytes":  2688,
+                               "SHA256":  "A09FD69DEC696C12972D3F51604F4CA3619A4A3AFCC19ABB7D6D53E597E3E928"
+                           },
+                           {
+                               "File":  "impulse_alignment.png",
+                               "Bytes":  84353,
+                               "SHA256":  "FE57C25758AE1C1BF48585E9041EF572CA21F5021C425AE58EB8DDFFF2BF20AD"
+                           },
+                           {
+                               "File":  "synthetic_incomplete_int16_iq.bin",
+                               "Bytes":  2,
+                               "SHA256":  "4D74440C32C4FAD5C28EBB6CF407A7D3433FBD7AE90CFF66354D9353B200B5B7"
+                           },
+                           {
+                               "File":  "synthetic_int16_iq.bin",
+                               "Bytes":  96000,
+                               "SHA256":  "051E3795C43A0DC58FF9D6CC9E1BF4AF276CDD0B77B70F842506E2EED072AAE0"
+                           },
+                           {
+                               "File":  "synthetic_int8_iq.bin",
+                               "Bytes":  48000,
+                               "SHA256":  "34331E78AE94B720EB79DE70E50E49DCAB8541ED5B136AA6612E127D6EE55302"
+                           },
+                           {
+                               "File":  "verify_iq_fir_alignment.m",
+                               "Bytes":  13525,
+                               "SHA256":  "87C5E803340C5D53CB26F52F90506754838ED06B4EC186B4A09F5BFD0590C626"
+                           }
+                       ],
+    "PriorBaselineTestsPassed":  26,
+    "BaselineTestsRerunThisTurn":  false,
+    "NewAlignmentCaseCount":  8,
+    "AllAlignmentCasesPassed":  true,
+    "CodeAnalyzerIssues":  0,
+    "NewTrackingRunsThisRevision":  0,
+    "NewLabScriptCountThisTurn":  1,
+    "Scope":  "Independent IQ fixture and FIR alignment tests plus reports; receiver and existing configurations/scripts unchanged",
+    "PlotVisuallyReviewed":  true
+}

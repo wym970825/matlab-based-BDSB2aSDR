@@ -1,0 +1,86 @@
+{
+  "status": "DESIGN_ONLY_NOT_A_RUNNABLE_RECEIVER_CONFIG",
+  "unitsPendingConfirmation": "User specified 400 MHz; simulations conditionally use 400 kHz total width at fs=25 MHz.",
+  "exampleBaseConfig": "../semiphysical_recompute/configs/04_2700_n50dBm.json",
+  "inheritance": {
+    "useEachCasesOwnConfig": true,
+    "unchanged": [
+      "samplingFreq", "IF", "dataType", "fileType", "startOffset",
+      "skipNumberOfBytes", "codeFreqBasis", "codeLength", "intTime",
+      "PLL/DLL/FLL/KF", "CNoInterval", "scintillation settings"
+    ]
+  },
+  "Frontend": {
+    "mode": "tf_v1",
+    "allowedModes": ["off", "pb", "tf_v1", "tf_v2"],
+    "legacyPolicy": "If mode absent, map EnablePB. If mode explicit, mode is the sole selector and legacy PB call sites must not run separately.",
+    "detector": {
+      "type": "fixed_sample_power",
+      "thresholdSourceAcquisition": "PB_settings.Th_static",
+      "thresholdSourceTracking": "PB_settings.Th_static_tracking",
+      "thresholdSourceFallback": "PB_settings.Th_static",
+      "sourceUnit": "amplitude_ADC_sample_units",
+      "comparison": "abs(rawIQ)^2 >= inheritedAmplitudeThreshold^2"
+    },
+    "notch": {
+      "family": "complex_linear_phase_fir",
+      "centerHz": -450000,
+      "widthDefinition": "full_flat_stopband_Hz",
+      "stopbandWidthHz": 400000,
+      "alternativeStopbandWidthHzForComparison": 600000,
+      "transitionWidthEachSideHz": 150000,
+      "taps": 641,
+      "kaiserBeta": 5.65326,
+      "designAttenuationTargetDb": 60,
+      "verifiedWorstStopbandDbAt400k": -59.203067405855194,
+      "fixedFilterDelaySamplesAt25MHz": 320
+    },
+    "weight": {
+      "policy": "dilate_then_unit_sum_triangle",
+      "triangleSpanUs": 12,
+      "pulseTailMarginUs": 2,
+      "dilationRadius": "filterInfluenceRadius + pulseTailMargin + triangleHalfSpan",
+      "lookahead": "filterInfluenceRadius + pulseTailMargin + triangleSpan",
+      "lookaheadSamplesAt25MHzFor641Taps": 670,
+      "lookaheadUsAt25MHzFor641Taps": 26.8,
+      "plateauRequirement": "weight=1 throughout detected samples expanded by filterInfluenceRadius+pulseTailMargin"
+    },
+    "adaptive": {
+      "enabledWhenMode": "tf_v2",
+      "status": "ESTIMATOR_TESTED_COEFFICIENT_TRANSITIONS_NOT_YET_TESTED",
+      "method": "raw_IQ_spectral_excess_centroid",
+      "frameMs": 1,
+      "frameOrigin": "absolute_file_sample_zero",
+      "fftPointsAt25MHz": 32768,
+      "window": "Hann",
+      "centroidHalfWidthHz": 500000,
+      "minimumAboveThresholdTotalDurationUs": 0.5,
+      "minimumPeakToMedianPsdRatio": 100,
+      "firstAcceptedEstimate": "direct_initialize",
+      "ewmaAlpha": 0.5,
+      "maximumStepHzPerFrame": 100000,
+      "adaptBandwidth": false,
+      "onNoEvidence": "freeze_center",
+      "coefficientUse": "next_frame_from_configured_initial_center",
+      "retunePolicy": "same_history_old_new_FIR_banks_then_aligned_crossfade",
+      "retuneCrossfadeUsProposedUnvalidated": 12,
+      "sharedScheduleAcrossAllChannels": true
+    },
+    "sampleMapping": {
+      "convention": "output logical sample n refers to physical raw input n after alignment",
+      "rawFileCursorIsNotLogicalTime": true,
+      "boundaryPolicy": "mark_insufficient_history_or_future_invalid",
+      "seekPolicy": "restore_checkpoint_or_replay_with_preroll"
+    },
+    "monitoring": {
+      "inputToReceiverCorrelator": "processed_IF",
+      "s4Input": "postcorrelation_pilot_intensity",
+      "tfSpecificNoiseAndGainCalibrationValidated": false,
+      "logDetectorDuty": true,
+      "logMeanWeight": true,
+      "logMeanWeightSquared": true,
+      "logWeightSupportFraction": true,
+      "logCenterConfidenceAndCoefficientGeneration": true
+    }
+  }
+}

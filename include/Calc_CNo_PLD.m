@@ -48,14 +48,7 @@ Q_P = trackResults.Q_P(loopCnt - settings.CNoInterval + 1 : loopCnt);
 % Calculate Power
 Z = I_P.^2 + Q_P.^2;
 % Calculate the mean and variance of the Power
-Zm = mean(Z);
-Zv = var(Z);
-% Calculate the average carrier power
-Pav = sqrt(Zm^2 - Zv);
-% Calculate the variance of the noise
-Nv = 0.5 * (Zm - Pav);
-%  C/No estimation for data channel
-DataCNo = abs((1/T) * Pav / (2 * Nv));
+DataCNo = localCarrierToNoise(Z, T);
 CNo(1) = 10*log10(DataCNo);
 
 % ----------------------- PLL lock detector output -----------------------
@@ -78,14 +71,7 @@ if settings.pilotTRKflag == 1
     % Calculate Power
     Z = I_P.^2 + Q_P.^2;
     % Calculate the mean and variance of the Power
-    Zm = mean(Z);
-    Zv = var(Z);
-    % Calculate the average carrier power
-    Pav = sqrt(Zm^2 - Zv);
-    % Calculate the variance of the noise
-    Nv = 0.5 * (Zm - Pav);
-    % C/No estimation for data channel
-    PilotCNo = abs((1/T) * Pav / (2 * Nv));
+    PilotCNo = localCarrierToNoise(Z, T);
     CNo(2) = 10*log10(PilotCNo);
     
     % ------------ PLL lock detector output for pilot channel -------------
@@ -98,3 +84,23 @@ end
 
 % CNo extimation for total B1C siganl channel
 CNo(3) = 10 * log10(DataCNo + PilotCNo );
+
+end
+
+function cn0 = localCarrierToNoise(power, integrationSec)
+% Real, nonnegative VSM estimate. Negative moments carry no signal evidence;
+% taking abs of a complex estimate invents a positive carrier/noise ratio.
+    cn0 = NaN;
+    if isempty(power) || any(~isfinite(power)) || integrationSec <= 0
+        return;
+    end
+    meanPower = mean(power);
+    discriminant = meanPower^2 - var(power);
+    if meanPower <= 0 || discriminant <= 0
+        cn0 = 0;  % log10(0)=-Inf: an observed window with no carrier evidence.
+        return;
+    end
+    carrierPower = sqrt(discriminant);
+    noisePower = max(meanPower-carrierPower, 2*eps(meanPower));
+    cn0 = carrierPower / noisePower / integrationSec;
+end

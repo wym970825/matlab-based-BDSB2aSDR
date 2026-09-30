@@ -1,0 +1,70 @@
+{
+  "receiverRoot": "F:\\matlab-GNSSsdr\\BDS\\B2a",
+  "entry": "core/runFromJsonConfig.m",
+  "defaultOutputBase": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute",
+  "nativePromptHz": 1000,
+  "coherentIntegrationSec": 0.001,
+  "cases": [
+    {
+      "index": 1,
+      "id": "dme_free",
+      "configFile": "configs/01_dme_free.json",
+      "sourceResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260805_064630_4ec665",
+      "sourceSettingsMat": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260805_064630_4ec665\\ui_results.mat",
+      "sourceUiConfig": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260805_064630_4ec665\\ui_config.json",
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_0000_00_1176_25_37p5_17p5.dat",
+      "thresholdDbm": -76.5,
+      "thresholdAmplitude": 1288.1605785012875,
+      "nominalReplyRatePerSec": 0
+    },
+    {
+      "index": 2,
+      "id": "1350_n50dBm",
+      "configFile": "configs/02_1350_n50dBm.json",
+      "sourceResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_175811_7e987b",
+      "sourceSettingsMat": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_175811_7e987b\\ui_results.mat",
+      "sourceUiConfig": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_175811_7e987b\\ui_config.json",
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_1350_50_1176_25_37p5_17p5.dat",
+      "thresholdDbm": -93,
+      "thresholdAmplitude": 192.73917883288581,
+      "nominalReplyRatePerSec": 1350
+    },
+    {
+      "index": 3,
+      "id": "1350_n60dBm",
+      "configFile": "configs/03_1350_n60dBm.json",
+      "sourceResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_161233_9313d2",
+      "sourceSettingsMat": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_161233_9313d2\\ui_results.mat",
+      "sourceUiConfig": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_161233_9313d2\\ui_config.json",
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_1350_60_1176_25_37p5_17p5.dat",
+      "thresholdDbm": -93,
+      "thresholdAmplitude": 192.73917883288581,
+      "nominalReplyRatePerSec": 1350
+    },
+    {
+      "index": 4,
+      "id": "2700_n50dBm",
+      "configFile": "configs/04_2700_n50dBm.json",
+      "sourceResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_135322_e2bef5",
+      "sourceSettingsMat": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_135322_e2bef5\\ui_results.mat",
+      "sourceUiConfig": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260811_135322_e2bef5\\ui_config.json",
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_50_1176_25_37p5_17p5.dat",
+      "thresholdDbm": -93,
+      "thresholdAmplitude": 192.73917883288581,
+      "nominalReplyRatePerSec": 2700
+    },
+    {
+      "index": 5,
+      "id": "2700_n60dBm",
+      "configFile": "configs/05_2700_n60dBm.json",
+      "sourceResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260810_213741_76f7da",
+      "sourceSettingsMat": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260810_213741_76f7da\\ui_results.mat",
+      "sourceUiConfig": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\ui\\260810_213741_76f7da\\ui_config.json",
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_60_1176_25_37p5_17p5.dat",
+      "thresholdDbm": -93,
+      "thresholdAmplitude": 192.73917883288581,
+      "nominalReplyRatePerSec": 2700
+    }
+  ],
+  "note": "Each config is standalone; five_cases.json is an index, not a receiver input."
+}

@@ -22,11 +22,11 @@ function settings = initSettings(varargin)
 settings = struct();
 
 %% Processing ==============================================================
-settings.msToProcess      = 1000e3;  % [ms] acquisition/tracking tuning run
-settings.numberOfChannels = 16;
+settings.msToProcess      = 1452e3;  % [ms] acquisition/tracking tuning run
+settings.numberOfChannels = 10;
 
 %% IF file =================================================================
-settings.filePath = 'I:\KLHP\IFData';
+settings.filePath = 'D:\KLHP\IFData';
 settings.fileName = '230919110036.B.gns';
 settings.dataType = 'int8';
 settings.fileType = 2;              % 1=real, 2=IQ interleaved
@@ -80,7 +80,7 @@ settings.resamplingThreshold = 50e6;
 settings.resamplingflag      = 0;
 
 %% Skip / duration vs file size ============================================
-skipNumberOfSeconds = 2005;
+skipNumberOfSeconds = 3005;
 if strcmpi(settings.dataType, 'int16')
     settings.size_per_sample = settings.fileType * 2;
 elseif strcmpi(settings.dataType, 'int8')
@@ -105,7 +105,7 @@ settings.reEstimateMS    = 10e3;
 settings.pllOrder        = 3;
 settings.pllDampingRatio = 0.707;
 settings.phaseDisType    = 2;
-settings.longCoh_ms      = 1;
+settings.longCoh_ms      = 5;
 settings.weilEstBuffLen  = 100;
 settings.weilConfTh      = 1.5;
 settings.TrkCN0Th        = 29;

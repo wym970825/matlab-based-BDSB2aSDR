@@ -1,0 +1,57 @@
+﻿{
+    "Date":  "2026-09-29",
+    "Cases":  [
+                  {
+                      "Case":  "dme_free",
+                      "ConfigFile":  "configs/01_dme_free.json",
+                      "ConfigSHA256":  "721423B686102EDEA6FFFDF652C3A6D79F3A56FCC65DF8F31597B2FE58F723B0",
+                      "InputExists":  true,
+                      "NativePromptHz":  1000,
+                      "CoherentSec":  0.001,
+                      "ThresholdDbm":  -76.5
+                  },
+                  {
+                      "Case":  "1350_n50dBm",
+                      "ConfigFile":  "configs/02_1350_n50dBm.json",
+                      "ConfigSHA256":  "F0E05F1C83B90D3ED567E2131DD9E0584C1FBFDA585813C5A62F695482D98413",
+                      "InputExists":  true,
+                      "NativePromptHz":  1000,
+                      "CoherentSec":  0.001,
+                      "ThresholdDbm":  -93
+                  },
+                  {
+                      "Case":  "1350_n60dBm",
+                      "ConfigFile":  "configs/03_1350_n60dBm.json",
+                      "ConfigSHA256":  "6D6060D21FFCE55A86F9A3DCD8EA6A9AFA1B635273A27A863CD4CC8664FCF663",
+                      "InputExists":  true,
+                      "NativePromptHz":  1000,
+                      "CoherentSec":  0.001,
+                      "ThresholdDbm":  -93
+                  },
+                  {
+                      "Case":  "2700_n50dBm",
+                      "ConfigFile":  "configs/04_2700_n50dBm.json",
+                      "ConfigSHA256":  "2CA465FF7244372DE4C8D7BA9C9C2B9CCF0869EB6521FCC6B0DE073E79822F13",
+                      "InputExists":  true,
+                      "NativePromptHz":  1000,
+                      "CoherentSec":  0.001,
+                      "ThresholdDbm":  -93
+                  },
+                  {
+                      "Case":  "2700_n60dBm",
+                      "ConfigFile":  "configs/05_2700_n60dBm.json",
+                      "ConfigSHA256":  "BB95741E5CCD5818B5B202BEB39C29D4DEEF10F16F17AEC7F8582AC4376E55BE",
+                      "InputExists":  true,
+                      "NativePromptHz":  1000,
+                      "CoherentSec":  0.001,
+                      "ThresholdDbm":  -93
+                  }
+              ],
+    "PreparationRunPassed":  true,
+    "MatlabSyntaxMessages":  0,
+    "RFReceiverExecuted":  false,
+    "OldMatOrJsonModified":  false,
+    "ReceiverBusinessCodeUnchanged":  true,
+    "VerifyOutput":  "F:\\matlab_project\\dme_L5_Scintillation-v2\\work\\sdr_recompute_package_20260929\\_checks\\prepare_20260929",
+    "BackupRoot":  "F:\\matlab_project\\dme_L5_Scintillation-v2\\backups\\before_sdr_recompute_package_20260929"
+}

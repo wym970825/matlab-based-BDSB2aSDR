@@ -7,10 +7,11 @@ function build_mex()
     cd(mexDir);
 
     % -R2018a: interleaved complex API (mxComplexDouble / mxGetComplexDoubles)
-    % MSVC: enable SSE2 (default x64) and favor speed
+    % MSVC x64 already guarantees SSE2.  Passing /arch:SSE2 is ignored by
+    % current 64-bit MSVC and produces D9002 warnings in MATLAB R2026a.
     fprintf('Building correlateB2aMs_mex (LUT+SSE2) ...\n');
     if ispc
-        mex('-O', '-R2018a', 'COMPFLAGS="$COMPFLAGS /O2 /arch:SSE2"', ...
+        mex('-O', '-R2018a', 'COMPFLAGS="$COMPFLAGS /O2"', ...
             'correlateB2aMs_mex.c', '-output', 'correlateB2aMs_mex');
     else
         mex('-O', '-R2018a', 'CFLAGS="$CFLAGS -O3 -msse2"', ...

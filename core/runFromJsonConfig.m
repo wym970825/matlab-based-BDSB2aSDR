@@ -124,6 +124,9 @@ function report = runFromJsonConfig(jsonPath, varargin)
     report.error = '';
     report.nmeaPath = '';
     report.nAcquired = 0;
+    report.requestedMs = settings.msToProcess;
+    if isfield(raw, 'msToProcess'), report.requestedMs = raw.msToProcess; end
+    report.effectiveMs = settings.msToProcess;
     report.navSummary = struct('nFixes', 0, 'meanLat', NaN, 'meanLon', NaN, 'meanH', NaN);
 
     navSolutions = [];
@@ -138,6 +141,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
 
         %% Acquisition
         report.stage = 'acquisition';
+        writeReportJson(fullfile(outDir, 'report.json'), report);
         fprintf('--- Acquisition ---\n');
         if settings.skipAcquisition
             error('runFromJsonConfig:SkipAcq', ...
@@ -162,9 +166,15 @@ function report = runFromJsonConfig(jsonPath, varargin)
 
         %% Tracking
         report.stage = 'tracking';
+        writeReportJson(fullfile(outDir, 'report.json'), report);
         fprintf('--- Tracking ---\n');
         t0 = datetime('now');
         [trackResults, channel] = tracking2_v6_fix2(fid, channel, settings);
+        activeTracks = trackResults(arrayfun(@(tr) tr.PRN > 0, trackResults));
+        report.trackingSummary = arrayfun(@(tr) struct('PRN', tr.PRN, ...
+            'recordedMs', numel(tr.I_P), ...
+            'finiteMs', nnz(isfinite(tr.I_P) & isfinite(tr.absoluteSample)), ...
+            'reacqMs', nnz(tr.trk_state == 9)), activeTracks);
         fprintf('Tracking done (%s)\n', char(string(datetime('now') - t0)));
         if doPlot && isfield(settings, 'plotTracking') && ...
                 logical(settings.plotTracking) && ~isempty(trackResults)
@@ -180,6 +190,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
         %% Navigation
         if doNav
             report.stage = 'navigation';
+            writeReportJson(fullfile(outDir, 'report.json'), report);
             fprintf('--- Navigation ---\n');
             [navSolutions, eph] = runNavigation(trackResults, settings);
             if doNmea && ~isempty(navSolutions)
@@ -196,6 +207,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
         %% Plot (all entry points use the same figure subdirectories)
         if doPlot && ~isempty(navSolutions)
             report.stage = 'plot';
+            writeReportJson(fullfile(outDir, 'report.json'), report);
             fprintf('--- Plot / Baidu ---\n');
             try
                 plotNavPost(navSolutions, settings, ...
@@ -221,6 +233,8 @@ function report = runFromJsonConfig(jsonPath, varargin)
             end
         end
 
+        report.stage = 'saving';
+        writeReportJson(fullfile(outDir, 'report.json'), report);
         results = struct( ...
             'settings', settings, ...
             'acqResults', acqResults, ...

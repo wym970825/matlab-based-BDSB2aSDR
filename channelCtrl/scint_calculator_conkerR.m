@@ -1,5 +1,5 @@
-classdef scint_calculator < handle
-    % scint_calculator  Real-time ionospheric scintillation index calculator.
+classdef scint_calculator_conkerR < handle
+    % scint_calculator_conkerR  Real-time ionospheric scintillation index calculator.
     %
     % Design principles
     % -----------------
@@ -25,15 +25,15 @@ classdef scint_calculator < handle
     %
     % Typical usage in tracking2_v6_fix1.m
     % --------------------------------------
-    %   scint = scint_calculator(settings);          % init (once per channel)
+    %   scint = scint_calculator_conkerR(settings);          % init (once per channel)
     %
     %   % inside the 1-ms loop:
     %   scint.push(Ip, Qp, remCarrPhase, carrFreq, isLong, CNoValue(2));
     %
     %   if scint.hasNewResult()
     %       res  = scint.getResult();
-    %       kfR  = scint_calculator.computeKF_R(res, settings);
-    %       kf.qJerk = scint_calculator.computeKF_qJerk(res, kf.qJerk, settings);
+    %       kfR  = scint_calculator_conkerR.computeKF_R(res, settings);
+    %       kf.qJerk = scint_calculator_conkerR.computeKF_qJerk(res, kf.qJerk, settings);
     %       if kfR.valid
     %           % pass kfR.Rphi / kfR.Romega to KF update calls
     %       end
@@ -127,7 +127,7 @@ classdef scint_calculator < handle
     methods
 
         % ------------------------------------------------------------------
-        function obj = scint_calculator(settings)
+        function obj = scint_calculator_conkerR(settings)
             % Constructor.  All parameters have sensible defaults.
             if nargin >= 1 && isstruct(settings)
                 if isfield(settings,'longCoh_ms')    && ~isempty(settings.longCoh_ms)
@@ -160,19 +160,19 @@ classdef scint_calculator < handle
             obj.ori_State = false(obj.updateInterval, 1);
 
             % Design full-rate filters (fs = 1000 Hz)
-            [obj.B_lp, obj.A_lp] = scint_calculator.designLP6sos(obj.fs, obj.fCutoff);
-            [obj.B_hp, obj.A_hp] = scint_calculator.designHP6sos(obj.fs, obj.fCutoff);
+            [obj.B_lp, obj.A_lp] = scint_calculator_conkerR.designLP6sos(obj.fs, obj.fCutoff);
+            [obj.B_hp, obj.A_hp] = scint_calculator_conkerR.designHP6sos(obj.fs, obj.fCutoff);
             obj.zi_lp = zeros(3, 2);   % 3 sections x order-2 state
             obj.zi_hp = zeros(3, 2);
 
             % Design down-sampled filters (fs = 1000/longCoh_ms Hz)
             fs_ds = obj.fs / max(obj.longCoh_ms, 1);
-            [obj.B_lp_ds, obj.A_lp_ds] = scint_calculator.designLP6sos(fs_ds, obj.fCutoff);
-            [obj.B_hp_ds, obj.A_hp_ds] = scint_calculator.designHP6sos(fs_ds, obj.fCutoff);
+            [obj.B_lp_ds, obj.A_lp_ds] = scint_calculator_conkerR.designLP6sos(fs_ds, obj.fCutoff);
+            [obj.B_hp_ds, obj.A_hp_ds] = scint_calculator_conkerR.designHP6sos(fs_ds, obj.fCutoff);
             obj.zi_lp_ds = zeros(3, 2);
             obj.zi_hp_ds = zeros(3, 2);
 
-            obj.result = scint_calculator.emptyResult();
+            obj.result = scint_calculator_conkerR.emptyResult();
         end
 
         % ------------------------------------------------------------------
@@ -249,7 +249,7 @@ classdef scint_calculator < handle
             obj.resetPhaseTracking();
             obj.tickSinceUpdate = 0;
             obj.newResultFlag   = false;
-            obj.result          = scint_calculator.emptyResult();
+            obj.result          = scint_calculator_conkerR.emptyResult();
         end
 
     end % public methods
@@ -517,7 +517,7 @@ classdef scint_calculator < handle
 
             % Any NaN in the window → suppress output (gap contamination)
             if any(isnan(SI_seq)) || any(isnan(phiHP_seq))
-                obj.result        = scint_calculator.emptyResult();
+                obj.result        = scint_calculator_conkerR.emptyResult();
                 obj.newResultFlag = true;
                 return;
             end

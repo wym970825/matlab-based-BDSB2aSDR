@@ -1,4 +1,4 @@
-function [satPositions, satClkCorr] = satpos(transmitTime, prnList,eph)
+function [satPositions, satClkCorr] = satpos1(transmitTime, prnList,eph)
 %SATPOS Calculation of X,Y,Z satellites coordinates at TRANSMITTIME for
 %given ephemeris EPH. Coordinates are calculated for each satellite in the
 %list PRNLIST.

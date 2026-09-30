@@ -1,4 +1,4 @@
-"""Locate MATLAB and run B2a pipeline via -batch (no Engine / desktop needed).
+"""Locate MATLAB and run B2a pipeline without Engine or desktop dependencies.
 
 IMPORTANT: Do NOT inherit the full Python process environment. R2024b can
 Access-Violation crash in libmwi18n / microservices at startup when PYTHON*
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -19,19 +20,23 @@ from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Tuple
 
 
+_LAUNCH_MODE_CACHE: dict[str, str] = {}
+
+
 def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
 def find_matlab() -> Optional[str]:
-    """Return matlab executable path. Honors B2A_MATLAB env override."""
+    """Return the newest MATLAB executable. Honors an explicit override."""
     env = os.environ.get("B2A_MATLAB") or os.environ.get("MATLAB_EXE")
     if env and Path(env).exists():
         return str(Path(env))
 
+    candidates: List[Path] = []
     which = shutil.which("matlab")
     if which:
-        return which
+        candidates.append(Path(which))
 
     roots = []
     for base in (
@@ -41,12 +46,43 @@ def find_matlab() -> Optional[str]:
         p = Path(base) / "MATLAB"
         if p.is_dir():
             roots.append(p)
+    # Also support installations such as F:\MATLAB2026a.  Limit this to
+    # the project drive root; no recursive disk scan is performed.
+    project_drive = Path(project_root().anchor)
+    if project_drive.is_dir():
+        candidates.extend(project_drive.glob("MATLAB*/bin/matlab.exe"))
     for root in roots:
-        cands = sorted(root.glob("R*/bin/matlab.exe"), reverse=True)
-        for c in cands:
-            if c.is_file():
-                return str(c)
-    return None
+        candidates.extend(root.glob("R*/bin/matlab.exe"))
+
+    unique: dict[str, Path] = {}
+    for candidate in candidates:
+        if candidate.is_file():
+            unique[str(candidate.resolve()).lower()] = candidate.resolve()
+    if not unique:
+        return None
+    newest = max(unique.values(), key=_matlab_release_sort_key)
+    return str(newest)
+
+
+def _matlab_release_sort_key(executable: Path) -> Tuple[int, int, str]:
+    match = re.search(r"(?i)(20\d{2})([ab])", str(executable))
+    if not match:
+        return (0, 0, str(executable).lower())
+    return (int(match.group(1)), 1 if match.group(2).lower() == "b" else 0,
+            str(executable).lower())
+
+
+def _launch_cache_key(matlab: str) -> str:
+    return str(Path(matlab).resolve()).lower()
+
+
+def _remember_launch_mode(matlab: str, mode: str) -> None:
+    _LAUNCH_MODE_CACHE[_launch_cache_key(matlab)] = mode
+
+
+def _needs_r2026a_startup_workaround(matlab: str) -> bool:
+    return (sys.platform.startswith("win") and
+            _matlab_release_sort_key(Path(matlab))[:2] >= (2026, 0))
 
 
 def _matlab_clean_env(matlab_exe: str) -> dict:
@@ -102,6 +138,25 @@ def _matlab_clean_env(matlab_exe: str) -> dict:
     env["MW_MATLAB_FORCE_NO_DESKTOP"] = "1"
     # Avoid MATLAB trying to bootstrap external Python (Engine / pyenv)
     env["MW_PY_DISABLE_AUTO_INSTALL"] = "1"
+    # Optional isolated MATLAB preferences.  This is useful for automation
+    # and for diagnosing a damaged release-specific user preference tree
+    # without renaming or overwriting the user's existing settings.
+    pref_override = os.environ.get("B2A_MATLAB_PREFDIR", "").strip()
+    if not pref_override and _needs_r2026a_startup_workaround(matlab_exe):
+        pref_override = str(
+            project_root() / "results" / "ui_runtime" / "r2026a_prefs"
+        )
+    if pref_override:
+        pref_base = Path(pref_override).resolve()
+        pref_base.mkdir(parents=True, exist_ok=True)
+        # R2026a can crash after reusing a damaged preference tree.  Give
+        # every receiver job/probe sequence a fresh child directory; all
+        # fallback processes in that sequence deliberately share it.
+        pref_path = pref_base / (
+            f"session_{os.getpid()}_{threading.get_ident()}_{time.time_ns()}"
+        )
+        pref_path.mkdir(parents=True, exist_ok=True)
+        env["MATLAB_PREFDIR"] = str(pref_path)
     return env
 
 
@@ -119,7 +174,7 @@ def _build_matlab_statement(root: Path, cfg_path: Path, entry: str = "runFromJso
 
 
 def _launch_variants(matlab: str, statement: str) -> List[Tuple[str, List[str]]]:
-    """Ordered command variants. Prefer clean -batch, then -r -wait fallbacks."""
+    """Return launch variants, preferring the last working mode per release."""
     variants: List[Tuple[str, List[str]]] = []
     # 1) Official non-interactive batch (R2019a+)
     variants.append(("batch", [matlab, "-batch", statement]))
@@ -134,15 +189,6 @@ def _launch_variants(matlab: str, statement: str) -> List[Tuple[str, List[str]]]
             "r_wait",
             [matlab, "-nosplash", "-nodesktop", "-wait", "-r", r_stmt],
         ))
-        # 3) via cmd with env scrub in shell
-        variants.append((
-            "cmd_batch",
-            [
-                "cmd.exe", "/d", "/c",
-                f'set PYTHONHOME=& set PYTHONPATH=& set PYTHONUTF8=& '
-                f'"{matlab}" -batch "{statement}"',
-            ],
-        ))
     else:
         r_stmt = (
             "try," + statement +
@@ -153,38 +199,69 @@ def _launch_variants(matlab: str, statement: str) -> List[Tuple[str, List[str]]]
             "r_nodesktop",
             [matlab, "-nosplash", "-nodesktop", "-r", r_stmt],
         ))
+    preferred = (
+        os.environ.get("B2A_MATLAB_LAUNCH_MODE", "").strip().lower()
+        or _LAUNCH_MODE_CACHE.get(_launch_cache_key(matlab), "")
+    )
+    if not preferred and _needs_r2026a_startup_workaround(matlab):
+        # On the tested R2026a Windows installation, project startup
+        # through -batch crashes in the recent-artifacts service while the
+        # guarded -r/-wait path is stable.
+        preferred = "r_wait"
+    if preferred:
+        variants.sort(key=lambda item: 0 if item[0].lower() == preferred else 1)
     return variants
 
 
-def probe_matlab(timeout_s: float = 120) -> dict:
-    """Quick start test: matlab -batch \"disp('B2A_OK')\" with clean env."""
+def probe_matlab(timeout_s: float = 120, launch_env: Optional[dict] = None) -> dict:
+    """Quick start test using the same fallback modes as receiver jobs."""
     matlab = find_matlab()
     if not matlab:
         return {"ok": False, "error": "MATLAB not found", "matlab": None}
-    env = _matlab_clean_env(matlab)
-    cmd = [matlab, "-batch", "fprintf('B2A_OK\\n');"]
-    try:
-        p = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            env=env,
-            timeout=timeout_s,
-            cwd=str(Path(matlab).parent),
-        )
-        out = (p.stdout or "") + (p.stderr or "")
-        ok = p.returncode == 0 and "B2A_OK" in out
-        return {
-            "ok": ok,
-            "matlab": matlab,
-            "exitCode": p.returncode,
-            "output": out[-2000:],
-            "mode": "clean_env_batch",
-        }
-    except Exception as e:
-        return {"ok": False, "matlab": matlab, "error": str(e)}
+    statement = "fprintf('B2A_OK\\n');"
+    attempts = []
+    variants = _launch_variants(matlab, statement)
+    if _needs_r2026a_startup_workaround(matlab):
+        # A trivial batch start safely initializes R2026a's per-user
+        # services; project statements still use r_wait afterward.
+        variants.sort(key=lambda item: 0 if item[0] == "batch" else 1)
+    for mode, cmd in variants:
+        try:
+            env = launch_env if launch_env is not None else _matlab_clean_env(matlab)
+            p = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
+                timeout=timeout_s,
+                cwd=str(Path(matlab).parent),
+            )
+            out = (p.stdout or "") + (p.stderr or "")
+            attempts.append({"mode": mode, "exitCode": p.returncode,
+                             "output": out[-2000:],
+                             "prefDir": env.get("MATLAB_PREFDIR", "")})
+            # Windows -r -wait can return no redirected output even though
+            # MATLAB executed the guarded statement and exit(0).
+            ok = p.returncode == 0 and (mode.startswith("r_") or "B2A_OK" in out)
+            if ok:
+                next_mode = "r_wait" if (
+                    mode == "batch" and
+                    _needs_r2026a_startup_workaround(matlab)
+                ) else mode
+                _remember_launch_mode(matlab, next_mode)
+                return {"ok": True, "matlab": matlab,
+                        "exitCode": p.returncode, "output": out[-2000:],
+                        "mode": mode, "attempts": attempts}
+        except Exception as exc:
+            attempts.append({"mode": mode, "error": str(exc)})
+    last = attempts[-1] if attempts else {}
+    return {"ok": False, "matlab": matlab,
+            "exitCode": last.get("exitCode"),
+            "output": last.get("output", ""),
+            "error": last.get("error", "MATLAB launch failed"),
+            "mode": last.get("mode", ""), "attempts": attempts}
 
 
 def run_probe(
@@ -243,8 +320,10 @@ def _run_matlab_job(
 
     statement = _build_matlab_statement(root, cfg_path, entry=entry)
     log_path = out_dir / "matlab.log"
+    # Keep one isolated preference tree for preflight and all fallbacks in
+    # this job.  R2026a's trivial batch preflight initializes services that
+    # the subsequent guarded r_wait project launch relies on.
     env = _matlab_clean_env(matlab)
-    variants = _launch_variants(matlab, statement)
 
     last_rc = None
     last_mode = ""
@@ -258,14 +337,18 @@ def _run_matlab_job(
     _log(f"[matlab_runner] exe={matlab} entry={entry}\n")
     _log("[matlab_runner] using CLEAN environment (no PYTHON* inheritance)\n")
 
-    # Optional MATLAB start preflight (skip for IF probe job — already short)
-    skip_pf = (
-        entry == "runProbeIf"
-        or os.environ.get("B2A_SKIP_MATLAB_PROBE", "").strip().lower() in ("1", "true", "yes")
+    # R2026a needs a trivial first launch before the stable project mode.
+    # Older IF probes stay fast by skipping this preflight.
+    skip_requested = os.environ.get(
+        "B2A_SKIP_MATLAB_PROBE", ""
+    ).strip().lower() in ("1", "true", "yes")
+    skip_pf = skip_requested or (
+        entry == "runProbeIf" and
+        not _needs_r2026a_startup_workaround(matlab)
     )
     if not skip_pf:
-        _log("[matlab_runner] preflight matlab -batch…\n")
-        probe = probe_matlab(timeout_s=180)
+        _log("[matlab_runner] preflight MATLAB launch…\n")
+        probe = probe_matlab(timeout_s=180, launch_env=env)
         _log(f"[matlab_runner] preflight ok={probe.get('ok')} exit={probe.get('exitCode')} "
              f"err={probe.get('error')}\n")
         if not probe.get("ok"):
@@ -276,9 +359,14 @@ def _run_matlab_job(
             if probe.get("output"):
                 _log(probe["output"] + "\n")
 
+    # Build this list after preflight so a working fallback discovered by
+    # probe_matlab is used first for the actual receiver job.
+    variants = _launch_variants(matlab, statement)
     for mode, cmd in variants:
         last_mode = mode
         _log(f"\n[matlab_runner] try mode={mode}\n$ {' '.join(cmd)}\n")
+        if env.get("MATLAB_PREFDIR"):
+            _log(f"[matlab_runner] isolated prefdir={env['MATLAB_PREFDIR']}\n")
         rc, text = _run_one(cmd, env=env, cwd=str(root), timeout_s=timeout_s, log_cb=_log)
         last_rc = rc
         # Access violation often 0xC0000005 = 3221225477 unsigned or -1073741819
@@ -287,8 +375,11 @@ def _run_matlab_job(
         )
         report_path = out_dir / "report.json"
         if report_path.is_file() and (rc == 0 or report_path.stat().st_size > 10):
+            if rc == 0:
+                _remember_launch_mode(matlab, mode)
             break
         if rc == 0:
+            _remember_launch_mode(matlab, mode)
             break
         if av:
             _log(
@@ -325,7 +416,7 @@ def _run_matlab_job(
                 " MATLAB Access Violation during startup is often caused by "
                 "inherited Python env; runner already uses clean env. Try: "
                 "(1) close other MATLAB instances, "
-                "(2) run once from desktop: matlab -batch \"disp(1)\", "
+                "(2) set B2A_MATLAB_LAUNCH_MODE=r_wait on Windows, "
                 "(3) set B2A_MATLAB to matlab.exe under bin\\, "
                 "(4) delete corrupt prefs if needed."
             )

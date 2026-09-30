@@ -118,8 +118,14 @@ if nargout >= 4
 
     dop(1)  = sqrt(trace(Q));
     dop(2)  = sqrt(Q(1,1) + Q(2,2) + Q(3,3));
-    dop(3)  = sqrt(Q(1,1) + Q(2,2));
-    dop(4)  = sqrt(Q(3,3));
+    % Horizontal/vertical axes are local ENU, not ECEF X/Y/Z.
+    [lat, lon, ~] = cart2geo(pos(1), pos(2), pos(3), 5);
+    Renu = [-sind(lon), cosd(lon), 0; ...
+        -sind(lat)*cosd(lon), -sind(lat)*sind(lon), cosd(lat); ...
+        cosd(lat)*cosd(lon), cosd(lat)*sind(lon), sind(lat)];
+    Qenu = Renu * Q(1:3,1:3) * Renu.';
+    dop(3)  = sqrt(max(0, Qenu(1,1) + Qenu(2,2)));
+    dop(4)  = sqrt(max(0, Qenu(3,3)));
     dop(5)  = sqrt(Q(4,4));
 end
 end

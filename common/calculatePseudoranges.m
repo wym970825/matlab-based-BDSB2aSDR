@@ -24,10 +24,13 @@ function [pseudoranges,transmitTime,localTime] = ...
 transmitTime = inf(1, settings.numberOfChannels);
 
 % Accelerate sequential search along absoluteSample
-persistent searchIndex;
-if isempty(searchIndex) || (localTime == inf)
+persistent searchIndex lastMeasSample;
+if isempty(searchIndex) || numel(searchIndex) ~= settings.numberOfChannels ...
+        || (localTime == inf) || isempty(lastMeasSample) ...
+        || currMeasSample < lastMeasSample
     searchIndex = ones(1, settings.numberOfChannels);
 end
+lastMeasSample = currMeasSample;
 
 useSegments = iscell(towSeg);
 
@@ -83,8 +86,17 @@ for channelNr = channelList
     end
     codePhaseStep = cf / settings.samplingFreq;
 
-    codePhase = trackResults(channelNr).remCodePhase(index) +  ...
-        codePhaseStep * (currMeasSample - absS(index));
+    % Do not extrapolate a terminated channel or bridge unrecorded samples.
+    % absoluteSample marks the start of a single recorded code period.
+    sampleDelta = currMeasSample - absS(index);
+    remPhase = trackResults(channelNr).remCodePhase(index);
+    periodSamples = ceil((settings.codeLength - remPhase) / codePhaseStep);
+    if ~isfinite(remPhase) || ~isfinite(periodSamples) || ...
+            sampleDelta < 0 || sampleDelta >= periodSamples
+        continue;
+    end
+
+    codePhase = remPhase + codePhaseStep * sampleDelta;
 
     transmitTime(channelNr) = (codePhase/settings.codeLength + index - ...
         sf0) * settings.codeLength / settings.codeFreqBasis + tow0;
