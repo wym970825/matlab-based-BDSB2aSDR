@@ -264,6 +264,11 @@ if ~isempty(varargin)
     addParameter(p, 'filePath',         settings.filePath);
     addParameter(p, 'fileName',         settings.fileName);
     addParameter(p, 'EnablePB',         settings.EnablePB);
+    addParameter(p, 'Frontend',         struct());
+    addParameter(p, 'samplingFreq',     settings.samplingFreq);
+    addParameter(p, 'dataType',         settings.dataType);
+    addParameter(p, 'fileType',         settings.fileType);
+    addParameter(p, 'skipNumberOfBytes',settings.skipNumberOfBytes);
     addParameter(p, 'skipAcquisition',  settings.skipAcquisition);
     addParameter(p, 'plotTracking',     settings.plotTracking);
     addParameter(p, 'numberOfChannels', settings.numberOfChannels);
@@ -287,6 +292,10 @@ if ~isempty(varargin)
     for i = 1:numel(fn)
         settings.(fn{i}) = p.Results.(fn{i});
     end
+    if ismember('skipNumberOfBytes',p.UsingDefaults)
+        settings.skipNumberOfBytes=skipNumberOfSeconds*settings.samplingFreq* ...
+            frontendSampleBytes(settings.dataType,settings.fileType);
+    end
 end
 % Enforce hard cap even if caller passes a larger value
 if isfield(settings, 'parMaxWorkers')
@@ -301,13 +310,15 @@ if ~exist(settings.resultRoot, 'dir')
 end
 
 %% Cap msToProcess by file length ==========================================
+% Name/value overrides must be reflected before deriving file duration.
+settings.size_per_sample=frontendSampleBytes(settings.dataType,settings.fileType);
 fileInfo = dir(fullfile(settings.filePath, settings.fileName));
 if isempty(fileInfo)
     warning('initSettings:FileMissing', ...
         'IF file not found: %s', fullfile(settings.filePath, settings.fileName));
 else
-    msToProcessMax = 1e3 * ((fileInfo.bytes) / settings.size_per_sample ...
-        / settings.samplingFreq - skipNumberOfSeconds - 1);
+    msToProcessMax = 1e3 * ((fileInfo.bytes-settings.skipNumberOfBytes) / ...
+        settings.size_per_sample / settings.samplingFreq - 1);
     if msToProcessMax < settings.msToProcess
         settings.msToProcess = floor(msToProcessMax);
         warning('initSettings:CapMs', ...

@@ -80,6 +80,14 @@ function report = runProbeIf(jsonPath, varargin)
     if isfield(raw, 'skipNumberOfBytes') && isfinite(raw.skipNumberOfBytes)
         settings.skipNumberOfBytes = raw.skipNumberOfBytes;
     end
+    % Explicit digital thresholds win over the optional dBm recomputation.
+    if isfield(raw,'PB_settings')
+        names=fieldnames(raw.PB_settings);
+        for i=1:numel(names), settings.PB_settings.(names{i})=raw.PB_settings.(names{i}); end
+    end
+    if isfield(raw,'Frontend'), settings.Frontend=raw.Frontend; end
+    if isfield(raw,'machineFormat'), settings.machineFormat=raw.machineFormat; end
+    settings=resolveFrontendSettings(settings);
 
     probeTime = 100e-3; % s, match probeData
     if isfield(raw, 'probeDurationMs') && isfinite(raw.probeDurationMs) ...
@@ -102,15 +110,9 @@ function report = runProbeIf(jsonPath, varargin)
     fprintf('fs=%g IF=%g probe=%.0f ms\n', settings.samplingFreq, settings.IF, probeTime*1e3);
 
     try
-        [fid, message] = fopen(fileNameStr, 'rb');
-        if fid <= 0
-            error('runProbeIf:Open', 'Unable to read %s: %s', fileNameStr, message);
-        end
-        cleaner = onCleanup(@() fclose(fid));
-
-        if isfield(settings, 'skipNumberOfBytes') && settings.skipNumberOfBytes > 0
-            fseek(fid, settings.skipNumberOfBytes, 'bof');
-        end
+        source=IFSource(settings,'probe');
+        cleaner=onCleanup(@() delete(source));
+        inputStart=source.tellLogical();
 
         samplesPerCode = round(settings.samplingFreq / ...
             (settings.codeFreqBasis / settings.codeLength));
@@ -120,8 +122,14 @@ function report = runProbeIf(jsonPath, varargin)
             dataAdaptCoeff = 2;
         end
 
-        dataNum = max(1, round(dataAdaptCoeff * probeTime * settings.samplingFreq));
-        [data, count] = fread(fid, [1, dataNum], settings.dataType);
+        complexCount=max(1,round(probeTime*settings.samplingFreq));
+        zRaw=source.readRawRange(inputStart,complexCount);
+        if settings.fileType==2
+            data=reshape([real(zRaw);imag(zRaw)],1,[]);
+        else
+            data=zRaw;
+        end
+        dataNum=dataAdaptCoeff*complexCount; count=numel(data);
         if count < min(dataNum, dataAdaptCoeff * samplesPerCode)
             error('runProbeIf:Short', 'Could not read enough IF samples (%d/%d)', count, dataNum);
         end
@@ -261,6 +269,22 @@ function report = runProbeIf(jsonPath, varargin)
         else
             fprintf('  PB disabled — skip PB debug figure\n');
         end
+
+        % The selected frontend is evaluated once from raw IQ. Existing raw
+        % probe plots remain raw; the comparison is explicitly labelled.
+        [processed,frontendMeta]=source.readRange(inputStart,numel(zRaw));
+        report.frontend=source.Info;
+        report.frontendSummary=rmfield(frontendMeta,'valid');
+        figFE=figure('Visible','off','Color','w','Position',[50 50 1000 500]);
+        fftLength=min(32768,2^floor(log2(max(8,numel(zRaw)))));
+        [pRaw,ff]=pwelch(zRaw,fftLength,[],fftLength,settings.samplingFreq,'centered');
+        pOut=pwelch(processed,fftLength,[],fftLength,settings.samplingFreq,'centered');
+        plot(ff/1e6,10*log10(max(pRaw,realmin)),ff/1e6,10*log10(max(pOut,realmin)));
+        grid on; xlabel('Frequency (MHz)'); ylabel('PSD (dB/Hz)');
+        legend('Raw IQ',['Processed: ' source.Mode],'Interpreter','none');
+        title(sprintf('Frontend comparison; valid %d/%d',frontendMeta.validCount,numel(processed)));
+        localSaveFig(figFE,fullfile(figDir,'probe_frontend.png')); close(figFE);
+        report.images.frontend='probe/probe_frontend.png';
 
         report.ok = true;
         report.stage = 'done';

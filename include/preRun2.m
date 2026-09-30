@@ -4,6 +4,9 @@ channel                 = [];
 channel.PRN             = 0;
 channel.acquiredFreq    = 0;
 channel.codePhase       = 0;
+channel.codePhaseAbs    = NaN; % Historical acquisition-array coordinate.
+channel.acqInputStartAbs = NaN;
+channel.trackStartAbs   = NaN; % Explicit physical file sample, zero based.
 channel.codeFreq        = 0;
 channel.status          = '-';
 channel.weilPhase   = 0;   % NEW: Weil(100) start phase from acquisition
@@ -30,6 +33,10 @@ for ii = 1:nInit
     channel(ii).acquiredFreq = acqResults.carrFreq(k);
     channel(ii).codePhase    = acqResults.codePhase(k);
     channel(ii).codePhaseAbs = acqResults.codePhaseAbs(k);
+    if isfield(acqResults,'acqInputStartAbs')
+        channel(ii).acqInputStartAbs = acqResults.acqInputStartAbs;
+        channel(ii).trackStartAbs = acqResults.acqInputStartAbs+acqResults.codePhase(k)-1;
+    end
     channel(ii).codeFreq     = settings.codeFreqBasis;
     channel(ii).status       = 'T';
     channel(ii).weilPhase   = acqResults.weilPhase(k);

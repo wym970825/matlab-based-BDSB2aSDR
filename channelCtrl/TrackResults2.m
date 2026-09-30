@@ -25,6 +25,14 @@ classdef TrackResults2 < handle
         % ---- Identification / status ----
         PRN double = 0
         status char = '-'
+        frontendInfo struct = struct() % Constant configuration and coefficient provenance.
+        frontendSampleCount double
+        frontendValidCount double
+        frontendBoundaryFlag logical
+        frontendDetectorDuty double
+        frontendMeanWeight double
+        frontendMeanWeightSquared double
+        frontendWeightSupportFraction double
 
         % ---- 1ms (per loopCnt) fields ----
         absoluteSample double
@@ -222,6 +230,7 @@ classdef TrackResults2 < handle
             obj.Ppre  = nan(1,Nsize);
             obj.Ppost = nan(1,Nsize);
             obj.eta   = nan(1,Nsize);
+            obj.resetFrontendBuffers(Nsize);
 
 
             obj.DataCNo   = nan(1, nCNo);
@@ -350,6 +359,27 @@ classdef TrackResults2 < handle
             obj.kf_rmsNuOmegaHz(k) = t.kf_rmsNuOmegaHz;
         end
 
+        function writeFrontend(obj,k,meta)
+            % Statistics refer only to this core integration, never its halo.
+            obj.frontendSampleCount(k)=meta.logicalCount;
+            obj.frontendValidCount(k)=meta.validCount;
+            obj.frontendBoundaryFlag(k)=meta.boundaryFlag;
+            obj.frontendDetectorDuty(k)=meta.detectorDuty;
+            obj.frontendMeanWeight(k)=meta.meanWeight;
+            obj.frontendMeanWeightSquared(k)=meta.meanWeightSquared;
+            obj.frontendWeightSupportFraction(k)=meta.weightSupportFraction;
+        end
+
+        function resetFrontendBuffers(obj,N)
+            obj.frontendSampleCount=nan(1,N);
+            obj.frontendValidCount=nan(1,N);
+            obj.frontendBoundaryFlag=false(1,N);
+            obj.frontendDetectorDuty=nan(1,N);
+            obj.frontendMeanWeight=nan(1,N);
+            obj.frontendMeanWeightSquared=nan(1,N);
+            obj.frontendWeightSupportFraction=nan(1,N);
+        end
+
         function writeCNo(obj, k, dataCNo, dataPLD, pilotCNo, pilotPLD, b2aCNo)
             %WRITECNO Fast C/N0 / PLD log at CNo index k (1-based).
             % Prefer k = ceil(TRii / CNoInterval).
@@ -442,7 +472,10 @@ classdef TrackResults2 < handle
 
             msFields = TrackResults2.msFieldNames();
             slowFields = TrackResults2.slowFieldNames();
-            skipFields = {'PRN', 'status', 'Nsize', 'CNoInterval', 'ChunkCapacity'};
+            skipFields = {'PRN', 'status', 'Nsize', 'CNoInterval', 'ChunkCapacity','frontendInfo'};
+            if TrackResults2.hasStoredField(other_obj,'frontendInfo')
+                obj.frontendInfo=other_obj.frontendInfo;
+            end
 
             all_properties = properties(obj);
             copied_prop = 0;
@@ -518,7 +551,7 @@ classdef TrackResults2 < handle
             all_properties = properties(obj);
             for p_ii = 1:numel(all_properties)
                 pname = all_properties{p_ii};
-                if ismember(pname, {'PRN', 'status', 'Nsize', 'CNoInterval', 'ChunkCapacity'})
+                if ismember(pname, {'PRN', 'status', 'Nsize', 'CNoInterval', 'ChunkCapacity','frontendInfo'})
                     continue;
                 end
                 if ismember(pname, msFields) || numel(obj.(pname)) == obj.ChunkCapacity ...
@@ -596,6 +629,7 @@ classdef TrackResults2 < handle
             obj.Ppre  = nan(1, Nn);
             obj.Ppost = nan(1, Nn);
             obj.eta   = nan(1, Nn);
+            obj.resetFrontendBuffers(Nn);
             obj.DataCNo  = nan(1, nCNo);
             obj.DataPLD  = nan(1, nCNo);
             obj.PilotCNo = nan(1, nCNo);
@@ -1081,7 +1115,10 @@ classdef TrackResults2 < handle
                 'fllDiscrHz','fllDiscrFiltHz','fllCorrHz','fllAided', ...
                 'kf_phiRad','kf_omegaHz','kf_alphaHzps','kf_corrHz', ...
                 'kf_nisPhi','kf_nisOmega','kf_rmsNuPhiRad','kf_rmsNuOmegaHz', ...
-                'Ppre','Ppost','eta'};
+                'Ppre','Ppost','eta', ...
+                'frontendSampleCount','frontendValidCount','frontendBoundaryFlag', ...
+                'frontendDetectorDuty','frontendMeanWeight','frontendMeanWeightSquared', ...
+                'frontendWeightSupportFraction'};
         end
 
         function names = slowFieldNames()

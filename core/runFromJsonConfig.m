@@ -74,6 +74,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
         settings = localApplyNested(settings, raw);
     end
     settings = localFinalizeSettings(settings, raw, settingsSource);
+    settings = resolveFrontendSettings(settings);
     settings.resultRoot = outDir;
     settings.tempdataSvPth = tempDir;
     settings.plotNavPost = doPlot;
@@ -119,6 +120,8 @@ function report = runFromJsonConfig(jsonPath, varargin)
     report.trkFigDir = trkFigDir;
     report.navFigDir = navFigDir;
     report.tag = tag;
+    report.frontend = settings.Frontend;
+    report.softwareVersion = strtrim(fileread(fullfile(fileparts(fileparts(mfilename('fullpath'))),'VERSION')));
     report.stage = 'start';
     report.errorIdentifier = '';
     report.error = '';
@@ -327,7 +330,8 @@ end
 function nv = localBuildInitArgs(raw)
     nv = {};
     keys = {'msToProcess','filePath','fileName','EnablePB','skipAcquisition', ...
-        'plotTracking','numberOfChannels','useParfor','parMaxWorkers'};
+        'plotTracking','numberOfChannels','useParfor','parMaxWorkers', ...
+        'samplingFreq','dataType','fileType','skipNumberOfBytes'};
     for i = 1:numel(keys)
         k = keys{i};
         if isfield(raw, k)
@@ -396,6 +400,8 @@ function settings = localApplyNested(settings, raw)
     end
     % An explicitly supplied digital threshold takes precedence over dBm.
     settings = localMergeStruct(settings, raw, 'PB_settings');
+    if isfield(raw,'Frontend'), settings.Frontend=raw.Frontend; end
+    if isfield(raw,'machineFormat'), settings.machineFormat=raw.machineFormat; end
 end
 
 function settings = localFinalizeSettings(settings, raw, settingsSource)
@@ -425,9 +431,10 @@ function settings = localFinalizeSettings(settings, raw, settingsSource)
     end
     if ~isnumeric(settings.skipNumberOfBytes) || ...
             ~isscalar(settings.skipNumberOfBytes) || ...
-            ~isfinite(settings.skipNumberOfBytes) || settings.skipNumberOfBytes < 0
+            ~isfinite(settings.skipNumberOfBytes) || settings.skipNumberOfBytes < 0 || ...
+            settings.skipNumberOfBytes ~= round(settings.skipNumberOfBytes)
         error('runFromJsonConfig:BadSkip', ...
-            'skipNumberOfBytes must be a nonnegative finite scalar');
+            'skipNumberOfBytes must be a nonnegative finite integer');
     end
     settings.skipNumberOfBytes = floor(double(settings.skipNumberOfBytes));
 

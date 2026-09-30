@@ -31,6 +31,7 @@ function results = run_B2a(varargin)
 
     unmatched = namedargs2cell(p.Unmatched);
     settings = initSettings(unmatched{:});
+    settings = resolveFrontendSettings(settings);
 
     projectRoot = fileparts(fileparts(mfilename('fullpath')));
     if ~isfield(p.Unmatched, 'resultRoot')

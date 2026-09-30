@@ -25,9 +25,9 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
         return;
     end
 
+    settings = resolveFrontendSettings(settings);
     codePeriods = settings.msToProcess;
-    if (settings.fileType == 1), dataAdaptCoeff = 1; else, dataAdaptCoeff = 2; end
-    Nin1ms = settings.samplingFreq * 1e-3;
+    Nin1ms = round(settings.samplingFreq * 1e-3);
 
     useKF = false;
     if isfield(settings, 'KF') && isstruct(settings.KF) && isfield(settings.KF, 'enable')
@@ -65,20 +65,17 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
     tau2code = tau2code_pull;
     if ~isfield(settings, 'longCoh_ms'), settings.longCoh_ms = 20; end
 
-    % --- private IF handle (parfor-safe) ---
-    targetfile = fullfile(settings.filePath, settings.fileName);
-    [fid, msg] = fopen(targetfile, 'rb');
-    if fid <= 0
-        error('trackOneChannel:OpenFailed', 'Unable to open %s: %s', targetfile, msg);
-    end
-    cleaner = onCleanup(@() local_fclose(fid)); %#ok<NASGU>
+    % Private logical IF source; halo reads never change observation time.
+    source = IFSource(settings,'tracking');
+    cleaner = onCleanup(@() delete(source));
 
     trkBuf = TrackResults2(settings); % per-channel rolling buffer (chunked save)
     trkBuf.PRN     = ch.PRN;
-    % Seek to this channel code-phase start (private file handle)
-    seekBytes = settings.skipNumberOfBytes + settings.size_per_sample * (ch.codePhase - 1);
-    if fseek(fid, seekBytes, 'bof') ~= 0
-        error('trackOneChannel:SeekFailed', 'fseek failed for PRN %d codePhase=%g', ch.PRN, ch.codePhase);
+    trkBuf.frontendInfo = source.Info;
+    if isfield(ch,'trackStartAbs') && isfinite(ch.trackStartAbs)
+        source.seekAbs(ch.trackStartAbs);
+    else
+        source.seekAbs(settings.skipNumberOfBytes/source.BytesPerSample+ch.codePhase-1);
     end
     %-----------------------------------------------------------------%
     % Local spreading code
@@ -212,17 +209,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
     REACQbuff_pointer = 0;
     % REACQbuff_isfull = false;
     
-    % Update in Version 4, Feb-2026
-    % Pulse blanker (PB) initialization
-    if settings.EnablePB
-        pbSettings = settings;
-        if isfield(settings, 'PB_settings') && ...
-                isfield(settings.PB_settings, 'Th_static_tracking')
-            pbSettings.PB_settings.Th_static = ...
-                settings.PB_settings.Th_static_tracking;
-        end
-        pb = pulseBlanker(pbSettings);
-    end
+    % Frontend selection/PB state belong exclusively to IFSource.
     % force Aiding after acq
     forceInitAiding = true;
 
@@ -319,6 +306,10 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
                 string(nhsm.STATE),scCal.result.S4_ori, scCal.result.phi60);
             % print and return carriage to beginning of the line (overwrite)
             fprintf('%s\n', statusLine);
+            if rem(loopCnt,5000)==0
+                writeTrackingProgress(settings,ch.PRN,completedPeriods,codePeriods, ...
+                    source.tellLogical(),'running');
+            end
         end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % New in V4
@@ -341,32 +332,21 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
             % --- absoluteSample MUST be logged during REACQ ---
             % Previously continue'd without writeTick → NaN holes and broken
             % postNavigation TOW/index ↔ sample mapping after re-acq.
-            logAbsSampleReacq = (ftell(fid)) / settings.size_per_sample;
+            logAbsSampleReacq = source.tellLogical();
 
             % load buffer in this step
             % ensure that only one ms data read in one step
-            samplesExpected = dataAdaptCoeff * Nin1ms;
-            [temp_data, samplesRead] = fread(fid, samplesExpected, settings.dataType);
-            if samplesRead ~= samplesExpected
+            [temp_data,frontendMeta] = source.read(Nin1ms);
+            samplesRead = numel(temp_data);
+            if samplesRead ~= Nin1ms || frontendMeta.validCount ~= Nin1ms
                 warning('tracking2_v6_fix2:REACQEOF', ...
-                    ['PRN %d REACQ reached EOF (got %d values, need %d); ' ...
-                     'ending channel early.'], ch.PRN, samplesRead, samplesExpected);
+                    ['PRN %d REACQ reached EOF/invalid context (got %d samples, need %d); ' ...
+                     'ending channel early.'], ch.PRN, samplesRead, Nin1ms);
                 break;
             end
             
-            if (dataAdaptCoeff == 2)
-                data_ii = temp_data(1:2:end);
-                data_qq = temp_data(2:2:end);
-                temp_data = data_ii + 1i .* data_qq;
-            end
-            if settings.EnablePB
-                temp_data = pb.mitigate(temp_data);
-            end
             REACQbuff(REACQbuff_pointer+1:REACQbuff_pointer + Nin1ms) = temp_data;
             REACQbuff_pointer = REACQbuff_pointer + Nin1ms;
-            if REACQbuff_pointer == 0 
-                fseek(fid,round(rand(1)*Nin1ms)*settings.size_per_sample,'cof');
-            end
 
             % Log REACQ 1-ms slot (invalid correlators; keep sample timeline)
             tick.absoluteSample = logAbsSampleReacq;
@@ -386,6 +366,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
             tick.kf_corrHz = NaN; tick.kf_nisPhi = NaN; tick.kf_nisOmega = NaN;
             tick.kf_rmsNuPhiRad = NaN; tick.kf_rmsNuOmegaHz = NaN;
             trkBuf.writeTick(TRii, tick);
+            trkBuf.writeFrontend(TRii,frontendMeta);
             completedPeriods = loopCnt;
             if rem(loopCnt, trkBuf.ChunkCapacity) == 0
                 if ~trkBuf.save()
@@ -399,6 +380,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
                 try
                     acqResults = acquisition_robust_v2fft(REACQbuff, settings, ...
                         'STA', 'SING', 'PRN', ch.PRN, 'ISSILENT', true);
+                    acqResults.acqInputStartAbs = source.tellLogical()-REACQbuff_size;
                 catch ME
                     warning('tracking2_v6_fix2:REACQ', ...
                         'REACQ acquisition failed for PRN %d: %s', ch.PRN, ME.message);
@@ -418,6 +400,8 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
                     ch.PRN          = cur_channel.PRN;
                     ch.acquiredFreq = cur_channel.acquiredFreq;
                     ch.codePhase    = cur_channel.codePhase;
+                    ch.codePhaseAbs = cur_channel.codePhaseAbs;
+                    ch.acqInputStartAbs = cur_channel.acqInputStartAbs;
                     ch.codeFreq     = cur_channel.codeFreq;
                     ch.status       = cur_channel.status;
                     ch.weilPhase    = cur_channel.weilPhase;
@@ -427,16 +411,13 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
                     st = round(cur_channel.codePhase);
                     st = max(1, min(st, Nin1ms));
                     rewindComplexSamples = Nin1ms - (st - 1);
-                    rewindBytes = - rewindComplexSamples * settings.size_per_sample;
-                    pos0 = ftell(fid);
-                    ret = fseek(fid, rewindBytes, 'cof');
-                    pos1 = ftell(fid);
-                    fprintf(['\tREACQ OK PRN%02d @loop %d fseek %d->%d' ...
+                    pos0 = source.tellLogical();
+                    source.seekAbs(pos0-rewindComplexSamples);
+                    pos1 = source.tellLogical();
+                    ch.trackStartAbs = pos1;
+                    fprintf(['\tREACQ OK PRN%02d @loop %d sample %d->%d' ...
                         ' rewindSamples=%d (post-REACQ re-INIT + frame re-sync in nav)\n'], ...
                         ch.PRN, loopCnt, pos0, pos1, rewindComplexSamples);
-                    if ret ~= 0
-                        warning('REACQ fseek failed -> handover likely wrong.');
-                    end
 
                     % 4) Full tracking re-init (same as cold start after acq)
                     carrFreq      = ch.acquiredFreq;
@@ -501,32 +482,24 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
 
         %% Read next block of data 
         % Sample index at start of this code period (before fread)
-        logAbsSample = (ftell(fid)) / settings.size_per_sample;
+        logAbsSample = source.tellLogical();
         logPpre = NaN; logPpost = NaN; logEta = NaN;
         logRemCode = remCodePhase;
         logRemCarr = remCarrPhase;
 
         codePhaseStep = codeFreq / settings.samplingFreq;
         blksize = ceil((settings.codeLength - remCodePhase) / codePhaseStep);
-        [rawSignal, samplesRead] = fread(fid, ...
-            dataAdaptCoeff*blksize, settings.dataType);
-        if samplesRead ~= dataAdaptCoeff*blksize
+        [rawSignal,frontendMeta] = source.read(blksize);
+        if numel(rawSignal) ~= blksize || frontendMeta.validCount ~= blksize
             warning('trackOneChannel:EOF', ...
-                'PRN %d reached EOF after %d complete code periods.', ...
+                'PRN %d reached EOF/invalid frontend context after %d complete code periods.', ...
                 ch.PRN, completedPeriods);
             break;
         end
-        rawSignal = rawSignal.';
-        if (dataAdaptCoeff==2)
-            rawSignalIdat = rawSignal(1:2:end);
-            rawSignalQdat = rawSignal(2:2:end);
-            rawSignal = rawSignalIdat + 1j * rawSignalQdat;
-        end
-        if settings.EnablePB
-            rawSignal = pb.mitigate(rawSignal);
-            logPpre  = pb.Ppre + PwrK;
-            logPpost = pb.Ppost + PwrK;
-            logEta   = pb.PDC;
+        if strcmp(source.Mode,'pb')
+            logPpre  = frontendMeta.Ppre + PwrK;
+            logPpost = frontendMeta.Ppost + PwrK;
+            logEta   = frontendMeta.eta;
         end
         %-------------------------------------------------------------%
         pf = nhsm.pf;
@@ -763,6 +736,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
         tick.kf_corrHz = NaN; tick.kf_nisPhi = NaN; tick.kf_nisOmega = NaN;
         tick.kf_rmsNuPhiRad = NaN; tick.kf_rmsNuOmegaHz = NaN;
         trkBuf.writeTick(TRii, tick);
+        trkBuf.writeFrontend(TRii,frontendMeta);
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% CNo calculation -------------------------------------------
@@ -1008,6 +982,7 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
         end
     end
     finalTRes.PRN = ch.PRN;
+    finalTRes.frontendInfo = source.Info;
     finalTRes.status  = ch.status;
     finalTRes.Nsize = completedPeriods;
     %% Extract the time stamp for each measurement (best-effort)
@@ -1042,6 +1017,10 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
     end
 
     fprintf('Channel %d PRN %02d tracking results collected.\n', c_i, ch.PRN);
+    progressStatus='complete';
+    if completedPeriods<codePeriods, progressStatus='ended_early'; end
+    writeTrackingProgress(settings,ch.PRN,completedPeriods,codePeriods, ...
+        source.tellLogical(),progressStatus);
 
     if returnFileOnly
         % Avoid serializing a million-sample handle object from a process
@@ -1052,10 +1031,21 @@ function [finalTRes, ch] = trackOneChannel(ch, settings, c_i, TrkedNr, returnFil
 
 end % trackOneChannel
 
-function local_fclose(fid)
-    if ~isempty(fid) && fid > 0
-        try, fclose(fid); catch, end %#ok<CTCH>
-    end
+function writeTrackingProgress(settings,prn,completed,requested,nextSample,status)
+% Per-PRN heartbeat; contains logical positions, independent of RF algorithms.
+if ~isfield(settings,'resultRoot') || ~isfolder(settings.resultRoot), return; end
+try
+    file=fullfile(settings.resultRoot,sprintf('tracking_progress_prn%02d.json',prn));
+    fid=fopen(file,'w','n','UTF-8');
+    if fid<0, return; end
+    cleanup=onCleanup(@() fclose(fid));
+    value=struct('prn',prn,'completedMs',completed,'requestedMs',requested, ...
+        'nextLogicalSample',nextSample,'status',status, ...
+        'updatedAt',char(datetime('now','Format','yyyy-MM-dd HH:mm:ss')));
+    fprintf(fid,'%s\n',jsonencode(value));
+catch
+    % Failure to write a UI heartbeat must not change tracking behavior.
+end
 end
 
 function e = costasPhaseErrCycles(P)

@@ -78,6 +78,8 @@ written after every item to batch_report.json. See
 
 ## Version
 
+**v0.2.0** — Configurable `off/pb/tf_v1` front end: complex FIR notch with pulse gating, interleaved int8/int16 IQ, sample-rate-scaled taps, logical sample alignment, and per-integration diagnostics. See [configuration and validation](docs/upgrade_v020/USAGE.md) and [upgrade record](docs/upgrade_v020/PROJECT.md).
+
 **v0.1.6** — Web UI + Python orchestrator: tabbed config (IF / acq / track / nav / plot), auto-detect MATLAB `-batch`, full pipeline, auto PVT plots & Baidu map. `python launch_b2a_ui.py` → http://127.0.0.1:8787
 
 **v0.1.5** — Multi-segment TOW after REACQ (epoch LS if nSat≥4); optional elev/C/N0 WLS weights; NMEA GGA+GSV export; geobasemap streets-light + ENU/vel/DOP plots; Baidu CustomOverlay track UI; ENU jump filter (v>500 m/s).
