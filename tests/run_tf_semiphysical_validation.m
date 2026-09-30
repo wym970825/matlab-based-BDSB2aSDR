@@ -36,8 +36,8 @@ function manifest=run_tf_semiphysical_validation(caseIndex,durationMs,modes,outp
         if strcmp(label,'pb') || strcmp(label,'off')
             cfg.Frontend=struct('mode',label);
         else
-            assert(ismember(label,{'tf400','tf600'}),'TFValidation:Mode','Unknown mode.');
-            width=400000; if strcmp(label,'tf600'), width=600000; end
+            assert(ismember(label,{'tf400','tf600','tf800'}),'TFValidation:Mode','Unknown mode.');
+            width=str2double(label(3:end))*1000;
             cfg.Frontend=struct('mode','tf_v1','TF',struct('stopbandWidthHz',width));
         end
         runDir=fullfile(outputRoot,label); mkdir(runDir);

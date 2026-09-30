@@ -1,9 +1,13 @@
-function summary=verify_tf_correlation_fidelity(outputRoot)
+function summary=verify_tf_correlation_fidelity(outputRoot,bandwidthsHz)
 %VERIFY_TF_CORRELATION_FIDELITY Known-code diagnostics, separate from tracking.
 % Frozen detection weights isolate useful-signal distortion from interference
 % residual. This is a synthetic diagnostic, not a calibrated S4 experiment.
     root=setupPaths();
     if nargin<1, outputRoot=fullfile(root,'results','upgrade_v020','correlation'); end
+    if nargin<2, bandwidthsHz=[400e3 600e3]; end
+    validateattributes(bandwidthsHz,{'numeric'},{'real','finite','positive','vector','numel',2});
+    assert(numel(unique(bandwidthsHz))==2,'Fidelity:Bandwidths','Select two distinct bandwidths.');
+    bandwidthsHz=bandwidthsHz(:).';
     assert(~isfolder(outputRoot),'Fidelity:OutputExists','Use a fresh output folder.');
     mkdir(outputRoot); rows={}; curves={};
     referenceConfig=fullfile(root,'docs','semiphysical_recompute','configs','04_2700_n50dBm.json');
@@ -23,7 +27,7 @@ function summary=verify_tf_correlation_fidelity(outputRoot)
             end
         end
         j=pulse.*exp(1i*(2*pi*(-450e3)*n/fs+.81));
-        for bw=[400e3 600e3]
+        for bw=bandwidthsHz
             for scenario={'quiet','continuous','gated'}
                 label=scenario{1}; r=clean; threshold=100;
                 if strcmp(label,'continuous'), threshold=.5; end
@@ -55,7 +59,7 @@ function summary=verify_tf_correlation_fidelity(outputRoot)
         end
     end
     summary=struct('prn',11,'durationMs',20,'oversampling',32, ...
-        'configPath',referenceConfig,'dllHalfSpacingChips',halfSpacing, ...
+        'configPath',referenceConfig,'dllHalfSpacingChips',halfSpacing,'bandwidthsHz',bandwidthsHz, ...
         'scriptHash',frontendHash(fileread([mfilename('fullpath') '.m'])), ...
         'note','Frozen-weight useful component; no receiver loops/noise/S4 truth.', ...
         'cases',{rows});

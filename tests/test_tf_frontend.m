@@ -10,10 +10,10 @@ function setupOnce(testCase)
     testCase.TestData.root=base;
 end
 
-function testEightFormatRateBandwidthCombinations(testCase)
+function testFormatRateBandwidthCombinations(testCase)
     for dtype={'int8','int16'}
         for fs=[25e6 30.69e6]
-            for bw=[400e3 600e3]
+            for bw=[400e3 600e3 800e3]
                 [s,x]=fixture(testCase,dtype{1},fs,12000);
                 s.Frontend=struct('mode','tf_v1','TF',struct('stopbandWidthHz',bw));
                 source=IFSource(s); cleaner=onCleanup(@() delete(source));
