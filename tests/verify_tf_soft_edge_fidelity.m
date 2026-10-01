@@ -1,6 +1,8 @@
-function summary=verify_tf_soft_edge_fidelity(outputRoot)
+function summary=verify_tf_soft_edge_fidelity(outputRoot,bandwidthHz)
 %VERIFY_TF_SOFT_EDGE_FIDELITY Separate useful-code loss from DME residual.
 % Synthetic frozen weights, no noise/receiver loops/truth-calibrated S4.
+    if nargin<2, bandwidthHz=600e3; end
+    validateattributes(bandwidthHz,{'numeric'},{'scalar','positive','finite'});
     root=setupPaths(); assert(~isfolder(outputRoot)); mkdir(outputRoot);
     cfg=jsondecode(fileread(fullfile(root,'docs','semiphysical_recompute','configs','04_2700_n50dBm.json')));
     fs=cfg.samplingFreq; N=round(fs/1000); periods=20; halo=1000;
@@ -16,7 +18,7 @@ function summary=verify_tf_soft_edge_fidelity(outputRoot)
     interference=envelope.*exp(1i*(2*pi*(-450e3)*n/fs+.81));
     r=clean+interference; rows={}; curves={};
     for span=[3 6 9 12]
-        cfg.Frontend=struct('mode','tf_v1','TF',struct('stopbandWidthHz',600e3,'triangleSpanUs',span));
+        cfg.Frontend=struct('mode','tf_v1','TF',struct('stopbandWidthHz',bandwidthHz,'triangleSpanUs',span));
         tf=TFBlankerV1(cfg); t=tf.Config;
         [z,meta]=tf.applyRange(r,0,halo,periods*N); assert(meta.validCount==periods*N);
         g=max(t.K-abs(-t.K:t.K),0)/t.K^2;
@@ -34,7 +36,7 @@ function summary=verify_tf_soft_edge_fidelity(outputRoot)
         metric.shiftedPeakSamples=wrong.peakSamples;
         rows{end+1}=metric; curves{end+1}=curve; %#ok<AGROW>
     end
-    summary=struct('samplingFreq',fs,'bandwidthHz',600e3,'prn',11,'durationMs',20, ...
+    summary=struct('samplingFreq',fs,'bandwidthHz',bandwidthHz,'prn',11,'durationMs',20, ...
         'pulseRateHz',2700,'pairSpacingUs',12,'gaussianSigmaUs',1.5,'peakToThresholdRatio',10, ...
         'note','Frozen detection weights from clean+synthetic DME; useful and interference components separated algebraically. No thermal noise, loop or S4 truth.', ...
         'scriptHash',frontendHash(fileread([mfilename('fullpath') '.m'])),'cases',{rows});

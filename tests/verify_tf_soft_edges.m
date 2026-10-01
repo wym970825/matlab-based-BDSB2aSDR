@@ -1,6 +1,8 @@
-function summary=verify_tf_soft_edges(outputRoot)
+function summary=verify_tf_soft_edges(outputRoot,bandwidthHz)
 %VERIFY_TF_SOFT_EDGES Independent weight/alignment/file checks for edge sweep.
 % triangleSpanUs is each outer transition's 2K/fs span, not K/fs.
+    if nargin<2, bandwidthHz=600e3; end
+    validateattributes(bandwidthHz,{'numeric'},{'scalar','positive','finite'});
     setupPaths(); assert(~isfolder(outputRoot)); mkdir(outputRoot);
     rows={}; curves={}; spans=[3 6 9 12];
     for fs=[25e6 30.69e6]
@@ -21,7 +23,7 @@ function summary=verify_tf_soft_edges(outputRoot)
                 fwrite(fid,iq,dtype{1}); fclose(fid);
                 cfg=struct('samplingFreq',fs,'dataType',dtype{1},'fileType',2, ...
                     'filePath',outputRoot,'fileName',file,'skipNumberOfBytes',0, ...
-                    'Frontend',struct('mode','tf_v1','TF',struct('stopbandWidthHz',600e3, ...
+                    'Frontend',struct('mode','tf_v1','TF',struct('stopbandWidthHz',bandwidthHz, ...
                     'triangleSpanUs',span,'thresholdAmplitude',threshold)));
                 source=IFSource(cfg); cleaner=onCleanup(@() delete(source));
                 tf=source.Mitigator; t=tf.Config;
@@ -82,7 +84,7 @@ function summary=verify_tf_soft_edges(outputRoot)
             end
         end
     end
-    summary=struct('bandwidthHz',600e3,'outerSpansUs',spans,'allPassed',true, ...
+    summary=struct('bandwidthHz',bandwidthHz,'outerSpansUs',spans,'allPassed',true, ...
         'cases',{rows},'scriptHash',frontendHash(fileread([mfilename('fullpath') '.m'])));
     fid=fopen(fullfile(outputRoot,'soft_edge_verification.json'),'w','n','UTF-8'); assert(fid>=0);
     cleaner=onCleanup(@() fclose(fid)); fprintf(fid,'%s\n',jsonencode(summary,'PrettyPrint',true)); clear cleaner

@@ -3,3 +3,5 @@ run_tf600_edge_comparison.m text eol=lf
 verify_tf_soft_edges.m text eol=lf
 analyze_tf600_edges.m text eol=lf
 verify_tf_soft_edge_fidelity.m text eol=lf
+run_tf_parameter_grid.m text eol=lf
+analyze_tf_parameter_grid.m text eol=lf
