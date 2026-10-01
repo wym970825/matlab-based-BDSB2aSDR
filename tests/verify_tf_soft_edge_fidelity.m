@@ -50,7 +50,10 @@ function summary=verify_tf_soft_edge_fidelity(outputRoot)
     xlabel('Lag (chips)'); ylabel('(E-L)/(E+L)'); grid on; legend('Location','best');
     nexttile; plot([3 6 9 12],cellfun(@(s) s.promptGainDb,rows),'o-');
     xlabel('Nominal outer transition (us)'); ylabel('Useful Prompt gain (dB)'); grid on;
-    nexttile; plot([3 6 9 12],cellfun(@(s) s.residualInterferenceEnergyDb,rows),'o-');
+    residualDb=cellfun(@(s) s.residualInterferenceEnergyDb,rows);
+    nexttile; plot([3 6 9 12],residualDb,'o-');
+    padding=max(.01,.1*(max(residualDb)-min(residualDb)));
+    ylim([min(residualDb)-padding max(residualDb)+padding]);
     xlabel('Nominal outer transition (us)'); ylabel('Residual DME / input DME (dB)'); grid on;
     exportgraphics(f,fullfile(outputRoot,'edge_fidelity.png'),'Resolution',150);
 end

@@ -132,6 +132,29 @@ function summary=analyze_tf600_edges(runDirs,outputRoot)
         ylabel(labels{panel}); xlabel('Physical file time (s)');
     end
     exportgraphics(f,fullfile(outputRoot,'edge_differences.png'),'Resolution',150);
+    clear cleaner
+    f=figure('Visible','off','Position',[100 100 1100 800]); cleaner=onCleanup(@() close(f));
+    tiledlayout(2,2); spans=cellfun(@(x) x.spanUs,series);
+    nexttile; plot(spans,100*cellfun(@(x) x.meanWeightBySample,runs),'o-');
+    xlabel('Nominal outer transition (us)'); ylabel('Mean notch weight (%)'); grid on;
+    nexttile; plot(spans,cellfun(@(x) x.meanPilotDifferenceVs12Db,commonRows),'o-');
+    yline(0,':'); xlabel('Nominal outer transition (us)'); ylabel('Pilot C/N0 minus 12 us (dB)');
+    title(sprintf('%d common native C/N0 updates',nnz(good))); grid on;
+    confidence=nan(1,4);
+    for k=1:4
+        nh=runs{k}.nhAudit;
+        if strcmp(nh.status,'all_decisions_verified')
+            use=cellfun(@(e) e.epoch>=150000,nh.events);
+            confidence(k)=min(cellfun(@(e) e.confidence,nh.events(use)));
+        end
+    end
+    nexttile; plot(spans,confidence,'o-'); yline(cfg.weilConfTh,'--','Threshold');
+    xlabel('Nominal outer transition (us)'); ylabel('Minimum reconstructed Weil peak ratio');
+    title('Estimates after 150 s; no-REACQ runs'); grid on;
+    nexttile; plot(spans,cellfun(@(x) x.rmsS4DifferenceVs12,commonRows),'o-');
+    xlabel('Nominal outer transition (us)'); ylabel('S4 RMS difference versus 12 us');
+    title(sprintf('%d common full-LONG 60-s windows; no truth',nnz(goodS4))); grid on;
+    exportgraphics(f,fullfile(outputRoot,'edge_overview.png'),'Resolution',150);
 end
 
 function result=blocks(time,value,seconds)
