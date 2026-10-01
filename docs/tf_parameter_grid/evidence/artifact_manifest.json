@@ -1,0 +1,420 @@
+{
+  "createdAt": "2026-10-01T18:13:37",
+  "rawInputMetadata": {
+    "path": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_50_1176_25_37p5_17p5.dat",
+    "bytes": 72000240000.0,
+    "modified": "21-Apr-2026 11:05:04"
+  },
+  "rawInputContentHashComputed": false,
+  "archivedEvidence": [
+    {
+      "path": "docs/tf_parameter_grid/evidence/experiment_plan.json",
+      "bytes": 6269,
+      "sha256": "86941c4fc19d7210fe0c2e2e99b64d0c9eb5720efa601323fc950d98ca3286be",
+      "source": "results/tf_parameter_grid/run_01/experiment_plan.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/experiment_status.json",
+      "bytes": 5133,
+      "sha256": "5e1b6ef34c046c27d7b647499a9f8ccd2e5e3bf7a5e912c72bffc53351f971ec",
+      "source": "results/tf_parameter_grid/run_01/experiment_status.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/source_manifest.json",
+      "bytes": 21791,
+      "sha256": "20dc584e9afc436d9ba3251da3127fc198d10b8dc1b0ef961c72c5f4622f586e",
+      "source": "results/tf_parameter_grid/run_01/source_manifest.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/postprocessing_status.json",
+      "bytes": 66,
+      "sha256": "21e0854212e762c2236e12d3b48170aaaf2b6917e62e33cc90e4ce110972c726",
+      "source": "results/tf_parameter_grid/run_01/postprocessing_status.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/grid_analysis.json",
+      "bytes": 320119,
+      "sha256": "27db94859fb3119fcba99dc401976ceb7cb3a3cdaacc59f705eaa425df914827",
+      "source": "results/tf_parameter_grid/run_01/analysis/grid_analysis.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/crosscheck.json",
+      "bytes": 182,
+      "sha256": "5682ea90aa6e598d928df16586af038c35c3ac5511e6350e57a0010579d8cbb0",
+      "source": "results/tf_parameter_grid/run_01/analysis/crosscheck.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/grid_overview.png",
+      "bytes": 223356,
+      "sha256": "4c9b27ff67cbae85bfa1187b96cbb5d24bf2d7456e855b8d3fe7670ac2839483",
+      "source": "results/tf_parameter_grid/run_01/analysis/grid_overview.png"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/grid_native_series.png",
+      "bytes": 325362,
+      "sha256": "8ec026bebcefcb3b52c56f1fc133add2734af045e8f402662ad71fe2637ced1d",
+      "source": "results/tf_parameter_grid/run_01/analysis/grid_native_series.png"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/grid_filter_response.png",
+      "bytes": 189079,
+      "sha256": "edafc9f288e177c67d86ddff36d2ca4504209ed37426774cb48cb71000c89724",
+      "source": "results/tf_parameter_grid/run_01/analysis/grid_filter_response.png"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/candidate_difference.png",
+      "bytes": 160615,
+      "sha256": "885178c12973a8b3fbd172ac494b091fd00fcf027d2c2de221131fbae7c95e1c",
+      "source": "results/tf_parameter_grid/run_01/analysis/candidate_difference.png"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_3us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "772e1ebf0860d865a00a48cc6cd04dbb0aa49357af2eab97af81dccc20784e58",
+      "source": "results/tf_parameter_grid/run_01/full/tf400_edge3us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_3us_validation_summary.json",
+      "bytes": 637,
+      "sha256": "25152d79cce17d95ab8e8a5de60312a8051aef7ef1d5bf41edd0d0a62844fbf5",
+      "source": "results/tf_parameter_grid/run_01/full/tf400_edge3us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_6us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "7efd5bd64adb3025dbcbc7e44852f996269f57ed126c2ce21f050bfecf42b2b7",
+      "source": "results/tf_parameter_grid/run_01/full/tf400_edge6us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_6us_validation_summary.json",
+      "bytes": 635,
+      "sha256": "b706f1213aa1a03acb6fe216c610542a7bc3ffc71369f2e79d9eee8f65f003f1",
+      "source": "results/tf_parameter_grid/run_01/full/tf400_edge6us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_9us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "3659c63f42b4d2ebb33c382cbaac92b56ec51b61a0cf23f333468ed5aba5a981",
+      "source": "results/tf_parameter_grid/run_01/full/tf400_edge9us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_9us_validation_summary.json",
+      "bytes": 637,
+      "sha256": "c598fda0494ae6661d3965cd5f2c4483a08761fb3e783b0ee45a533d797cd0d7",
+      "source": "results/tf_parameter_grid/run_01/full/tf400_edge9us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_12us_validation_config.json",
+      "bytes": 3503,
+      "sha256": "d319f1ac2c48b777bdf2b2d855772ef5ae8ff63b5bef44e2440cb063d04a5d21",
+      "source": "results/upgrade_v020/full_01/tf400/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/400k_12us_validation_summary.json",
+      "bytes": 597,
+      "sha256": "f8cd52d69ac5d393df34b649d3917097c08a83b025f14106ca9631d84841b0ec",
+      "source": "results/upgrade_v020/full_01/tf400/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_3us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "5f5ae41e564ef85da966490f5c79a383a0b1ae0cb73d48c963faa51078a7a487",
+      "source": "results/tf600_soft_edges/run_01/full/edge3us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_3us_validation_summary.json",
+      "bytes": 624,
+      "sha256": "a8e1084b0cdf8fa89cc6915f7292bdbed2f3ecffd537563daf8601ca0a5558ee",
+      "source": "results/tf600_soft_edges/run_01/full/edge3us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_6us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "a36e22cf8e2a160b1d87b1334f62bcc8610bdcbbae6089f3c66fa9e7e75fcb1d",
+      "source": "results/tf600_soft_edges/run_01/full/edge6us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_6us_validation_summary.json",
+      "bytes": 622,
+      "sha256": "770a3e022470760100ad03913cb79dab5e4732b490de0d349c0c23d6a99be6b3",
+      "source": "results/tf600_soft_edges/run_01/full/edge6us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_9us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "b2d9c47254c07a76fc42e08c2005bfe2808ea45df2f8d32bf48188d40c61e68a",
+      "source": "results/tf600_soft_edges/run_01/full/edge9us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_9us_validation_summary.json",
+      "bytes": 624,
+      "sha256": "87ee2acb2ebdacecb11bb713ce21ff1e71ade0f286f221f2fbcfa6fcb9036af4",
+      "source": "results/tf600_soft_edges/run_01/full/edge9us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_12us_validation_config.json",
+      "bytes": 3503,
+      "sha256": "4a87591b66427d6ff85117af1d8e4bbcd549d69b384e9d788daddc47280cb5d2",
+      "source": "results/upgrade_v020/full_01/tf600/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/600k_12us_validation_summary.json",
+      "bytes": 611,
+      "sha256": "3747c3e54ecde0d463d27d44d4bc1a175560f1568741644288eb2fe1a2b4f6b6",
+      "source": "results/upgrade_v020/full_01/tf600/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_3us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "08dd2d68ae52d4212673c49c450e97a2c1f834964286dcf540b6aa82e813b8d7",
+      "source": "results/tf_parameter_grid/run_01/full/tf800_edge3us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_3us_validation_summary.json",
+      "bytes": 636,
+      "sha256": "21241c02ee1593bcf28edafa773b698dc725961ee730ecd47a64125f4653b8f8",
+      "source": "results/tf_parameter_grid/run_01/full/tf800_edge3us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_6us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "3b45bef773d450add418cc8061baa31ed168026b2bcbe9232477d55b8bb8117a",
+      "source": "results/tf_parameter_grid/run_01/full/tf800_edge6us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_6us_validation_summary.json",
+      "bytes": 637,
+      "sha256": "ab40bc01a8237b44327d930f1f9f89ee93d3e258bcddb8909c3d0aa5ee265469",
+      "source": "results/tf_parameter_grid/run_01/full/tf800_edge6us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_9us_validation_config.json",
+      "bytes": 3538,
+      "sha256": "4aaaa59bdec2a5aae21c42125c69003f28e7d800c5458ed9e989d7b55f366800",
+      "source": "results/tf_parameter_grid/run_01/full/tf800_edge9us/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_9us_validation_summary.json",
+      "bytes": 637,
+      "sha256": "618045aa80f71dc97ef57992b2f9535300b534ca139c7567e9d0e3339bf95365",
+      "source": "results/tf_parameter_grid/run_01/full/tf800_edge9us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_12us_validation_config.json",
+      "bytes": 3503,
+      "sha256": "e40a0fb26cd48dbc8e87adb4c288875685948490d6338c76a8473198324f0555",
+      "source": "results/tf600_vs_tf800/run_03/full/tf800/validation_config.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/800k_12us_validation_summary.json",
+      "bytes": 618,
+      "sha256": "9b3abd3d62d4df8c4807f8f6322640fe24ced7ada062d8c2777ff00f645a4c1c",
+      "source": "results/tf600_vs_tf800/run_03/full/tf800/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/short_tf400_edge3us_summary.json",
+      "bytes": 615,
+      "sha256": "b3fc0ffd3286f01e410814d63194bec400e4732f25b6ca1d14ab85114394abf1",
+      "source": "results/tf_parameter_grid/run_01/short/tf400_edge3us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/short_tf400_edge6us_summary.json",
+      "bytes": 616,
+      "sha256": "0d700c0406af5515f755bb2e84e0767c12d82703eaa996d77b54b14d7e8cc61c",
+      "source": "results/tf_parameter_grid/run_01/short/tf400_edge6us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/short_tf400_edge9us_summary.json",
+      "bytes": 613,
+      "sha256": "1b1b09f81b4e25a6633f160abbe598caac66d6039a4b83dfffced0664808ade6",
+      "source": "results/tf_parameter_grid/run_01/short/tf400_edge9us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/short_tf800_edge3us_summary.json",
+      "bytes": 616,
+      "sha256": "b356a63fe8b6041d967d7270bcfeda4da568069b5901e080704962f4e683a9c5",
+      "source": "results/tf_parameter_grid/run_01/short/tf800_edge3us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/short_tf800_edge6us_summary.json",
+      "bytes": 616,
+      "sha256": "120e5590d1ad5021b0634d69974f047234fbc0bfe252e3781582370382e56454",
+      "source": "results/tf_parameter_grid/run_01/short/tf800_edge6us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/short_tf800_edge9us_summary.json",
+      "bytes": 613,
+      "sha256": "7b091310d1292a42a88cf1b11d7370b8f627226489fb0e75b1823a683625e063",
+      "source": "results/tf_parameter_grid/run_01/short/tf800_edge9us/validation_summary.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/fidelity_400k.json",
+      "bytes": 2075,
+      "sha256": "2670276c37b891e2c1838285c919a8e763b7e4116c5363182e37727f7b83eb6b",
+      "source": "results/tf_parameter_grid/run_01/fidelity_400k/edge_fidelity.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/fidelity_400k.png",
+      "bytes": 110325,
+      "sha256": "0a0d88601fbf252466781e75a51cc38bfae675adf1182f4657cecddc391a11b7",
+      "source": "results/tf_parameter_grid/run_01/fidelity_400k/edge_fidelity.png"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/fidelity_600k.json",
+      "bytes": 2067,
+      "sha256": "7e28ea30e581fceb683b2fc3713b55e1a868576552a7627bdef3f0851dca172f",
+      "source": "results/tf600_soft_edges/run_01/fidelity/edge_fidelity.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/fidelity_600k.png",
+      "bytes": 112723,
+      "sha256": "4b89deeef8cc842acb0304dfe74c78f809257b32f9c2d2c5519779b20d8ec859",
+      "source": "results/tf600_soft_edges/run_01/fidelity/edge_fidelity.png"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/fidelity_800k.json",
+      "bytes": 2068,
+      "sha256": "669a250e332e795adedd80d5dfb52189b37d06872f761d9ae897320dcacc0a29",
+      "source": "results/tf_parameter_grid/run_01/fidelity_800k/edge_fidelity.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/fidelity_800k.png",
+      "bytes": 103181,
+      "sha256": "86e76cdd7e93cdf17a93696376a5471a6275d46e78808c9fe42320f5116f58f8",
+      "source": "results/tf_parameter_grid/run_01/fidelity_800k/edge_fidelity.png"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/verification_400k.json",
+      "bytes": 10081,
+      "sha256": "92ef176b0c7ee419f023de3e3b7c42ba57f8ad51de60fbe922c5c971fbd75cbb",
+      "source": "results/tf_parameter_grid/run_01/verification_400k/soft_edge_verification.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/verification_600k.json",
+      "bytes": 10097,
+      "sha256": "eec62acfdbfbbacb333f09b420337c8d3fb44c84524f71b03500d951c50d3ff0",
+      "source": "results/tf600_soft_edges/run_01/verification/soft_edge_verification.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/verification_800k.json",
+      "bytes": 10079,
+      "sha256": "70a0ce717218b2230523df41dd6ef7ba3754f17f57cc922f1ab2d1f9fb668b23",
+      "source": "results/tf_parameter_grid/run_01/verification_800k/soft_edge_verification.json"
+    },
+    {
+      "path": "docs/tf_parameter_grid/evidence/soft_edge_weights.png",
+      "bytes": 132884,
+      "sha256": "b5d00076bb8751930e0101ba4755f869eae235a87ca1803dccd13b94f99988cf",
+      "source": "results/tf_parameter_grid/run_01/verification_400k/soft_edge_weights.png"
+    }
+  ],
+  "localMatFiles": [
+    {
+      "path": "results/tf_parameter_grid/run_01/analysis/grid_series.mat",
+      "bytes": 4870981,
+      "sha256": "2a988b0efb98077a7315192479765fe84659e1cd9612eb4f469f15ce93237d89"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/full/tf400_edge3us/run_B2a_04_2700_n50dBm_tf400_edge3us.mat",
+      "bytes": 130930466,
+      "sha256": "fa559ffa468abf4e1b12f3eb6502a087dbc91edff8f785b33cf77b6cad98080a"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/full/tf400_edge6us/run_B2a_04_2700_n50dBm_tf400_edge6us.mat",
+      "bytes": 131332692,
+      "sha256": "cb721ac13dbdb3365be8b1fd8f4522740ee97aebd5973fa4a159085f6bef68c1"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/full/tf400_edge9us/run_B2a_04_2700_n50dBm_tf400_edge9us.mat",
+      "bytes": 131702679,
+      "sha256": "a3d57a9c236d40990ccf1f95a812fe30b117d97ddc0bd965ff32521ea0fa4030"
+    },
+    {
+      "path": "results/upgrade_v020/full_01/tf400/run_B2a_04_2700_n50dBm_tf400.mat",
+      "bytes": 131859512,
+      "sha256": "7d52898fc7d918e835dd91fe2b04fe328909bdfd22af73fcb493694076ebf11a"
+    },
+    {
+      "path": "results/tf600_soft_edges/run_01/full/edge3us/run_B2a_04_2700_n50dBm_tf600_edge3us.mat",
+      "bytes": 130973596,
+      "sha256": "de18646b1e1d6458528362eb5d23dc278bcf23e7c903d38919e0c90a92e3b1b8"
+    },
+    {
+      "path": "results/tf600_soft_edges/run_01/full/edge6us/run_B2a_04_2700_n50dBm_tf600_edge6us.mat",
+      "bytes": 131270673,
+      "sha256": "8f455e3c1f9307936ad483008e2504ec3bbe28f1a1b6fccd1cf1a67daf83731a"
+    },
+    {
+      "path": "results/tf600_soft_edges/run_01/full/edge9us/run_B2a_04_2700_n50dBm_tf600_edge9us.mat",
+      "bytes": 131669173,
+      "sha256": "17e7f8b90929b165840328089ce989d7a0a8587f7aa6316a0611d4e2f362f689"
+    },
+    {
+      "path": "results/upgrade_v020/full_01/tf600/run_B2a_04_2700_n50dBm_tf600.mat",
+      "bytes": 131875618,
+      "sha256": "a4ff0a8c4b083cecb5cff0d980fb1a7408a007534ddca8c59f8e2a8b40d83f04"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/full/tf800_edge3us/run_B2a_04_2700_n50dBm_tf800_edge3us.mat",
+      "bytes": 130948634,
+      "sha256": "1aaeb504f8e36774af1736f53efcd046c3e4f6c1d3cf8162006532ede7429a3e"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/full/tf800_edge6us/run_B2a_04_2700_n50dBm_tf800_edge6us.mat",
+      "bytes": 131257390,
+      "sha256": "69d5a49255b58c06acb6170a0537274a3a39acd84d3e8923d0b184dc5869604f"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/full/tf800_edge9us/run_B2a_04_2700_n50dBm_tf800_edge9us.mat",
+      "bytes": 131569551,
+      "sha256": "e936b670225733b5177962a1dd814d1a1493dbd45ca30cdac192722d79616c74"
+    },
+    {
+      "path": "results/tf600_vs_tf800/run_03/full/tf800/run_B2a_04_2700_n50dBm_tf800.mat",
+      "bytes": 131837042,
+      "sha256": "f2e7764bd4290f909971ed21c31523ee2639ef10adb01c391968b9b013920cd8"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/fidelity_400k/edge_fidelity.mat",
+      "bytes": 84779,
+      "sha256": "94ddd05b36248180c6c12d02abd732ce895c4c34d5b35fcc2d5594db8079f5dc"
+    },
+    {
+      "path": "results/tf600_soft_edges/run_01/fidelity/edge_fidelity.mat",
+      "bytes": 84674,
+      "sha256": "17322702a872c2a6b2fb3e28539fcdba0db799e55034c557173b50100adf782c"
+    },
+    {
+      "path": "results/tf_parameter_grid/run_01/fidelity_800k/edge_fidelity.mat",
+      "bytes": 84678,
+      "sha256": "02bfed03633f53ef19e4a8337d2b4970e197dd353645523760b32feb1f0a71b8"
+    }
+  ],
+  "scripts": [
+    {
+      "path": "tests/run_tf_parameter_grid.m",
+      "bytes": 5346,
+      "sha256": "64068be24acdd10522bf73548b5af5e8d5512cbd1ef044b11d4f1a0438bb6629"
+    },
+    {
+      "path": "tests/analyze_tf_parameter_grid.m",
+      "bytes": 20061,
+      "sha256": "33fcb876ab04911e8a3ef3a7e801ea74aabb05d91d3cd5fc0edb4f5a874b6d89"
+    },
+    {
+      "path": "tests/verify_tf_soft_edges.m",
+      "bytes": 6784,
+      "sha256": "37d496b10ee0b14b646d80a7812bd0e5368d52c9f038d9f2588d4da06e986c04"
+    },
+    {
+      "path": "tests/verify_tf_soft_edge_fidelity.m",
+      "bytes": 5273,
+      "sha256": "fb7b5a37b2b4ebb86f40a3bef6fd9fe6edc5bda0144a91f6ed6d143fac4b7680"
+    },
+    {
+      "path": "tests/plot_tf_grid_candidates.m",
+      "bytes": 1482,
+      "sha256": "f0d8d3968af67bed7acbf2264327ed263f74d527d5d3ece6b0be38d32958f2d9"
+    }
+  ]
+}

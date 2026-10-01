@@ -29,6 +29,7 @@ setupPaths; addpath(fullfile(pwd,'tests'));
 r = fullfile(pwd,'results','tf_parameter_grid','new_run');
 run_tf_parameter_grid(r);
 analyze_tf_parameter_grid(r,fullfile(r,'analysis'));
+plot_tf_grid_candidates(fullfile(r,'analysis'));
 ```
 
 两个输出目录须为新目录。驱动 `run_tf_parameter_grid.m` 包含独立验证、合成分量诊断、六次 30 秒短段及六次 715 秒完整实验。短段只用于检查配置与完整性，不评价尚未预热的 S4。完整实验原始 MAT/日志保留在本地 `results/`；最终报告附小型 JSON/PNG 证据与哈希清单。

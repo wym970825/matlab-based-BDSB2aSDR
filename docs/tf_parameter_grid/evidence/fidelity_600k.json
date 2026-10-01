@@ -1,0 +1,62 @@
+{
+  "samplingFreq": 2.5E+7,
+  "bandwidthHz": 600000,
+  "prn": 11,
+  "durationMs": 20,
+  "pulseRateHz": 2700,
+  "pairSpacingUs": 12,
+  "gaussianSigmaUs": 1.5,
+  "peakToThresholdRatio": 10,
+  "note": "Frozen detection weights from clean+synthetic DME; useful and interference components separated algebraically. No thermal noise, loop or S4 truth.",
+  "scriptHash": "272efe962e4bde7f39fc9b7acf933a37bd90eb833b5ddcf0299c3ecfbd84d2db",
+  "cases": [
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -1.9839354439138424E-7,
+      "promptPhaseRad": -2.924173568914105E-6,
+      "promptGainDb": -0.093029046641154842,
+      "outerSpanUs": 3,
+      "actualOuterSpanUs": 3.04,
+      "meanWeight": 0.137912,
+      "relativeReferenceError": 7.0731969383806674E-16,
+      "residualInterferenceEnergyDb": -62.782765984139559,
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": 4.3291180031440994E-7,
+      "promptPhaseRad": 4.788909675951592E-6,
+      "promptGainDb": -0.098575024078480983,
+      "outerSpanUs": 6,
+      "actualOuterSpanUs": 6,
+      "meanWeight": 0.145904,
+      "relativeReferenceError": 7.4003101265812118E-16,
+      "residualInterferenceEnergyDb": -62.782765981802044,
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": 1.3192858978726102E-7,
+      "promptPhaseRad": 6.959800237460007E-7,
+      "promptGainDb": -0.10362809808356951,
+      "outerSpanUs": 9,
+      "actualOuterSpanUs": 9.04,
+      "meanWeight": 0.154112,
+      "relativeReferenceError": 8.0918159041944363E-16,
+      "residualInterferenceEnergyDb": -62.782765981331316,
+      "shiftedPeakSamples": 1
+    },
+    {
+      "peakSamples": 0,
+      "dllZeroChips": -3.2971309722328208E-7,
+      "promptPhaseRad": 7.1175767594629507E-8,
+      "promptGainDb": -0.1081803978590892,
+      "outerSpanUs": 12,
+      "actualOuterSpanUs": 12,
+      "meanWeight": 0.162104,
+      "relativeReferenceError": 8.0918159041944363E-16,
+      "residualInterferenceEnergyDb": -62.782765981169682,
+      "shiftedPeakSamples": 1
+    }
+  ]
+}

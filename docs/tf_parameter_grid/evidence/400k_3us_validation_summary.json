@@ -1,0 +1,19 @@
+{
+  "mode": "tf400_edge3us",
+  "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf_parameter_grid\\run_01\\full\\tf400_edge3us",
+  "pipelineOk": true,
+  "recordedMs": 715000,
+  "complete": true,
+  "reacqMs": 0,
+  "longStateFraction": 0.99580419580419577,
+  "firstSample": 15483,
+  "lastSample": 1.787498521E+10,
+  "frontendMode": "tf_v1",
+  "frontendConfigHash": "a7eb2262840c2d582d74613d5075970c9bc37a66657fb58a58fef1d1b030a6ba",
+  "meanWeight": 0.15014801906665337,
+  "finiteS4": 114,
+  "medianPilotCNo": 45.427204354137785,
+  "medianTotalCNo": 48.514127163851086,
+  "maxNormalTimelineErrorSamples": 0,
+  "elapsedSec": 2532.6851744
+}
