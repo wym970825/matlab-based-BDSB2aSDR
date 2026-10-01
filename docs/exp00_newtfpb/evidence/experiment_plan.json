@@ -1,0 +1,107 @@
+{
+  "createdAt": "2026-10-01T23:11:31.518909+08:00",
+  "basis": "Each accepted full PB effective_settings.json, not single-PRN parameter-scan config",
+  "receiverSourceHead": "fb6bf59",
+  "mode": "tf_v1",
+  "stopbandWidthHz": 800000,
+  "triangleSpanUs": 3,
+  "execution": "Sequential isolated R2024b processes; 4 workers within each case; five preflights and one 5-second parallel smoke before full runs",
+  "cases": [
+    {
+      "index": 1,
+      "id": "dme_free",
+      "oldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\dme_free",
+      "originalOldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260929_debug_fixed_r2024b\\dme_free",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\dme_free",
+      "configPath": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\dme_free\\planned_config.json",
+      "configSha256": "8325efc8f1c32c6322d70417e84fe31b4a2a8f1377841965f51d6380bce0b0bd",
+      "oldSettingsSha256": "0a66cf843e296d48ec037dfd6eb7aba47e64ff005f5786a31ebff44d47a0ac13",
+      "oldFieldChanges": [
+        "EnablePB",
+        "resultRoot",
+        "tempdataSvPth"
+      ],
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_0000_00_1176_25_37p5_17p5.dat",
+      "inputBytes": 90000280000,
+      "amplitudeThreshold": 1288.1605785012875,
+      "msToProcess": 715000
+    },
+    {
+      "index": 2,
+      "id": "1350_n50dBm",
+      "oldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\1350_n50dBm",
+      "originalOldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_02_attempt_01\\output\\1350_n50dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\1350_n50dBm",
+      "configPath": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\1350_n50dBm\\planned_config.json",
+      "configSha256": "3a820135204776deea7c227e535f7c45bc038b72059325349146acb9aeb849e9",
+      "oldSettingsSha256": "de1023decd86157a71d154eb9ca965df9b6a39de8e6144fff232b0d6691dff81",
+      "oldFieldChanges": [
+        "EnablePB",
+        "resultRoot",
+        "tempdataSvPth"
+      ],
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_1350_50_1176_25_37p5_17p5.dat",
+      "inputBytes": 71664810356,
+      "amplitudeThreshold": 192.7391788328858,
+      "msToProcess": 715000
+    },
+    {
+      "index": 3,
+      "id": "1350_n60dBm",
+      "oldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\1350_n60dBm",
+      "originalOldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_03_attempt_01\\output\\1350_n60dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\1350_n60dBm",
+      "configPath": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\1350_n60dBm\\planned_config.json",
+      "configSha256": "421657307915f563586dca055d7b3b64ccbcf9a9e41613a66b7d1f87f6e7318a",
+      "oldSettingsSha256": "cec455912b75421b6b4a0267f7d8220fe24f40cc53ce032151c51f2b09323499",
+      "oldFieldChanges": [
+        "EnablePB",
+        "resultRoot",
+        "tempdataSvPth"
+      ],
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_1350_60_1176_25_37p5_17p5.dat",
+      "inputBytes": 71627229540,
+      "amplitudeThreshold": 192.7391788328858,
+      "msToProcess": 715000
+    },
+    {
+      "index": 4,
+      "id": "2700_n50dBm",
+      "oldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\2700_n50dBm",
+      "originalOldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_04_attempt_01\\output\\2700_n50dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\2700_n50dBm",
+      "configPath": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\2700_n50dBm\\planned_config.json",
+      "configSha256": "0aae3bc1a733639c8cc1d263b1ed4a6d0d7c6a817ef70b34dbb0a0e8e3d1172b",
+      "oldSettingsSha256": "15976923d326b07e66cd7ace537c88df04bcc9761b6fd4b3b17397c2b98c684c",
+      "oldFieldChanges": [
+        "EnablePB",
+        "resultRoot",
+        "tempdataSvPth"
+      ],
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_50_1176_25_37p5_17p5.dat",
+      "inputBytes": 72000240000,
+      "amplitudeThreshold": 192.7391788328858,
+      "msToProcess": 715000
+    },
+    {
+      "index": 5,
+      "id": "2700_n60dBm",
+      "oldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\2700_n60dBm",
+      "originalOldResultDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_05_attempt_01\\output\\2700_n60dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\2700_n60dBm",
+      "configPath": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\2700_n60dBm\\planned_config.json",
+      "configSha256": "7f32162f59905dab40c3c1e1dbab1979fa78a5ec88d1e51fc9662b3d1bd44bc9",
+      "oldSettingsSha256": "6f8d51ccf193a8e591128c92baa998007cd4fd3a602174dcabbcbd28dcb366dc",
+      "oldFieldChanges": [
+        "EnablePB",
+        "resultRoot",
+        "tempdataSvPth"
+      ],
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_60_1176_25_37p5_17p5.dat",
+      "inputBytes": 72000280000,
+      "amplitudeThreshold": 192.7391788328858,
+      "msToProcess": 715000
+    }
+  ],
+  "harnessGitHead": "81d1317baba1f3a5fa68a7c5fd924495b326cf25"
+}

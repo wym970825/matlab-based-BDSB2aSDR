@@ -1,0 +1,177 @@
+{
+  "createdAt": "2026-10-01T23:08:25.988937+08:00",
+  "scope": "Five accepted full PB result directories; historical metadata retained verbatim. Failed attempts and parent diagnostics remain in place.",
+  "cases": [
+    {
+      "index": 1,
+      "case": "dme_free",
+      "source": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260929_debug_fixed_r2024b\\dme_free",
+      "destination": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\dme_free",
+      "files": 118,
+      "bytes": 3038430669,
+      "metadataSha256": {
+        "ui_config.json": "d069df1fe6daebe0a0b63e7414825cd1daeb83c86cec9d33674efcaf811fafca",
+        "effective_settings.json": "0a66cf843e296d48ec037dfd6eb7aba47e64ff005f5786a31ebff44d47a0ac13",
+        "report.json": "ef18eeabcff3147eedb8a4e037b4ea757c0c5b2074cd88ed371de9b64760b9bb",
+        "validation.json": "32f493b2e39babcd4ac23aefb3cf8114f43d69446a75aba83d26e4e40ba960d8"
+      },
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_0000_00_1176_25_37p5_17p5.dat",
+      "inputBytes": 90000280000,
+      "oldAudit": {
+        "ok": true,
+        "outputDir": "results/semiphysical_recompute/20260929_debug_fixed_r2024b/dme_free",
+        "issues": [],
+        "pipelineOK": true,
+        "navigationFixes": 1426,
+        "configDifferences": [],
+        "requestedMs": 715000,
+        "effectiveMs": 715000,
+        "prn11Samples": 715000,
+        "prn11FiniteSamples": 715000,
+        "prn11ReacqMs": 0,
+        "prn11TimestampSamples": 715000,
+        "prn11MedianCNo": 52.26143481743889,
+        "prn11ChunkSamples": 715000,
+        "prn11Chunks": 12,
+        "nmeaExists": true
+      }
+    },
+    {
+      "index": 2,
+      "case": "1350_n50dBm",
+      "source": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_02_attempt_01\\output\\1350_n50dBm",
+      "destination": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\1350_n50dBm",
+      "files": 118,
+      "bytes": 3079659393,
+      "metadataSha256": {
+        "ui_config.json": "86f8f34897ccaa7b0daf2dcdf5c056ec5d3b7af2c25584ee96a2c5ddf5ffddf3",
+        "effective_settings.json": "de1023decd86157a71d154eb9ca965df9b6a39de8e6144fff232b0d6691dff81",
+        "report.json": "ed4cf1cf82e3b15079d98bbd3146fda061a9571a1c1816d190c6d4ae4ec74cf1",
+        "validation.json": "6300ee20cf68fb369ca8a78412a3222e732f4e91303ebf35c330d4ce198db25a"
+      },
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_1350_50_1176_25_37p5_17p5.dat",
+      "inputBytes": 71664810356,
+      "oldAudit": {
+        "ok": true,
+        "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_02_attempt_01\\output\\1350_n50dBm",
+        "issues": [],
+        "pipelineOK": true,
+        "navigationFixes": 1428,
+        "configDifferences": [],
+        "requestedMs": 715000,
+        "effectiveMs": 715000,
+        "prn11Samples": 715000,
+        "prn11FiniteSamples": 715000,
+        "prn11ReacqMs": 0,
+        "prn11TimestampSamples": 715000,
+        "prn11MedianCNo": 48.75653022015226,
+        "prn11ChunkSamples": 715000,
+        "prn11Chunks": 12,
+        "nmeaExists": true
+      }
+    },
+    {
+      "index": 3,
+      "case": "1350_n60dBm",
+      "source": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_03_attempt_01\\output\\1350_n60dBm",
+      "destination": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\1350_n60dBm",
+      "files": 118,
+      "bytes": 3078889006,
+      "metadataSha256": {
+        "ui_config.json": "d6af9ad97e37980493731e46ade489f44db3b0812cd3ca043b1f726879792df6",
+        "effective_settings.json": "cec455912b75421b6b4a0267f7d8220fe24f40cc53ce032151c51f2b09323499",
+        "report.json": "36c57ef58841f760821569cbdb8b79339721244f95aa9cab3cc41bba45b51422",
+        "validation.json": "f04fa2bcad25e62afb0f233c6af6220679de58a17a3710f2387555d56608cddb"
+      },
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_1350_60_1176_25_37p5_17p5.dat",
+      "inputBytes": 71627229540,
+      "oldAudit": {
+        "ok": true,
+        "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_03_attempt_01\\output\\1350_n60dBm",
+        "issues": [],
+        "pipelineOK": true,
+        "navigationFixes": 1425,
+        "configDifferences": [],
+        "requestedMs": 715000,
+        "effectiveMs": 715000,
+        "prn11Samples": 715000,
+        "prn11FiniteSamples": 715000,
+        "prn11ReacqMs": 0,
+        "prn11TimestampSamples": 715000,
+        "prn11MedianCNo": 48.77094412041772,
+        "prn11ChunkSamples": 715000,
+        "prn11Chunks": 12,
+        "nmeaExists": true
+      }
+    },
+    {
+      "index": 4,
+      "case": "2700_n50dBm",
+      "source": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_04_attempt_01\\output\\2700_n50dBm",
+      "destination": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\2700_n50dBm",
+      "files": 118,
+      "bytes": 3088305529,
+      "metadataSha256": {
+        "ui_config.json": "30e9112185fb69bb2b06e0d7da98ba1d0b10eee6883e94174c68e079491bc844",
+        "effective_settings.json": "15976923d326b07e66cd7ace537c88df04bcc9761b6fd4b3b17397c2b98c684c",
+        "report.json": "99a47588e4cb7218a9f129fcc526239b03d5036313747975d39699bbe3fb2b78",
+        "validation.json": "4549bbad6f83cf053956af6388e81390900c8e708571df263638e3f97493dc91"
+      },
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_50_1176_25_37p5_17p5.dat",
+      "inputBytes": 72000240000,
+      "oldAudit": {
+        "ok": true,
+        "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_04_attempt_01\\output\\2700_n50dBm",
+        "issues": [],
+        "pipelineOK": true,
+        "navigationFixes": 1426,
+        "configDifferences": [],
+        "requestedMs": 715000,
+        "effectiveMs": 715000,
+        "prn11Samples": 715000,
+        "prn11FiniteSamples": 715000,
+        "prn11ReacqMs": 0,
+        "prn11TimestampSamples": 715000,
+        "prn11MedianCNo": 48.44508991750297,
+        "prn11ChunkSamples": 715000,
+        "prn11Chunks": 12,
+        "nmeaExists": true
+      }
+    },
+    {
+      "index": 5,
+      "case": "2700_n60dBm",
+      "source": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_05_attempt_01\\output\\2700_n60dBm",
+      "destination": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp01-oldPB\\2700_n60dBm",
+      "files": 118,
+      "bytes": 3089268298,
+      "metadataSha256": {
+        "ui_config.json": "7ca446ce47da478d962fd48e8abe3724ee21f61b57c842004e312695a3ea77bd",
+        "effective_settings.json": "6f8d51ccf193a8e591128c92baa998007cd4fd3a602174dcabbcbd28dcb366dc",
+        "report.json": "ebb9de33d1eb53455f4d8ff278bdec5e3144d40530fc64d64c9906105ca50afd",
+        "validation.json": "24e27cd2aa026833839e392b79878a3691866312619f584a14c2b55a804cc988"
+      },
+      "inputFile": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_60_1176_25_37p5_17p5.dat",
+      "inputBytes": 72000280000,
+      "oldAudit": {
+        "ok": true,
+        "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\semiphysical_recompute\\20260930_restart_isolated\\case_05_attempt_01\\output\\2700_n60dBm",
+        "issues": [],
+        "pipelineOK": true,
+        "navigationFixes": 1425,
+        "configDifferences": [],
+        "requestedMs": 715000,
+        "effectiveMs": 715000,
+        "prn11Samples": 715000,
+        "prn11FiniteSamples": 715000,
+        "prn11ReacqMs": 0,
+        "prn11TimestampSamples": 715000,
+        "prn11MedianCNo": 48.48103594489872,
+        "prn11ChunkSamples": 715000,
+        "prn11Chunks": 12,
+        "nmeaExists": true
+      }
+    }
+  ],
+  "completedAt": "2026-10-01T23:08:52.3323959+08:00"
+}
