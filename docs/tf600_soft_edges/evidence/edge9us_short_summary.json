@@ -1,0 +1,19 @@
+{
+  "mode": "edge9us",
+  "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_soft_edges\\run_01\\short\\edge9us",
+  "pipelineOk": true,
+  "recordedMs": 30000,
+  "complete": true,
+  "reacqMs": 0,
+  "longStateFraction": 0.9,
+  "firstSample": 15483,
+  "lastSample": 7.49990175E+8,
+  "frontendMode": "tf_v1",
+  "frontendConfigHash": "d643b3569847ac2554b393c1ff5363bb0df6192714bc787267529dbf57b23e0b",
+  "meanWeight": 0.16681142061685006,
+  "finiteS4": 0,
+  "medianPilotCNo": 45.98198543709406,
+  "medianTotalCNo": 49.035491891262055,
+  "maxNormalTimelineErrorSamples": 0,
+  "elapsedSec": 110.3251414
+}

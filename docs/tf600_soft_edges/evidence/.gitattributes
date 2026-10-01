@@ -1,0 +1,3 @@
+# Preserve archived bytes so artifact_manifest.json hashes survive checkout.
+*.json -text
+*.png -text

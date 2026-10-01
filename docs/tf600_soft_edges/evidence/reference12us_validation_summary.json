@@ -1,0 +1,19 @@
+{
+  "mode": "tf600",
+  "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\upgrade_v020\\full_01\\tf600",
+  "pipelineOk": true,
+  "recordedMs": 715000,
+  "complete": true,
+  "reacqMs": 0,
+  "longStateFraction": 0.99580419580419577,
+  "firstSample": 15483,
+  "lastSample": 1.787498521E+10,
+  "frontendMode": "tf_v1",
+  "frontendConfigHash": "0ac8d82275b8214656435cf3498c2406a55f9f1d036e93c95307557f260a008f",
+  "meanWeight": 0.17506298390221917,
+  "finiteS4": 114,
+  "medianPilotCNo": 45.816403410175425,
+  "medianTotalCNo": 48.887920660276464,
+  "maxNormalTimelineErrorSamples": 0,
+  "elapsedSec": 2476.6413001
+}

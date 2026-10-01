@@ -1,0 +1,9 @@
+{
+  "status": "complete",
+  "startedAtUTC": "2026-10-01T05:08:38.114189+00:00",
+  "sourceHead": "f78059b48586a07c27c251aba9a7f0034b934069",
+  "finishedAtUTC": "2026-10-01T05:08:59.538894+00:00",
+  "finalAnalysisDirectory": "analysis_final",
+  "finalPlotLayoutVerified": true,
+  "finalNumericalResultsExactlyMatchInitialAnalysis": true
+}

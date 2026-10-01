@@ -153,7 +153,8 @@ function summary=analyze_tf600_edges(runDirs,outputRoot)
     title('Estimates after 150 s; no-REACQ runs'); grid on;
     nexttile; plot(spans,cellfun(@(x) x.rmsS4DifferenceVs12,commonRows),'o-');
     xlabel('Nominal outer transition (us)'); ylabel('S4 RMS difference versus 12 us');
-    title(sprintf('%d common full-LONG 60-s windows; no truth',nnz(goodS4))); grid on;
+    ax=gca; ax.YAxis.Exponent=0; ytickformat('%.4f');
+    title(sprintf('Full 60-s LONG support: %d common updates',nnz(goodS4))); grid on;
     exportgraphics(f,fullfile(outputRoot,'edge_overview.png'),'Resolution',150);
 end
 

@@ -1,0 +1,741 @@
+{
+  "warmupExclusionSeconds": 150,
+  "minimumNativeWindowOverlap": 0.99,
+  "nativeUpdateIntervalMs": 200,
+  "storedCnoSupportMs": 400,
+  "analysisScriptHash": "d7b8db742764cb9638941c900c510a4c42b07fbbef41d342746426513ac30552",
+  "pairing": "Nearest physical 200-ms bin, >=99% overlap; separate <=2-sample subset; no interpolation.",
+  "notes": "Single file/PRN; overlapping S4 outputs are descriptive, not independent trials. No S4 truth.",
+  "runs": [
+    {
+      "mode": "edge3us",
+      "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_soft_edges\\run_01\\full\\edge3us",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2808,
+      "reacqMs": 0,
+      "meanWeight": 0.15014801889741458,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12256478053019652,
+      "pllDiscriminatorStdCycles": 0.057025861606962318,
+      "promptPowerMean": 3.5696502021189127E+9,
+      "promptPowerCV": 0.58721866097941655,
+      "medianPilotCno": 45.654456405871912,
+      "medianTotalCno": 48.759154900374952,
+      "finiteS4Updates": 114,
+      "medianS4": 0.5582630788331211,
+      "medianS4Raw": 0.63601949091764753
+    },
+    {
+      "mode": "edge6us",
+      "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_soft_edges\\run_01\\full\\edge6us",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2808,
+      "reacqMs": 0,
+      "meanWeight": 0.15839634822439169,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12263524050528188,
+      "pllDiscriminatorStdCycles": 0.056934538601999742,
+      "promptPowerMean": 3.5648750246182327E+9,
+      "promptPowerCV": 0.587233356766325,
+      "medianPilotCno": 45.654741465106547,
+      "medianTotalCno": 48.754726850533039,
+      "finiteS4Updates": 114,
+      "medianS4": 0.55805434322426106,
+      "medianS4Raw": 0.63599844913291381
+    },
+    {
+      "mode": "edge9us",
+      "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_soft_edges\\run_01\\full\\edge9us",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2824,
+      "reacqMs": 0,
+      "meanWeight": 0.16684961873041917,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12267381970951284,
+      "pllDiscriminatorStdCycles": 0.056870241767201679,
+      "promptPowerMean": 3.5804276472481337E+9,
+      "promptPowerCV": 0.594793117419886,
+      "medianPilotCno": 45.646862272464276,
+      "medianTotalCno": 48.75320386610364,
+      "finiteS4Updates": 114,
+      "medianS4": 0.55808285581680539,
+      "medianS4Raw": 0.6360426726083479
+    },
+    {
+      "mode": "tf600",
+      "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\upgrade_v020\\full_01\\tf600",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2824,
+      "reacqMs": 0,
+      "meanWeight": 0.17506298390221917,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12279785210892449,
+      "pllDiscriminatorStdCycles": 0.056895485802177154,
+      "promptPowerMean": 3.5756678251624303E+9,
+      "promptPowerCV": 0.59481118238837838,
+      "medianPilotCno": 45.643514185549009,
+      "medianTotalCno": 48.749559823991959,
+      "finiteS4Updates": 114,
+      "medianS4": 0.5580536335069437,
+      "medianS4Raw": 0.6360671866918638
+    }
+  ],
+  "pairs": [
+    {
+      "comparison": "edge6us minus edge3us",
+      "commonCnoWindows": 2808,
+      "matchedCoverageSec": 561.6,
+      "maxWindowEdgeMismatchUs": 0.03999997488790541,
+      "minimumWindowOverlapFraction": 0.9999999000000328,
+      "meanPilotDifferenceDb": -0.0033057753694149031,
+      "medianPilotDifferenceDb": -0.0034311786576992631,
+      "meanTotalDifferenceDb": -0.0035406057219997426,
+      "commonS4Updates": 112,
+      "meanS4Difference": -5.4669119727966563E-5,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.003363493129165708,
+          -0.0031584890534759563,
+          -0.0023764941576756133,
+          -0.0055801072006602939,
+          -0.0018904703710090588,
+          -0.003515740559034768,
+          -0.0032568101638734723,
+          -0.0023802533683150292
+        ],
+        "meanDb": -0.0031902322504012378,
+        "minimumBlockDb": -0.0055801072006602939,
+        "maximumBlockDb": -0.0018904703710090588,
+        "stdAcrossBlocksDb": 0.0011250735807167857
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0032606482751407488,
+          -0.0039783006791679534,
+          -0.0027031054650219133
+        ],
+        "meanDb": -0.0033140181397768712,
+        "minimumBlockDb": -0.0039783006791679534,
+        "maximumBlockDb": -0.0027031054650219133,
+        "stdAcrossBlocksDb": 0.00063927065112024328
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2808,
+      "strictMeanPilotDifferenceDb": -0.0033057753694149031,
+      "strictMeanTotalDifferenceDb": -0.0035406057219997426,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.003363493129165708,
+          -0.0031584890534759563,
+          -0.0023764941576756133,
+          -0.0055801072006602939,
+          -0.0018904703710090588,
+          -0.003515740559034768,
+          -0.0032568101638734723,
+          -0.0023802533683150292
+        ],
+        "meanDb": -0.0031902322504012378,
+        "minimumBlockDb": -0.0055801072006602939,
+        "maximumBlockDb": -0.0018904703710090588,
+        "stdAcrossBlocksDb": 0.0011250735807167857
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0032606482751407488,
+          -0.0039783006791679534,
+          -0.0027031054650219133
+        ],
+        "meanDb": -0.0033140181397768712,
+        "minimumBlockDb": -0.0039783006791679534,
+        "maximumBlockDb": -0.0027031054650219133,
+        "stdAcrossBlocksDb": 0.00063927065112024328
+      }
+    },
+    {
+      "comparison": "edge9us minus edge3us",
+      "commonCnoWindows": 2808,
+      "matchedCoverageSec": 561.6,
+      "maxWindowEdgeMismatchUs": 0.03999997488790541,
+      "minimumWindowOverlapFraction": 0.9999999000000428,
+      "meanPilotDifferenceDb": -0.0071775940672555013,
+      "medianPilotDifferenceDb": -0.0066552035808520316,
+      "meanTotalDifferenceDb": -0.0067044829108482392,
+      "commonS4Updates": 112,
+      "meanS4Difference": 0.00040160648314233337,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0066022150800367062,
+          -0.0076299448697338809,
+          -0.0059800201721597786,
+          -0.0078357113791844551,
+          -0.0071594149853564677,
+          -0.0069480917059630328,
+          -0.0076428231758925826,
+          -0.0059581549005615153
+        ],
+        "meanDb": -0.0069695470336110527,
+        "minimumBlockDb": -0.0078357113791844551,
+        "maximumBlockDb": -0.0059581549005615153,
+        "stdAcrossBlocksDb": 0.00073806572780218114
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.00711779858657375,
+          -0.0069078657756721168,
+          -0.00705375334565975
+        ],
+        "meanDb": -0.0070264725693018728,
+        "minimumBlockDb": -0.00711779858657375,
+        "maximumBlockDb": -0.0069078657756721168,
+        "stdAcrossBlocksDb": 0.00010759241070949968
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2808,
+      "strictMeanPilotDifferenceDb": -0.0071775940672555013,
+      "strictMeanTotalDifferenceDb": -0.0067044829108482392,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0066022150800367062,
+          -0.0076299448697338809,
+          -0.0059800201721597786,
+          -0.0078357113791844551,
+          -0.0071594149853564677,
+          -0.0069480917059630328,
+          -0.0076428231758925826,
+          -0.0059581549005615153
+        ],
+        "meanDb": -0.0069695470336110527,
+        "minimumBlockDb": -0.0078357113791844551,
+        "maximumBlockDb": -0.0059581549005615153,
+        "stdAcrossBlocksDb": 0.00073806572780218114
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.00711779858657375,
+          -0.0069078657756721168,
+          -0.00705375334565975
+        ],
+        "meanDb": -0.0070264725693018728,
+        "minimumBlockDb": -0.00711779858657375,
+        "maximumBlockDb": -0.0069078657756721168,
+        "stdAcrossBlocksDb": 0.00010759241070949968
+      }
+    },
+    {
+      "comparison": "tf600 minus edge3us",
+      "commonCnoWindows": 2808,
+      "matchedCoverageSec": 561.6,
+      "maxWindowEdgeMismatchUs": 0.03999997488790541,
+      "minimumWindowOverlapFraction": 0.9999999000000328,
+      "meanPilotDifferenceDb": -0.010776847232735086,
+      "medianPilotDifferenceDb": -0.010002508510737584,
+      "meanTotalDifferenceDb": -0.010040066834276041,
+      "commonS4Updates": 112,
+      "meanS4Difference": 0.0004282896092297683,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.010387465784774032,
+          -0.011854283962268113,
+          -0.0098859994812627149,
+          -0.011605920384728137,
+          -0.00936293685916193,
+          -0.011962996071592234,
+          -0.010858061434518358,
+          -0.0086627775585157475
+        ],
+        "meanDb": -0.010572555192102658,
+        "minimumBlockDb": -0.011962996071592234,
+        "maximumBlockDb": -0.0086627775585157475,
+        "stdAcrossBlocksDb": 0.001215469096353993
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.011123327746727585,
+          -0.010745959932995425,
+          -0.010662966465377082
+        ],
+        "meanDb": -0.010844084715033363,
+        "minimumBlockDb": -0.011123327746727585,
+        "maximumBlockDb": -0.010662966465377082,
+        "stdAcrossBlocksDb": 0.0002453660163493796
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2808,
+      "strictMeanPilotDifferenceDb": -0.010776847232735086,
+      "strictMeanTotalDifferenceDb": -0.010040066834276041,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.010387465784774032,
+          -0.011854283962268113,
+          -0.0098859994812627149,
+          -0.011605920384728137,
+          -0.00936293685916193,
+          -0.011962996071592234,
+          -0.010858061434518358,
+          -0.0086627775585157475
+        ],
+        "meanDb": -0.010572555192102658,
+        "minimumBlockDb": -0.011962996071592234,
+        "maximumBlockDb": -0.0086627775585157475,
+        "stdAcrossBlocksDb": 0.001215469096353993
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.011123327746727585,
+          -0.010745959932995425,
+          -0.010662966465377082
+        ],
+        "meanDb": -0.010844084715033363,
+        "minimumBlockDb": -0.011123327746727585,
+        "maximumBlockDb": -0.010662966465377082,
+        "stdAcrossBlocksDb": 0.0002453660163493796
+      }
+    },
+    {
+      "comparison": "edge9us minus edge6us",
+      "commonCnoWindows": 2808,
+      "matchedCoverageSec": 561.6,
+      "maxWindowEdgeMismatchUs": 0.03999997488790541,
+      "minimumWindowOverlapFraction": 0.9999999000000328,
+      "meanPilotDifferenceDb": -0.0038718186978405982,
+      "medianPilotDifferenceDb": -0.0036452657758125895,
+      "meanTotalDifferenceDb": -0.003163877188848497,
+      "commonS4Updates": 112,
+      "meanS4Difference": 0.00045627560287029987,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0032387219508709987,
+          -0.004471455816257925,
+          -0.0036035260144841649,
+          -0.0022556041785241612,
+          -0.0052689446143474091,
+          -0.0034323511469282644,
+          -0.0043860130120191108,
+          -0.0035779015322464857
+        ],
+        "meanDb": -0.0037793147832098153,
+        "minimumBlockDb": -0.0052689446143474091,
+        "maximumBlockDb": -0.0022556041785241612,
+        "stdAcrossBlocksDb": 0.00091588570366669779
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0038571503114330015,
+          -0.002929565096504163,
+          -0.004350647880637837
+        ],
+        "meanDb": -0.0037124544295250007,
+        "minimumBlockDb": -0.004350647880637837,
+        "maximumBlockDb": -0.002929565096504163,
+        "stdAcrossBlocksDb": 0.00072150657898672631
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2808,
+      "strictMeanPilotDifferenceDb": -0.0038718186978405982,
+      "strictMeanTotalDifferenceDb": -0.003163877188848497,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0032387219508709987,
+          -0.004471455816257925,
+          -0.0036035260144841649,
+          -0.0022556041785241612,
+          -0.0052689446143474091,
+          -0.0034323511469282644,
+          -0.0043860130120191108,
+          -0.0035779015322464857
+        ],
+        "meanDb": -0.0037793147832098153,
+        "minimumBlockDb": -0.0052689446143474091,
+        "maximumBlockDb": -0.0022556041785241612,
+        "stdAcrossBlocksDb": 0.00091588570366669779
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0038571503114330015,
+          -0.002929565096504163,
+          -0.004350647880637837
+        ],
+        "meanDb": -0.0037124544295250007,
+        "minimumBlockDb": -0.004350647880637837,
+        "maximumBlockDb": -0.002929565096504163,
+        "stdAcrossBlocksDb": 0.00072150657898672631
+      }
+    },
+    {
+      "comparison": "tf600 minus edge6us",
+      "commonCnoWindows": 2808,
+      "matchedCoverageSec": 561.6,
+      "maxWindowEdgeMismatchUs": 0,
+      "minimumWindowOverlapFraction": 1,
+      "meanPilotDifferenceDb": -0.0074710718633201828,
+      "medianPilotDifferenceDb": -0.0074919210075385934,
+      "meanTotalDifferenceDb": -0.0064994611122762991,
+      "commonS4Updates": 112,
+      "meanS4Difference": 0.00048295872895773485,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0070239726556083244,
+          -0.0086957949087921576,
+          -0.0075095053235871012,
+          -0.0060258131840678431,
+          -0.00747246648815287,
+          -0.008447255512557466,
+          -0.0076012512706448848,
+          -0.0062825241902007174
+        ],
+        "meanDb": -0.00738232294170142,
+        "minimumBlockDb": -0.0086957949087921576,
+        "maximumBlockDb": -0.0060258131840678431,
+        "stdAcrossBlocksDb": 0.00093423855649911339
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0078626794715868347,
+          -0.0067676592538274726,
+          -0.0079598610003551677
+        ],
+        "meanDb": -0.0075300665752564928,
+        "minimumBlockDb": -0.0079598610003551677,
+        "maximumBlockDb": -0.0067676592538274726,
+        "stdAcrossBlocksDb": 0.00066204966219300069
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2808,
+      "strictMeanPilotDifferenceDb": -0.0074710718633201828,
+      "strictMeanTotalDifferenceDb": -0.0064994611122762991,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0070239726556083244,
+          -0.0086957949087921576,
+          -0.0075095053235871012,
+          -0.0060258131840678431,
+          -0.00747246648815287,
+          -0.008447255512557466,
+          -0.0076012512706448848,
+          -0.0062825241902007174
+        ],
+        "meanDb": -0.00738232294170142,
+        "minimumBlockDb": -0.0086957949087921576,
+        "maximumBlockDb": -0.0060258131840678431,
+        "stdAcrossBlocksDb": 0.00093423855649911339
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0078626794715868347,
+          -0.0067676592538274726,
+          -0.0079598610003551677
+        ],
+        "meanDb": -0.0075300665752564928,
+        "minimumBlockDb": -0.0079598610003551677,
+        "maximumBlockDb": -0.0067676592538274726,
+        "stdAcrossBlocksDb": 0.00066204966219300069
+      }
+    },
+    {
+      "comparison": "tf600 minus edge9us",
+      "commonCnoWindows": 2824,
+      "matchedCoverageSec": 564.8,
+      "maxWindowEdgeMismatchUs": 0.03999997488790541,
+      "minimumWindowOverlapFraction": 0.9999999000000328,
+      "meanPilotDifferenceDb": -0.00359750354249265,
+      "medianPilotDifferenceDb": -0.003683579563752204,
+      "meanTotalDifferenceDb": -0.0033388238144563985,
+      "commonS4Updates": 113,
+      "meanS4Difference": 2.5675894545905961E-5,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 9,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          630,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0037852507047373253,
+          -0.0042243390925342317,
+          -0.0039059793091029368,
+          -0.0037702090055436819,
+          -0.0022035218738054615,
+          -0.005014904365629202,
+          -0.0032152382586257745,
+          -0.0030515706420696158,
+          -0.0027046226579542322
+        ],
+        "meanDb": -0.0035417373233336069,
+        "minimumBlockDb": -0.005014904365629202,
+        "maximumBlockDb": -0.0022035218738054615,
+        "stdAcrossBlocksDb": 0.00084548678120499143
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 4,
+        "blockEndSeconds": [
+          270,
+          390,
+          510,
+          630
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0040055291601538336,
+          -0.0038380941573233091,
+          -0.0036092131197173315,
+          -0.0031334044503476951
+        ],
+        "meanDb": -0.0036465602218855421,
+        "minimumBlockDb": -0.0040055291601538336,
+        "maximumBlockDb": -0.0031334044503476951,
+        "stdAcrossBlocksDb": 0.00037871167527496382
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2824,
+      "strictMeanPilotDifferenceDb": -0.00359750354249265,
+      "strictMeanTotalDifferenceDb": -0.0033388238144563985,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 9,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          630,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0037852507047373253,
+          -0.0042243390925342317,
+          -0.0039059793091029368,
+          -0.0037702090055436819,
+          -0.0022035218738054615,
+          -0.005014904365629202,
+          -0.0032152382586257745,
+          -0.0030515706420696158,
+          -0.0027046226579542322
+        ],
+        "meanDb": -0.0035417373233336069,
+        "minimumBlockDb": -0.005014904365629202,
+        "maximumBlockDb": -0.0022035218738054615,
+        "stdAcrossBlocksDb": 0.00084548678120499143
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 4,
+        "blockEndSeconds": [
+          270,
+          390,
+          510,
+          630
+        ],
+        "pilotMeanDifferencesDb": [
+          -0.0040055291601538336,
+          -0.0038380941573233091,
+          -0.0036092131197173315,
+          -0.0031334044503476951
+        ],
+        "meanDb": -0.0036465602218855421,
+        "minimumBlockDb": -0.0040055291601538336,
+        "maximumBlockDb": -0.0031334044503476951,
+        "stdAcrossBlocksDb": 0.00037871167527496382
+      }
+    }
+  ]
+}
