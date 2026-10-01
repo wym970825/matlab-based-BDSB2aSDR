@@ -1,0 +1,131 @@
+{
+  "status": "complete",
+  "finishedAt": "2026-10-02T07:28:32.874405+08:00",
+  "auditedAt": "2026-10-02T07:51:54.989113+08:00",
+  "sourceHashesUnchanged": true,
+  "sourceFilesChecked": 134,
+  "allFiveCasesPassed": true,
+  "cases": [
+    {
+      "case": "dme_free",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\dme_free",
+      "finishedAt": "2026-10-02T00:37:39.265845+08:00",
+      "elapsedSec": 4113.3699492,
+      "status": "done",
+      "actualSettingsMatchPreflight": true,
+      "trackedSatellites": 8,
+      "samplesPerSatellite": 715000,
+      "reacqMsAllSatellites": 0,
+      "finiteS4PerSatellite": 114,
+      "navigationFixes": 1426,
+      "prn11MedianCNo": 52.26143481743889,
+      "oldPbPrn11MedianCNo": 52.26143481743889,
+      "prn11MedianCNoDifferenceDb": 0.0,
+      "nmeaExists": true,
+      "fullMatBytes": 939711942,
+      "evidenceSha256": {
+        "report.json": "f668f55a7c3772702ddf34fa453c1695351ca6c4cbf0bf3695d3a1fa79052a83",
+        "validation.json": "bb5ffee23a8a1c5b87956c11e1dc75b4693bdd5cb20b04feda399772660e4c92",
+        "all_tracks_validation.json": "431cfec9fc0be2c4450c511c6667831ba7fbe900f433c1e064fbe41bcc11e423",
+        "effective_settings.json": "72339f76d05b738128b8a5777aa33e692974d1f6470c29f0057199edcb3a7afe"
+      }
+    },
+    {
+      "case": "1350_n50dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\1350_n50dBm",
+      "finishedAt": "2026-10-02T02:19:56.750605+08:00",
+      "elapsedSec": 5975.8852838,
+      "status": "done",
+      "actualSettingsMatchPreflight": true,
+      "trackedSatellites": 8,
+      "samplesPerSatellite": 715000,
+      "reacqMsAllSatellites": 0,
+      "finiteS4PerSatellite": 114,
+      "navigationFixes": 1428,
+      "prn11MedianCNo": 49.00179273157234,
+      "oldPbPrn11MedianCNo": 48.75653022015226,
+      "prn11MedianCNoDifferenceDb": 0.24526251142007993,
+      "nmeaExists": true,
+      "fullMatBytes": 1031451571,
+      "evidenceSha256": {
+        "report.json": "e1a77bd24125461d240a8889e320b54eac9e345fbd95ea001fcf36f4b8f4be69",
+        "validation.json": "cdb87473ed13a27920bdf214e430aa6fe87ab35d9297b6242ccbac5f2e37f6fc",
+        "all_tracks_validation.json": "3a232b93de57ec69d97ee88480672677a43f0717b16db0623cfbb79c424cda16",
+        "effective_settings.json": "662dbc41816775d758be502d78ec9e0364f47dbe5a3bbdf5c6706546aa82ce7f"
+      }
+    },
+    {
+      "case": "1350_n60dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\1350_n60dBm",
+      "finishedAt": "2026-10-02T04:03:58.669585+08:00",
+      "elapsedSec": 6105.9510655,
+      "status": "done",
+      "actualSettingsMatchPreflight": true,
+      "trackedSatellites": 8,
+      "samplesPerSatellite": 715000,
+      "reacqMsAllSatellites": 0,
+      "finiteS4PerSatellite": 114,
+      "navigationFixes": 1425,
+      "prn11MedianCNo": 49.01470261485157,
+      "oldPbPrn11MedianCNo": 48.77094412041772,
+      "prn11MedianCNoDifferenceDb": 0.24375849443385533,
+      "nmeaExists": true,
+      "fullMatBytes": 1031401973,
+      "evidenceSha256": {
+        "report.json": "abfe84bfbd75be9eb836fbbe809f548319145e83b1a82373ebb6852db501aa06",
+        "validation.json": "1124383d19a2dfd321d4b0138db0c20cc884f3f7111438abcf576adb9e0329f4",
+        "all_tracks_validation.json": "b49a65982d44db20ecb36f11db8a6fd7c5e4c66c2c522d8b7c53b3db662287f5",
+        "effective_settings.json": "10474fc292509286b7f0f55e1dc637c0e8c425467842aa54ba5768bd02523904"
+      }
+    },
+    {
+      "case": "2700_n50dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\2700_n50dBm",
+      "finishedAt": "2026-10-02T05:45:15.721589+08:00",
+      "elapsedSec": 5930.8489696,
+      "status": "done",
+      "actualSettingsMatchPreflight": true,
+      "trackedSatellites": 8,
+      "samplesPerSatellite": 715000,
+      "reacqMsAllSatellites": 0,
+      "finiteS4PerSatellite": 114,
+      "navigationFixes": 1426,
+      "prn11MedianCNo": 48.92673097833881,
+      "oldPbPrn11MedianCNo": 48.44508991750297,
+      "prn11MedianCNoDifferenceDb": 0.481641060835841,
+      "nmeaExists": true,
+      "fullMatBytes": 1050536221,
+      "evidenceSha256": {
+        "report.json": "5a9a1f45e316de590403ff819a23d796021e4e5e8dcd4edf8c9c77fe530a526f",
+        "validation.json": "0b80c404bea6ebf6b00f2f01dcad2c08115cb600b02ca0916bda15c100298546",
+        "all_tracks_validation.json": "ee38ad93fbae6d4b125bd46f12aa7746710f7935501a3db587dff8c6be7eea65",
+        "effective_settings.json": "c0d356bbec84dde1f90e2896657ebde63d778792a60975222f89f89d22ce908f"
+      }
+    },
+    {
+      "case": "2700_n60dBm",
+      "outputDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\Exp00-newTFPB\\2700_n60dBm",
+      "finishedAt": "2026-10-02T07:28:32.860346+08:00",
+      "elapsedSec": 6051.2211121,
+      "status": "done",
+      "actualSettingsMatchPreflight": true,
+      "trackedSatellites": 8,
+      "samplesPerSatellite": 715000,
+      "reacqMsAllSatellites": 0,
+      "finiteS4PerSatellite": 114,
+      "navigationFixes": 1425,
+      "prn11MedianCNo": 48.950068414672884,
+      "oldPbPrn11MedianCNo": 48.48103594489872,
+      "prn11MedianCNoDifferenceDb": 0.469032469774163,
+      "nmeaExists": true,
+      "fullMatBytes": 1050971100,
+      "evidenceSha256": {
+        "report.json": "4f1c67e8e1f39e662f5898d2e622db4a070e0f3e4f715a4112a001a6209c4e0d",
+        "validation.json": "aee4c549cc0af30f972f971c63745b13ea841472b2c7808c44ab952308205d98",
+        "all_tracks_validation.json": "066298484cdf321f88e280903ead7bc383ab75ec10e44396df65fe5639163e6b",
+        "effective_settings.json": "757b34eb7b5c0de604ca483d4ef588db6e40cf5173e93a326ee55daf774dea46"
+      }
+    }
+  ],
+  "scope": "Saved receiver audit plus final file/config/source checks. No S4repair processing or new proof of truth-timeline alignment."
+}
