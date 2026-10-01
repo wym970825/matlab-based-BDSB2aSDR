@@ -1,0 +1,118 @@
+{
+  "total": 22,
+  "passed": 22,
+  "failed": 0,
+  "incomplete": 0,
+  "cases": [
+    {
+      "name": "test_config_entrypoints/testPreviouslyDroppedSettingsAndLegacyFlags",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_config_entrypoints/testFormatsRatesAndExplicitFrontend",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_config_entrypoints/testDerivedFieldsUseFinalOverrides",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_config_entrypoints/testExplicitDerivedValuesAndCanonicalAliasesWin",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_config_entrypoints/testDurationAndSkipGeometry",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_config_entrypoints/testPrnTextAndLegacyEnablePb",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_config_entrypoints/testWrapperOverridesAndSnapshotReplay",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_config_entrypoints/testRejectedGeometryIsTransportIndependent",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testFormatRateBandwidthCombinations",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testQuietIdentityAndThresholdTie",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testImpulseAndSingleSidedFrequency",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testExplicitOverrideAndValidation",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testLegacyOffAndPbNumericCompatibility",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testInvalidOffsetsAndIncompleteIq",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testInitOverridesPrecedeDurationCap",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testAcquisitionOriginPropagation",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testMetadataChunkRoundTrip",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_tf_frontend/testJsonFrontendSelectionIsPreserved",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_NH_stateMachine_reacq/testThreeIndependentLowCnoUpdatesRequired",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_NH_stateMachine_reacq/testRecoveredCnoClearsConsecutiveCount",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_NH_stateMachine_reacq/testObservedZeroCarrierTriggersReacquisition",
+      "passed": true,
+      "failed": false
+    },
+    {
+      "name": "test_NH_stateMachine_reacq/testMissingObservationSentinelDoesNotCount",
+      "passed": true,
+      "failed": false
+    }
+  ]
+}

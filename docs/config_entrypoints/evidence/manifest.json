@@ -1,0 +1,33 @@
+{
+  "validationDate": "2026-10-01",
+  "matlab": "R2026a",
+  "localResults": "results/config_entrypoints/run_02",
+  "sourceHashConvention": "SHA-256 of UTF-8 source text normalized to LF; no BOM",
+  "sources": {
+    "config/initSettings.m": "e24e4fd5d463847756b88e5eefa17d6231c5c14068a115f31c72efc163f8d5ae",
+    "core/runFromJsonConfig.m": "45b445c15830ac269a9159b1661d47ce4d209900a026443bdcd17a2228288bf7",
+    "core/runFromSettings.m": "846ddab870b5718b00eaebc94b0de61145a284032dccff73a1fda907fcefe4c9",
+    "tests/test_config_entrypoints.m": "2927e1c8f6d9db3c70036a4c43fc1271c72b35fc33fe154fca7ae1f43d152275",
+    "tests/verify_config_entrypoint_if.m": "ad85a2803db26338bbed04351143a001af43fb326419d7cacfb0d1a98a1af52d"
+  },
+  "summaryScriptHashConvention": "frontendHash: SHA-256 of MATLAB jsonencode(fileread(script)) UTF-8 bytes; verified against current verifier source",
+  "summaryScriptHashVerified": true,
+  "evidenceHashConvention": "SHA-256 of exact file bytes",
+  "evidence": {
+    "batch.json": "0fbe496b2e782343a34ac02eb5a89d48f66bb9410d5c7f7c21ec80fba2b71e80",
+    "entrypoint_if_summary.json": "874caf208d1924bfb63964c78d7611c448c869cf67c932fc696c1805d76a7597",
+    "input.json": "e0c85d6b5d0ba07f3bdeeb2e39bbcc0e5aae45ccf002f6fa0f4a0afd831d8960",
+    "tests.json": "fc5c562eb2fe8a92759d125d3335eae2de772f81dada63e32117bb786e71289f"
+  },
+  "codeAnalyzer": {
+    "files": [
+      "config/initSettings.m",
+      "core/runFromJsonConfig.m",
+      "core/runFromSettings.m",
+      "tests/test_config_entrypoints.m",
+      "tests/verify_config_entrypoint_if.m"
+    ],
+    "diagnostics": 0
+  },
+  "scope": "Configuration parity; algorithms unchanged. Actual IF: 5 seconds, one satellite, navigation disabled, no finite S4 yet."
+}

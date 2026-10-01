@@ -1,31 +1,58 @@
 function report = runFromJsonConfig(jsonPath, varargin)
-%RUNFROMJSONCONFIG Run full B2a pipeline from a UI/JSON config file.
+%RUNFROMJSONCONFIG Run the B2a receiver from JSON or MATLAB settings.
 %
 %   report = runFromJsonConfig(jsonPath)
-%   report = runFromJsonConfig(jsonPath, 'outDir', dir)
+%   report = runFromJsonConfig(settingsStruct, 'outDir', outputFolder)
 %
-% Invoked by Python web UI:
-%   matlab -batch "cd('.../B2a'); setupPaths; runFromJsonConfig('cfg.json')"
-% No interactive MATLAB desktop required.
+% INPUT: jsonPath names a JSON object; settingsStruct is a scalar partial or
+% complete configuration (for example, initSettings(...)). Both are passed
+% through the SAME initSettings constructor and resolveFrontendSettings.
+% Nested overrides, derived values and file-duration limits therefore do
+% not depend on the input transport. No MATLAB desktop is required.
+%
+% PIPELINE CONTROLS in the configuration:
+%   doNavigation : run navigation after tracking (default true).
+%   doPlot       : master figure/export switch (fallback plotNavPost).
+%   doNmea       : allow NMEA export (fallback nmea.enable); needs navigation.
+%   doBaiduMap   : allow the map (fallback plotBaiduMap); also needs doPlot.
+% Explicit do* values take precedence; absent legacy switches default true.
+% plotTracking additionally controls tracking-figure export under doPlot.
+%
+% EXECUTION OPTIONS (name/value pairs, not receiver algorithm settings):
+%   outDir           : overrides config.outDir; otherwise results/ui/<tag>.
+%   openBaiduBrowser : open the generated map in a browser (default true).
+%   closeFigures     : close only figures created by this run (default false).
+% config.tag supplies filenames; otherwise use the current local timestamp.
+%
+% OUTPUT: report.ok/stage/errorIdentifier/error describe execution. Invalid
+% configuration/preparation throws; acquisition/tracking/navigation failures
+% after preparation return report.ok=false. Optional plot/NMEA failures warn.
+% Output includes ui_config.json (requested input plus resolved run controls),
+% report.json (status), ui_results.mat (lightweight UI product), and on success
+% run_B2a_<tag>.mat (full results.settings/acqResults/channel/trackResults/nav).
+% Effective settings, including capped duration, live in the MAT products.
+% Existing output filenames may be overwritten: use a fresh folder for an
+% independent experiment. This function does not close the MATLAB session.
+%
+% Relative documentation: ../docs/config_entrypoints/README.md
+% Frontend details:       ../docs/upgrade_v020/USAGE.md
+% See also initSettings, runFromSettings, resolveFrontendSettings.
 
     setupPaths();
 
     p = inputParser;
     addParameter(p, 'outDir', '', @(x) ischar(x) || isstring(x));
-    addParameter(p, 'openBaiduBrowser', true, @islogical);
-    addParameter(p, 'closeFigures', false, @islogical);
+    addParameter(p, 'openBaiduBrowser', true, @localLogicalScalar);
+    addParameter(p, 'closeFigures', false, @localLogicalScalar);
     parse(p, varargin{:});
 
-    settingsSource = isstruct(jsonPath);
-    if settingsSource
+    % Decode only the transport here. A MATLAB struct and the same JSON
+    % object must reach initSettings unchanged; neither gets a whitelist.
+    if isstruct(jsonPath)
         if ~isscalar(jsonPath)
-            error('runFromJsonConfig:BadSettings', ...
-                'Settings input must be a scalar struct');
+            error('runFromJsonConfig:BadSettings', 'Settings input must be a scalar struct');
         end
         raw = jsonPath;
-        doPlotDefault = localTopFlag(raw, 'plotNavPost', true);
-        doNmeaDefault = localNestedFlag(raw, 'nmea', 'enable', true);
-        doBaiduDefault = localTopFlag(raw, 'plotBaiduMap', true);
     else
         jsonPath = char(jsonPath);
         if ~isfile(jsonPath)
@@ -35,17 +62,21 @@ function report = runFromJsonConfig(jsonPath, varargin)
         if ~isstruct(raw) || ~isscalar(raw)
             error('runFromJsonConfig:BadJson', 'JSON root must be an object');
         end
-        doPlotDefault = true;
-        doNmeaDefault = true;
-        doBaiduDefault = true;
     end
 
+    % Explicit do* controls win over their legacy settings counterparts.
+    % Use the same fallback for JSON, partial structs and complete settings.
+    doPlotDefault = localFlag(raw, 'plotNavPost', true);
+    doNmeaDefault = localNestedFlag(raw, 'nmea', 'enable', true);
+    doBaiduDefault = localFlag(raw, 'plotBaiduMap', true);
     doNav   = localFlag(raw, 'doNavigation', true);
     doPlot  = localFlag(raw, 'doPlot', doPlotDefault);
     doNmea  = localFlag(raw, 'doNmea', doNmeaDefault);
     doBaidu = localFlag(raw, 'doBaiduMap', doBaiduDefault);
     tag = localStr(raw, 'tag', char(string(datetime('now'), 'yyMMdd_HHmmss')));
 
+    % Output layout is run-scoped for both entry points. resultRoot and
+    % tempdataSvPth from the configuration are replaced by this layout.
     outDir = char(p.Results.outDir);
     if isempty(outDir)
         outDir = localStr(raw, 'outDir', '');
@@ -66,17 +97,20 @@ function report = runFromJsonConfig(jsonPath, varargin)
     if ~exist(trkFigDir, 'dir'), mkdir(trkFigDir); end
     if ~exist(navFigDir, 'dir'), mkdir(navFigDir); end
 
-    if settingsSource
-        settings = raw;
-    else
-        nv = localBuildInitArgs(raw);
-        settings = initSettings(nv{:});
-        settings = localApplyNested(settings, raw);
-    end
-    settings = localFinalizeSettings(settings, raw, settingsSource);
+    % Central construction handles nested defaults, explicit overrides,
+    % derived fields and duration limits for every configuration transport.
+    settings = initSettings(raw);
     settings = resolveFrontendSettings(settings);
     settings.resultRoot = outDir;
     settings.tempdataSvPth = tempDir;
+    % Canonical run metadata also makes ui_config.json replay independent of
+    % whether a flag was originally explicit, inferred or absent.
+    settings.outDir = outDir;
+    settings.tag = tag;
+    settings.doNavigation = doNav;
+    settings.doPlot = doPlot;
+    settings.doNmea = doNmea;
+    settings.doBaiduMap = doBaidu;
     settings.plotNavPost = doPlot;
     settings.plotBaiduMap = doBaidu && doPlot;
     if ~isfield(settings, 'nmea') || ~isstruct(settings.nmea)
@@ -112,6 +146,8 @@ function report = runFromJsonConfig(jsonPath, varargin)
     fprintf('acqList     = %s\n', mat2str(settings.acqSatelliteList));
     fprintf('nav/plot/nmea/baidu = %d/%d/%d/%d\n', doNav, doPlot, doNmea, doBaidu);
 
+    % Publish a small status document between stages. requestedMs is the
+    % caller's request; effectiveMs reflects integer rounding/file capping.
     report = struct();
     report.ok = false;
     report.outDir = outDir;
@@ -136,19 +172,17 @@ function report = runFromJsonConfig(jsonPath, varargin)
     eph = [];
     acqResults = [];
     channel = [];
-    trackResults = [];
-
     try
         [fid, dataAdaptCoeff] = openIfFile(settings);
         cleaner = onCleanup(@() localClose(fid));
 
-        %% Acquisition
+        %% Acquisition: all entries use the same file origin and frontend.
         report.stage = 'acquisition';
         writeReportJson(fullfile(outDir, 'report.json'), report);
         fprintf('--- Acquisition ---\n');
         if settings.skipAcquisition
             error('runFromJsonConfig:SkipAcq', ...
-                'skipAcquisition=true is not supported from UI yet');
+                'skipAcquisition=true is not supported by this runner');
         end
         acqResults = runAcquisition(fid, settings, dataAdaptCoeff);
         nAcq = 0;
@@ -167,7 +201,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
         channel = preRun2(acqResults, settings);
         showChannelStatus(channel, settings);
 
-        %% Tracking
+        %% Tracking: retain native logical sample positions and metadata.
         report.stage = 'tracking';
         writeReportJson(fullfile(outDir, 'report.json'), report);
         fprintf('--- Tracking ---\n');
@@ -190,7 +224,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
             end
         end
 
-        %% Navigation
+        %% Navigation: optional; no navigation also means no NMEA export.
         if doNav
             report.stage = 'navigation';
             writeReportJson(fullfile(outDir, 'report.json'), report);
@@ -236,6 +270,8 @@ function report = runFromJsonConfig(jsonPath, varargin)
             end
         end
 
+        % Store tracking objects as plain structures for portable replay.
+        % The small UI MAT and full scientific archive serve different uses.
         report.stage = 'saving';
         writeReportJson(fullfile(outDir, 'report.json'), report);
         results = struct( ...
@@ -286,6 +322,7 @@ function report = runFromJsonConfig(jsonPath, varargin)
 end
 
 function localClose(fid)
+% Cleanup must not replace the original pipeline exception.
     if ~isempty(fid) && fid > 0
         try
             fclose(fid);
@@ -295,6 +332,7 @@ function localClose(fid)
 end
 
 function prn = localChannelPrn(channel)
+% Accept both legacy channel structures and channel objects for plot export.
     prn = 0;
     if isstruct(channel) && isfield(channel, 'PRN') && ...
             isnumeric(channel.PRN) && isscalar(channel.PRN)
@@ -306,6 +344,7 @@ function prn = localChannelPrn(channel)
 end
 
 function localExportAcquisitionFigure(acqResults, settings, outputDir)
+% Own only newly created figures; leave the user's existing figures alone.
     figuresBefore = findall(groot, 'Type', 'figure');
     try
         plotAcquisition(acqResults, settings.acqSatelliteList);
@@ -327,248 +366,8 @@ function localExportAcquisitionFigure(acqResults, settings, outputDir)
     end
 end
 
-function nv = localBuildInitArgs(raw)
-    nv = {};
-    keys = {'msToProcess','filePath','fileName','EnablePB','skipAcquisition', ...
-        'plotTracking','numberOfChannels','useParfor','parMaxWorkers', ...
-        'samplingFreq','dataType','fileType','skipNumberOfBytes'};
-    for i = 1:numel(keys)
-        k = keys{i};
-        if isfield(raw, k)
-            nv{end+1} = k; %#ok<AGROW>
-            nv{end+1} = raw.(k);
-        end
-    end
-    if isfield(raw, 'acqSatelliteList')
-        nv{end+1} = 'acqSatelliteList';
-        nv{end+1} = localParsePrnList(raw.acqSatelliteList);
-    end
-end
-
-function settings = localApplyNested(settings, raw)
-    flat = { ...
-        'samplingFreq','IF','dataType','fileType','acqSearchBand','acqThreshold', ...
-        'acqStep','coarseNoncohMs','acqFlipSegments','fineNoncoh', ...
-        'fineStepHz','fineSearchInitialHalfSpanHz','fineSearchMaxHalfSpanHz', ...
-        'fineCodeSearchHalfWinSamples','resamplingThreshold', ...
-        'resamplingflag','dllNoiseBandwidth_pull','dllNoiseBandwidth_stab', ...
-        'pllNoiseBandwidth_pull','pllNoiseBandwidth_stab','filter_pullinMS', ...
-        'trackInit_MS','carrierAidCode','carrierAidCodeMaxHz','TrkCN0Th','CNo_Th', ...
-        'CNoInterval','navSolPeriod','elevationMask','useTropCorr','plotNavPost', ...
-        'plotBaiduMap','plotNavLegacy','navTrackMaxSpeedMps','REACQ_max','max_reacqT', ...
-        'scint_updateMs','scint_bufLen','scint_fCutoff', ...
-        'dllDampingRatio','dllCorrelatorSpacing','pllOrder','pllDampingRatio', ...
-        'pllDampingRatio_pull','pllDampingRatio_stab','phaseDisType','phaseDisType_init', ...
-        'reEstimateMS','longCoh_ms','intTime','pilotTRKflag','weilEstBuffLen', ...
-        'weilConfTh','codeLength','codeFreqBasis','carrFreqBasis','startOffset','c', ...
-        'IFBandwidth','skipNumberOfBytes','Th_static_dBm','FLLinitT', ...
-        'REACQ_eachTimeWaitMs','pllDampingRatio_init','baiduMapKeyFile'};
-    for i = 1:numel(flat)
-        k = flat{i};
-        if isfield(raw, k)
-            settings.(k) = raw.(k);
-        end
-    end
-    % Keep DLL/PLL aliases consistent
-    if isfield(settings, 'dllNoiseBandwidth_stab')
-        settings.dllNoiseBandwidth = settings.dllNoiseBandwidth_stab;
-    end
-    if isfield(settings, 'pllNoiseBandwidth_stab')
-        settings.pllNoiseBandwidth = settings.pllNoiseBandwidth_stab;
-        settings.pllNoiseBandwidth_init = settings.pllNoiseBandwidth_pull;
-    end
-    settings = localMergeStruct(settings, raw, 'FLL');
-    settings = localMergeStruct(settings, raw, 'KF');
-    settings = localMergeStruct(settings, raw, 'raim');
-    settings = localMergeStruct(settings, raw, 'lsWeight');
-    settings = localMergeStruct(settings, raw, 'nmea');
-    if isfield(raw, 'nmea') && isstruct(raw.nmea) ...
-            && isfield(raw.nmea, 'bdtMinusUtc') ...
-            && ~isfield(raw.nmea, 'utcOffsetSeconds')
-        settings.nmea.utcOffsetSeconds = raw.nmea.bdtMinusUtc;
-    end
-    settings = localMergeStruct(settings, raw, 'truePosition');
-    settings = localSanitizeTruePosition(settings);
-    settings = localMergeStruct(settings, raw, 'usrp');
-    if isfield(settings, 'Th_static_dBm') && isfield(settings, 'usrp')
-        try
-            threshold_digdB = settings.Th_static_dBm - settings.usrp.scaleK - ...
-                settings.usrp.gain + 10*log10(settings.samplingFreq);
-            settings.PB_settings.Th_static = 10.^(threshold_digdB/20);
-        catch
-        end
-    end
-    % An explicitly supplied digital threshold takes precedence over dBm.
-    settings = localMergeStruct(settings, raw, 'PB_settings');
-    if isfield(raw,'Frontend'), settings.Frontend=raw.Frontend; end
-    if isfield(raw,'machineFormat'), settings.machineFormat=raw.machineFormat; end
-end
-
-function settings = localFinalizeSettings(settings, raw, settingsSource)
-    required = {'filePath','fileName','dataType','fileType','samplingFreq', ...
-        'skipNumberOfBytes','msToProcess'};
-    for i = 1:numel(required)
-        if ~isfield(settings, required{i})
-            error('runFromJsonConfig:MissingSetting', ...
-                'Required setting is missing: %s', required{i});
-        end
-    end
-
-    bytesPerValue = localBytesPerValue(settings.dataType);
-    if ~isnumeric(settings.fileType) || ~isscalar(settings.fileType) || ...
-            ~isfinite(settings.fileType) || settings.fileType ~= round(settings.fileType) || ...
-            ~ismember(round(double(settings.fileType)), [1 2])
-        error('runFromJsonConfig:BadFileType', ...
-            'fileType must be 1 (real) or 2 (IQ)');
-    end
-    settings.fileType = round(double(settings.fileType));
-    settings.size_per_sample = settings.fileType * bytesPerValue;
-
-    if ~isnumeric(settings.samplingFreq) || ~isscalar(settings.samplingFreq) || ...
-            ~isfinite(settings.samplingFreq) || settings.samplingFreq <= 0
-        error('runFromJsonConfig:BadSamplingFreq', ...
-            'samplingFreq must be a positive finite scalar');
-    end
-    if ~isnumeric(settings.skipNumberOfBytes) || ...
-            ~isscalar(settings.skipNumberOfBytes) || ...
-            ~isfinite(settings.skipNumberOfBytes) || settings.skipNumberOfBytes < 0 || ...
-            settings.skipNumberOfBytes ~= round(settings.skipNumberOfBytes)
-        error('runFromJsonConfig:BadSkip', ...
-            'skipNumberOfBytes must be a nonnegative finite integer');
-    end
-    settings.skipNumberOfBytes = floor(double(settings.skipNumberOfBytes));
-
-    requestedMs = double(settings.msToProcess);
-    if ~settingsSource && isfield(raw, 'msToProcess')
-        requestedMs = double(raw.msToProcess);
-    end
-    if ~isscalar(requestedMs) || ~isfinite(requestedMs) || requestedMs < 1
-        error('runFromJsonConfig:BadDuration', ...
-            'msToProcess must be a positive finite scalar');
-    end
-
-    fileInfo = dir(fullfile(settings.filePath, settings.fileName));
-    if ~isempty(fileInfo)
-        usableBytes = double(fileInfo(1).bytes) - settings.skipNumberOfBytes;
-        maxMs = floor(1e3 * usableBytes / settings.size_per_sample / ...
-            double(settings.samplingFreq) - 1e3);
-        if maxMs < 1
-            error('runFromJsonConfig:FileTooShort', ...
-                'IF file is too short after skip/reserved tail: %s', ...
-                fullfile(settings.filePath, settings.fileName));
-        end
-        settings.msToProcess = min(floor(requestedMs), maxMs);
-        if settings.msToProcess < requestedMs
-            warning('runFromJsonConfig:CapMs', ...
-                'msToProcess capped to file length: %d ms', ...
-                settings.msToProcess);
-        end
-    else
-        settings.msToProcess = floor(requestedMs);
-    end
-
-    if ~settingsSource && ~isfield(raw, 'fineCodeSearchHalfWinSamples')
-        settings.fineCodeSearchHalfWinSamples = ceil( ...
-            2 * settings.samplingFreq / settings.codeFreqBasis);
-    end
-    if isfield(settings, 'REACQ_max')
-        nReacq = max(0, round(double(settings.REACQ_max)));
-        if ~isfield(settings, 'REACQ_eachTimeWaitMs') || ...
-                numel(settings.REACQ_eachTimeWaitMs) ~= nReacq
-            settings.REACQ_eachTimeWaitMs = 100 * (0:nReacq-1);
-        end
-    end
-end
-
-function n = localBytesPerValue(dataType)
-    t = lower(strtrim(char(string(dataType))));
-    arrow = strfind(t, '=>');
-    if ~isempty(arrow), t = strtrim(t(1:arrow(1)-1)); end
-    if startsWith(t, '*'), t = t(2:end); end
-    switch t
-        case {'int8','uint8','char','schar','uchar','logical'}
-            n = 1;
-        case {'int16','uint16','short','ushort'}
-            n = 2;
-        case {'int32','uint32','single','float','integer*4','real*4'}
-            n = 4;
-        case {'int64','uint64','double','integer*8','real*8'}
-            n = 8;
-        otherwise
-            error('runFromJsonConfig:BadDataType', ...
-                'Unsupported fread dataType: %s', t);
-    end
-end
-
-function settings = localMergeStruct(settings, raw, name)
-    if ~isfield(raw, name), return; end
-    src = raw.(name);
-    if isstruct(src)
-        if ~isfield(settings, name) || ~isstruct(settings.(name))
-            settings.(name) = struct();
-        end
-        f = fieldnames(src);
-        for i = 1:numel(f)
-            settings.(name).(f{i}) = src.(f{i});
-        end
-    end
-end
-
-function settings = localSanitizeTruePosition(settings)
-    % jsondecode maps JSON null → []; plotNavPost/plotNavigation use scalar
-    % isfinite/isnan &&/|| on E/N/U. Empty must become NaN.
-    if ~isfield(settings, 'truePosition') || ~isstruct(settings.truePosition)
-        settings.truePosition = struct('E', nan, 'N', nan, 'U', nan);
-        return;
-    end
-    for f = {'E', 'N', 'U'}
-        k = f{1};
-        if ~isfield(settings.truePosition, k)
-            settings.truePosition.(k) = nan;
-            continue;
-        end
-        v = settings.truePosition.(k);
-        if isempty(v) || ~isnumeric(v) || ~isscalar(v)
-            settings.truePosition.(k) = nan;
-        else
-            settings.truePosition.(k) = double(v);
-        end
-    end
-end
-
-function list = localParsePrnList(v)
-    if isnumeric(v)
-        list = double(v(:)');
-        return;
-    end
-    if iscell(v)
-        list = cellfun(@double, v);
-        list = list(:)';
-        return;
-    end
-    s = strtrim(char(string(v)));
-    if contains(s, ':')
-        parts = split(s, ':');
-        nums = str2double(parts);
-        if numel(nums) == 2 && all(isfinite(nums))
-            list = nums(1):nums(2);
-            return;
-        elseif numel(nums) == 3 && all(isfinite(nums)) && nums(2) ~= 0
-            list = nums(1):nums(2):nums(3);
-            return;
-        end
-    end
-    s = strrep(s, ';', ',');
-    parts = split(s, ',');
-    list = [];
-    for i = 1:numel(parts)
-        x = str2double(strtrim(parts{i}));
-        if isfinite(x), list(end+1) = x; end %#ok<AGROW>
-    end
-    if isempty(list), list = [24 38 39 41]; end
-end
-
 function tf = localFlag(raw, name, default)
+% UI-compatible coercion shared by both transports (including legacy flags).
     tf = default;
     if ~isfield(raw, name), return; end
     v = raw.(name);
@@ -579,28 +378,21 @@ function tf = localFlag(raw, name, default)
     end
 end
 
-function tf = localTopFlag(raw, name, default)
-    tf = default;
-    if isfield(raw, name)
-        value = raw.(name);
-        if (islogical(value) || isnumeric(value)) && isscalar(value)
-            tf = logical(value);
-        end
-    end
+function tf = localLogicalScalar(value)
+% Execution options accept scalar logicals or finite numeric truth values.
+    tf = (islogical(value) || isnumeric(value)) && isscalar(value) && isfinite(value);
 end
 
 function tf = localNestedFlag(raw, parent, name, default)
+% Read a legacy nested switch using the same coercion as top-level do* flags.
     tf = default;
-    if isfield(raw, parent) && isstruct(raw.(parent)) && ...
-            isfield(raw.(parent), name)
-        value = raw.(parent).(name);
-        if (islogical(value) || isnumeric(value)) && isscalar(value)
-            tf = logical(value);
-        end
+    if isfield(raw, parent) && isstruct(raw.(parent)) && isscalar(raw.(parent))
+        tf = localFlag(raw.(parent), name, default);
     end
 end
 
 function s = localStr(raw, name, default)
+% Empty optional strings use their fallback instead of suppressing filenames.
     s = default;
     if isfield(raw, name) && ~isempty(raw.(name))
         s = char(string(raw.(name)));
@@ -608,6 +400,7 @@ function s = localStr(raw, name, default)
 end
 
 function localCloseNewFigures(figuresBefore, enabled)
+% onCleanup also runs after a stage failure; never close pre-existing figures.
     if ~enabled, return; end
     figuresAfter = findall(groot, 'Type', 'figure');
     for i = 1:numel(figuresAfter)
@@ -622,7 +415,8 @@ function localCloseNewFigures(figuresBefore, enabled)
 end
 
 function writeReportJson(path, report)
-    % jsonencode may fail on some MATLAB versions with nested empties
+    % Best-effort progress reporting; a small fallback handles nested empties
+    % on older MATLAB releases without hiding the underlying stage failure.
     try
         txt = jsonencode(report);
     catch
@@ -640,6 +434,7 @@ function writeReportJson(path, report)
 end
 
 function localWriteJson(path, value)
+% Config snapshots require a writable UTF-8 file; callers decide error policy.
     try
         text = jsonencode(value, 'PrettyPrint', true);
     catch
@@ -654,6 +449,7 @@ function localWriteJson(path, value)
 end
 
 function t = localEsc(s)
+% Sanitize text used only by the legacy minimal report-serialization fallback.
     t = char(string(s));
     t = strrep(t, '\', '/');
     t = strrep(t, '"', '''');

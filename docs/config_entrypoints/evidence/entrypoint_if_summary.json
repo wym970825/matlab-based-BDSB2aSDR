@@ -1,0 +1,158 @@
+{
+  "passed": true,
+  "prn": 11,
+  "recordedMs": 5000,
+  "effectiveSettingsEqual": true,
+  "acquisitionExactlyEqual": true,
+  "trackingExactlyEqual": true,
+  "frontendHash": "07cfd92f0cd3f830bc22c3948a39afaf366f499a61eead01d673532550488af1",
+  "archivePrefixComparisons": [
+    {
+      "field": "I_P",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "Q_P",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "Pilot_I_P",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "Pilot_Q_P",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "codeFreq",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "carrFreq",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "absoluteSample",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "trk_state",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "cur_state",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "dllDiscr",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "pllDiscr",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "frontendMeanWeight",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "frontendSampleCount",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "frontendValidCount",
+      "elements": 5000,
+      "finiteElements": 5000,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "PilotCNo",
+      "elements": 25,
+      "finiteElements": 25,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "B2a_CNo",
+      "elements": 25,
+      "finiteElements": 25,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "S4",
+      "elements": 25,
+      "finiteElements": 0,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    },
+    {
+      "field": "S4_ori",
+      "elements": 25,
+      "finiteElements": 0,
+      "exact": true,
+      "maxAbsoluteError": 0,
+      "relativeError": 0
+    }
+  ],
+  "baselineDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf_parameter_grid\\run_01\\full\\tf800_edge3us",
+  "scope": "Five seconds; no finite S4 expected before 150-second warmup.",
+  "scriptHash": "6095a9443fef3120b13b852389cb208d1b5001af60cb469abb991a5ec47e0e60"
+}
