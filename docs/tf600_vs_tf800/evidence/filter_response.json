@@ -1,0 +1,42 @@
+[
+  {
+    "samplingFreq": 2.5E+7,
+    "bandwidthHz": 600000,
+    "taps": 641,
+    "D": 320,
+    "H": 670,
+    "worstStopbandDbOnGrid": -59.712402506455518,
+    "zeroFrequencyResponseDb": 0.00340314195793428,
+    "coefficientHash": "3683ae598158f3c28765d65530c4a0aae26dd4c75c9fffc8d235891bb58cdbd6"
+  },
+  {
+    "samplingFreq": 2.5E+7,
+    "bandwidthHz": 800000,
+    "taps": 641,
+    "D": 320,
+    "H": 670,
+    "worstStopbandDbOnGrid": -57.947375333646221,
+    "zeroFrequencyResponseDb": -13.951467924846039,
+    "coefficientHash": "58fbf85e01e48660ed0bfc1ee524bff43dc385b3434234c4b4c7ef9eaeeefe18"
+  },
+  {
+    "samplingFreq": 3.069E+7,
+    "bandwidthHz": 600000,
+    "taps": 787,
+    "D": 393,
+    "H": 822,
+    "worstStopbandDbOnGrid": -59.697626249949217,
+    "zeroFrequencyResponseDb": 0.0034651157075969679,
+    "coefficientHash": "02a3034e1ad0c61b2c4a0413eca5ff7c01fb264d48ca65dcf2797dfcefe1ad84"
+  },
+  {
+    "samplingFreq": 3.069E+7,
+    "bandwidthHz": 800000,
+    "taps": 787,
+    "D": 393,
+    "H": 822,
+    "worstStopbandDbOnGrid": -57.937875156969405,
+    "zeroFrequencyResponseDb": -13.95590163569066,
+    "coefficientHash": "24038aa451f0d7ca71876fa18cd6f953df3b69a10f4d37163cebcee67ecf7d0a"
+  }
+]

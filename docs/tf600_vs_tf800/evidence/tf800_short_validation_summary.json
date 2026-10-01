@@ -1,0 +1,19 @@
+{
+  "mode": "tf800",
+  "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_vs_tf800\\run_03\\short\\tf800",
+  "pipelineOk": true,
+  "recordedMs": 30000,
+  "complete": true,
+  "reacqMs": 0,
+  "longStateFraction": 0.9,
+  "firstSample": 15483,
+  "lastSample": 7.49990175E+8,
+  "frontendMode": "tf_v1",
+  "frontendConfigHash": "69a8e2cfeb733c4fd3e0a65ed46666c9c16bc73a08c86049b66318b7aeb337bf",
+  "meanWeight": 0.17502217087202396,
+  "finiteS4": 0,
+  "medianPilotCNo": 46.004727611598341,
+  "medianTotalCNo": 49.063447862907537,
+  "maxNormalTimelineErrorSamples": 0,
+  "elapsedSec": 115.8070671
+}

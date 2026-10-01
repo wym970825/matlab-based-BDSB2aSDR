@@ -1,0 +1,146 @@
+{
+  "copiedEvidence": [
+    {
+      "evidence": "experiment_status.json",
+      "source": "results/tf600_vs_tf800/run_03/experiment_status.json",
+      "bytes": 555,
+      "sha256": "834fb4cee923034f458e736bcf9d5fb2f8aaf9303365ca61c8e09436a84ad9a2"
+    },
+    {
+      "evidence": "frontend_tests.json",
+      "source": "results/tf600_vs_tf800/run_03/frontend_tests.json",
+      "bytes": 1673,
+      "sha256": "77fdfa6bcac0f45fb35aa7aab9ec0e9f84b36ac8614b5bdba4e34956700025f6"
+    },
+    {
+      "evidence": "filter_response.json",
+      "source": "results/tf600_vs_tf800/run_03/filter_response.json",
+      "bytes": 1212,
+      "sha256": "36b8048b8b2ec8591bca1ab181310ca763dfc919f2f52e0d1bef646e6a13df49"
+    },
+    {
+      "evidence": "filter_response.png",
+      "source": "results/tf600_vs_tf800/run_03/filter_response.png",
+      "bytes": 146756,
+      "sha256": "b7a3317143a568723792a0322e148afe8a366e40d0a5b0d6d7d55343b3c8f61c"
+    },
+    {
+      "evidence": "correlation_summary.json",
+      "source": "results/tf600_vs_tf800/run_03/correlation/correlation_summary.json",
+      "bytes": 7163,
+      "sha256": "ff93e59f5777250388e5f1092bcd0f428d8d457910a0ef3537b3a579edb37d55"
+    },
+    {
+      "evidence": "correlation_fidelity.png",
+      "source": "results/tf600_vs_tf800/run_03/correlation/correlation_fidelity.png",
+      "bytes": 134141,
+      "sha256": "037b9d956e0fd9450de0d9e12189530ddb42641957f16524ca0bba0db1c0763c"
+    },
+    {
+      "evidence": "comparison.json",
+      "source": "results/tf600_vs_tf800/run_03/comparison/comparison.json",
+      "bytes": 4979,
+      "sha256": "35a87390240af4234e4abef161b9c29a6f37efefe5fa0eae27cf6291cf7c0f8a"
+    },
+    {
+      "evidence": "comparison.png",
+      "source": "results/tf600_vs_tf800/run_03/comparison/comparison.png",
+      "bytes": 177562,
+      "sha256": "2e459234d502e596af4f4fc05c9960ff667edde4a2c4a6ed9b143e71c76bff12"
+    },
+    {
+      "evidence": "difference_summary.json",
+      "source": "results/tf600_vs_tf800/run_03/comparison/differences/difference_summary.json",
+      "bytes": 761,
+      "sha256": "bd2bd4d53f975cc3cc7a147cf61c0712648c4d9453b19d9f205a18f7c3a36066"
+    },
+    {
+      "evidence": "paired_differences.png",
+      "source": "results/tf600_vs_tf800/run_03/comparison/differences/paired_differences.png",
+      "bytes": 137476,
+      "sha256": "e31998c039a7396f0c4f50238432414eb5dc28b43033b0ca7a3b20ded9a4eaf1"
+    },
+    {
+      "evidence": "state_audit.json",
+      "source": "results/tf600_vs_tf800/run_03/state_audit/state_audit.json",
+      "bytes": 29553,
+      "sha256": "48a24091d5187607ad3a57a5dd7b7da01520c353bb8782ada88a5e478c8ca76d"
+    },
+    {
+      "evidence": "tf800_validation_summary.json",
+      "source": "results/tf600_vs_tf800/run_03/full/tf800/validation_summary.json",
+      "bytes": 618,
+      "sha256": "9b3abd3d62d4df8c4807f8f6322640fe24ced7ada062d8c2777ff00f645a4c1c"
+    },
+    {
+      "evidence": "tf600_validation_summary.json",
+      "source": "results/upgrade_v020/full_01/tf600/validation_summary.json",
+      "bytes": 611,
+      "sha256": "3747c3e54ecde0d463d27d44d4bc1a175560f1568741644288eb2fe1a2b4f6b6"
+    },
+    {
+      "evidence": "tf800_validation_config.json",
+      "source": "results/tf600_vs_tf800/run_03/full/tf800/validation_config.json",
+      "bytes": 3503,
+      "sha256": "e40a0fb26cd48dbc8e87adb4c288875685948490d6338c76a8473198324f0555"
+    },
+    {
+      "evidence": "tf600_validation_config.json",
+      "source": "results/upgrade_v020/full_01/tf600/validation_config.json",
+      "bytes": 3503,
+      "sha256": "4a87591b66427d6ff85117af1d8e4bbcd549d69b384e9d788daddc47280cb5d2"
+    },
+    {
+      "evidence": "tf800_validation_manifest.json",
+      "source": "results/tf600_vs_tf800/run_03/full/validation_manifest.json",
+      "bytes": 1532,
+      "sha256": "12f7230238a7124cb7ada6a468c49f43b07b39076e22c3f1f62107de897f01d9"
+    },
+    {
+      "evidence": "tf600_baseline_validation_manifest.json",
+      "source": "results/upgrade_v020/full_01/validation_manifest.json",
+      "bytes": 2894,
+      "sha256": "9297ee9b476a1d5b79bb98fc100a8b2ce4bdecf0535ec74e1fd7f3a43e431cc4"
+    },
+    {
+      "evidence": "tf800_source_manifest.json",
+      "source": "results/tf600_vs_tf800/run_03/full/source_manifest.json",
+      "bytes": 22212,
+      "sha256": "945137530cb86fa1c22033149e8c243af65c70f1cb60de5617234f532d79dbab"
+    },
+    {
+      "evidence": "tf600_baseline_source_manifest.json",
+      "source": "results/upgrade_v020/full_01/source_manifest.json",
+      "bytes": 21791,
+      "sha256": "713a15198277c7f1ebd54f0ab537d3ba5337e1e4065deb2afb6575ecdce5923a"
+    },
+    {
+      "evidence": "tf800_short_validation_summary.json",
+      "source": "results/tf600_vs_tf800/run_03/short/tf800/validation_summary.json",
+      "bytes": 597,
+      "sha256": "a23fb21847ed043ae438cf2c244ab993f90e103c68ec621d32678ef4f4bcdc6e"
+    }
+  ],
+  "localMatArchivesNotInGit": [
+    {
+      "path": "results/upgrade_v020/full_01/tf600/run_B2a_04_2700_n50dBm_tf600.mat",
+      "bytes": 131875618,
+      "sha256": "a4ff0a8c4b083cecb5cff0d980fb1a7408a007534ddca8c59f8e2a8b40d83f04"
+    },
+    {
+      "path": "results/tf600_vs_tf800/run_03/full/tf800/run_B2a_04_2700_n50dBm_tf800.mat",
+      "bytes": 131837042,
+      "sha256": "f2e7764bd4290f909971ed21c31523ee2639ef10adb01c391968b9b013920cd8"
+    },
+    {
+      "path": "results/tf600_vs_tf800/run_03/comparison/native_series.mat",
+      "bytes": 281088,
+      "sha256": "baefb1a41aec756b5d692d294e1d1ea8076fae543f1ac296ebcaaa5bffb6333d"
+    },
+    {
+      "path": "results/tf600_vs_tf800/run_03/comparison/differences/paired_differences.mat",
+      "bytes": 68642,
+      "sha256": "48e4d7205f744ac92afe3b06d5ed33111711b8142e6c14e9b398e3439e2574c5"
+    }
+  ]
+}

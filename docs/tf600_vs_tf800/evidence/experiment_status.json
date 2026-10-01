@@ -1,0 +1,13 @@
+{
+  "status": "complete",
+  "phase": "done",
+  "startedAt": "01-Oct-2026 08:22:22",
+  "outputRoot": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_vs_tf800\\run_03",
+  "baselineDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\upgrade_v020\\full_01\\tf600",
+  "matlabVersion": "26.1.0.3203278 (R2026a)",
+  "gitHead": "6da29789613cc85c31eb91f42155dff66c57d1a3",
+  "scriptHash": "a4bab177d0f53de0a8fc5f8d72b2285c72a5fdd5d30d128e3bac73e43da58dd8",
+  "updatedAt": "01-Oct-2026 09:08:50",
+  "receiverMatchesBaseline": true,
+  "finishedAt": "01-Oct-2026 09:08:50"
+}

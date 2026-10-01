@@ -1,0 +1,20 @@
+{
+  "comparison": "tf800 minus tf600",
+  "commonCnoUpdates": 2808,
+  "strictCnoUpdates": 2808,
+  "meanPilotDifferenceDb": 0.0224821314112262,
+  "medianPilotDifferenceDb": 0.02082537519601857,
+  "pilotQuantiles05_50_95Db": [
+    -0.058378492165392967,
+    0.02082537519601857,
+    0.10545835411273002
+  ],
+  "fractionPositivePilotDifferences": 0.676994301994302,
+  "commonS4Updates": 112,
+  "meanS4Difference": -1.81020591623052E-5,
+  "rmsS4Difference": 0.0031664374090318017,
+  "maximumAbsoluteS4Difference": 0.015194201342362507,
+  "meanRawS4Difference": -0.00064772487328304941,
+  "notes": "Paired estimator differences, not errors against truth. Updates overlap in time.",
+  "scriptHash": "98f32d13aabcbae5d6a90cfaeae8afbedc81c0df4833aa79dd5b725acede643c"
+}

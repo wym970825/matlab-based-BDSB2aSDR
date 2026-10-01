@@ -1,0 +1,157 @@
+{
+  "warmupExclusionSeconds": 150,
+  "minimumNativeWindowOverlap": 0.99,
+  "nativeUpdateIntervalMs": 200,
+  "storedCnoSupportMs": 400,
+  "analysisScriptHash": "d7b8db742764cb9638941c900c510a4c42b07fbbef41d342746426513ac30552",
+  "pairing": "Nearest physical 200-ms bin, >=99% overlap; separate <=2-sample subset; no interpolation.",
+  "notes": "Single file/PRN; overlapping S4 outputs are descriptive, not independent trials. No S4 truth.",
+  "runs": [
+    {
+      "mode": "tf600",
+      "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\upgrade_v020\\full_01\\tf600",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2824,
+      "reacqMs": 0,
+      "meanWeight": 0.17506298390221917,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12279785210892449,
+      "pllDiscriminatorStdCycles": 0.056895485802177154,
+      "promptPowerMean": 3.5756678251624303E+9,
+      "promptPowerCV": 0.59481118238837838,
+      "medianPilotCno": 45.643514185549009,
+      "medianTotalCno": 48.749559823991959,
+      "finiteS4Updates": 114,
+      "medianS4": 0.5580536335069437,
+      "medianS4Raw": 0.6360671866918638
+    },
+    {
+      "mode": "tf800",
+      "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_vs_tf800\\run_03\\full\\tf800",
+      "recordedMs": 715000,
+      "validSteadyCnoWindows": 2808,
+      "reacqMs": 0,
+      "meanWeight": 0.17506298384977084,
+      "frontendBoundaryMs": 0,
+      "dllDiscriminatorStdDimensionless": 0.12346600584051487,
+      "pllDiscriminatorStdCycles": 0.056892631133724669,
+      "promptPowerMean": 3.5302411180308275E+9,
+      "promptPowerCV": 0.5871587155051029,
+      "medianPilotCno": 45.669974479954163,
+      "medianTotalCno": 48.769724751621489,
+      "finiteS4Updates": 114,
+      "medianS4": 0.55945731844230906,
+      "medianS4Raw": 0.63614302770050446
+    }
+  ],
+  "pairs": [
+    {
+      "comparison": "tf800 minus tf600",
+      "commonCnoWindows": 2808,
+      "matchedCoverageSec": 561.6,
+      "maxWindowEdgeMismatchUs": 0.04000003173132427,
+      "minimumWindowOverlapFraction": 0.99999989999990069,
+      "meanPilotDifferenceDb": 0.0224821314112262,
+      "medianPilotDifferenceDb": 0.02082537519601857,
+      "meanTotalDifferenceDb": 0.021524039216609746,
+      "commonS4Updates": 112,
+      "meanS4Difference": -1.81020591623052E-5,
+      "blocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          0.024372030327389289,
+          0.024686823550819737,
+          0.026432973207521873,
+          0.018384141697834078,
+          0.020089781326867638,
+          0.017659893145196837,
+          0.018066951314463207,
+          0.029036206200954807
+        ],
+        "meanDb": 0.022341100096380934,
+        "minimumBlockDb": 0.017659893145196837,
+        "maximumBlockDb": 0.029036206200954807,
+        "stdAcrossBlocksDb": 0.0043441745843746226
+      },
+      "blocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.024529953349177139,
+          0.022408557452677974,
+          0.018874837236032237
+        ],
+        "meanDb": 0.021937782679295786,
+        "minimumBlockDb": 0.018874837236032237,
+        "maximumBlockDb": 0.024529953349177139,
+        "stdAcrossBlocksDb": 0.0028567999980270873
+      },
+      "strictToleranceSamples": 2,
+      "strictCommonCnoWindows": 2808,
+      "strictMeanPilotDifferenceDb": 0.0224821314112262,
+      "strictMeanTotalDifferenceDb": 0.021524039216609746,
+      "strictBlocks60": {
+        "blockLengthSec": 60,
+        "nBlocks": 8,
+        "blockEndSeconds": [
+          210,
+          270,
+          330,
+          390,
+          450,
+          510,
+          570,
+          690
+        ],
+        "pilotMeanDifferencesDb": [
+          0.024372030327389289,
+          0.024686823550819737,
+          0.026432973207521873,
+          0.018384141697834078,
+          0.020089781326867638,
+          0.017659893145196837,
+          0.018066951314463207,
+          0.029036206200954807
+        ],
+        "meanDb": 0.022341100096380934,
+        "minimumBlockDb": 0.017659893145196837,
+        "maximumBlockDb": 0.029036206200954807,
+        "stdAcrossBlocksDb": 0.0043441745843746226
+      },
+      "strictBlocks120": {
+        "blockLengthSec": 120,
+        "nBlocks": 3,
+        "blockEndSeconds": [
+          270,
+          390,
+          510
+        ],
+        "pilotMeanDifferencesDb": [
+          0.024529953349177139,
+          0.022408557452677974,
+          0.018874837236032237
+        ],
+        "meanDb": 0.021937782679295786,
+        "minimumBlockDb": 0.018874837236032237,
+        "maximumBlockDb": 0.024529953349177139,
+        "stdAcrossBlocksDb": 0.0028567999980270873
+      }
+    }
+  ]
+}

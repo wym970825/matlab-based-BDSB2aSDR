@@ -1,0 +1,1118 @@
+{
+  "runs": [
+    {
+      "mode": "tf600",
+      "longIntervals": [
+        {
+          "long": false,
+          "firstEpoch": 1,
+          "lastEpoch": 3000,
+          "durationMs": 3000,
+          "firstFileTimeSec": 0.00061932,
+          "endFileTimeSec": 3.00061804
+        },
+        {
+          "long": true,
+          "firstEpoch": 3001,
+          "lastEpoch": 715000,
+          "durationMs": 712000,
+          "firstFileTimeSec": 3.00061804,
+          "endFileTimeSec": 715.0004084
+        }
+      ],
+      "nhEvents": [
+        {
+          "epoch": 3000,
+          "fileTimeSec": 3.00061804,
+          "confidence": 5.2711097614666951,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 13000,
+          "fileTimeSec": 13.00061392,
+          "confidence": 5.29893344284591,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 23000,
+          "fileTimeSec": 23.00060984,
+          "confidence": 5.1937161692376117,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 33000,
+          "fileTimeSec": 33.0006058,
+          "confidence": 6.1488224406005019,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 43000,
+          "fileTimeSec": 43.0006018,
+          "confidence": 5.72904786453788,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 53000,
+          "fileTimeSec": 53.0005978,
+          "confidence": 5.526262315076143,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 63000,
+          "fileTimeSec": 63.00059384,
+          "confidence": 5.6513764796759549,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 73000,
+          "fileTimeSec": 73.00058992,
+          "confidence": 5.6927106042374715,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 83000,
+          "fileTimeSec": 83.00058604,
+          "confidence": 5.3331343956343868,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 93000,
+          "fileTimeSec": 93.0005822,
+          "confidence": 6.1559058704950695,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 103000,
+          "fileTimeSec": 103.0005784,
+          "confidence": 6.1611192377444643,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 113000,
+          "fileTimeSec": 113.0005746,
+          "confidence": 6.0847927538689941,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 123000,
+          "fileTimeSec": 123.00057084,
+          "confidence": 5.4648306475957114,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 133000,
+          "fileTimeSec": 133.00056712,
+          "confidence": 5.343953004880202,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 143000,
+          "fileTimeSec": 143.00056344,
+          "confidence": 5.72753594426092,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 153000,
+          "fileTimeSec": 153.0005598,
+          "confidence": 5.4346465550703682,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 163000,
+          "fileTimeSec": 163.0005562,
+          "confidence": 5.9469527373748816,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 173000,
+          "fileTimeSec": 173.0005526,
+          "confidence": 6.0034501893577623,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 183000,
+          "fileTimeSec": 183.00054904,
+          "confidence": 5.6133524664307748,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 193000,
+          "fileTimeSec": 193.00054552,
+          "confidence": 5.5505875902026354,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 203000,
+          "fileTimeSec": 203.00054204,
+          "confidence": 6.0484726791596151,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 213000,
+          "fileTimeSec": 213.0005386,
+          "confidence": 5.7263538263609259,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 223000,
+          "fileTimeSec": 223.0005352,
+          "confidence": 5.9655947358189518,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 233000,
+          "fileTimeSec": 233.0005318,
+          "confidence": 5.9590669784906716,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 243000,
+          "fileTimeSec": 243.00052844,
+          "confidence": 5.5888025719901355,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 253000,
+          "fileTimeSec": 253.00052512,
+          "confidence": 5.9778488214079433,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 263000,
+          "fileTimeSec": 263.00052184,
+          "confidence": 5.450895976211231,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 273000,
+          "fileTimeSec": 273.0005186,
+          "confidence": 5.2851288228846061,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 283000,
+          "fileTimeSec": 283.0005154,
+          "confidence": 5.7176943944094338,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 293000,
+          "fileTimeSec": 293.0005122,
+          "confidence": 5.3125201470656132,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 303000,
+          "fileTimeSec": 303.00050904,
+          "confidence": 5.6085272558819579,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 313000,
+          "fileTimeSec": 313.00050592,
+          "confidence": 5.047021546862279,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 323000,
+          "fileTimeSec": 323.00050284,
+          "confidence": 5.4658109838939417,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 333000,
+          "fileTimeSec": 333.0004998,
+          "confidence": 5.43353270659127,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 343000,
+          "fileTimeSec": 343.0004968,
+          "confidence": 5.8392843224115021,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 353000,
+          "fileTimeSec": 353.0004938,
+          "confidence": 5.1374882910983937,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 363000,
+          "fileTimeSec": 363.00049088,
+          "confidence": 5.5914482554188787,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 373000,
+          "fileTimeSec": 373.00048796,
+          "confidence": 5.4105717087410214,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 383000,
+          "fileTimeSec": 383.00048508,
+          "confidence": 5.70842971956777,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 393000,
+          "fileTimeSec": 393.0004822,
+          "confidence": 4.9359966242466529,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 403000,
+          "fileTimeSec": 403.0004794,
+          "confidence": 5.054800763328001,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 413000,
+          "fileTimeSec": 413.00047664,
+          "confidence": 4.3877020122586741,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 423000,
+          "fileTimeSec": 423.00047388,
+          "confidence": 5.3526303278629577,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 433000,
+          "fileTimeSec": 433.00047116,
+          "confidence": 5.4377367590679881,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 443000,
+          "fileTimeSec": 443.00046848,
+          "confidence": 6.1843786990065945,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 453000,
+          "fileTimeSec": 453.00046584,
+          "confidence": 6.1719109345486682,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 463000,
+          "fileTimeSec": 463.0004632,
+          "confidence": 4.776550226606517,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 473000,
+          "fileTimeSec": 473.00046064,
+          "confidence": 5.7910378951555277,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 483000,
+          "fileTimeSec": 483.00045808,
+          "confidence": 5.1702469827375745,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 493000,
+          "fileTimeSec": 493.00045556,
+          "confidence": 4.9663763724080265,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 503000,
+          "fileTimeSec": 503.00045308,
+          "confidence": 5.5470304330769507,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 513000,
+          "fileTimeSec": 513.00045064,
+          "confidence": 5.7691432955605668,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 523000,
+          "fileTimeSec": 523.00044824,
+          "confidence": 5.8973120444281433,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 533000,
+          "fileTimeSec": 533.00044584,
+          "confidence": 5.9477808296797887,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 543000,
+          "fileTimeSec": 543.00044352,
+          "confidence": 5.6474804407146006,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 553000,
+          "fileTimeSec": 553.0004412,
+          "confidence": 4.8890566564569191,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 563000,
+          "fileTimeSec": 563.00043892,
+          "confidence": 5.591891734723772,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 573000,
+          "fileTimeSec": 573.00043668,
+          "confidence": 5.5652510181537851,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 583000,
+          "fileTimeSec": 583.00043448,
+          "confidence": 5.3788305682688566,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 593000,
+          "fileTimeSec": 593.00043228,
+          "confidence": 5.8565320797685558,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 603000,
+          "fileTimeSec": 603.00043012,
+          "confidence": 5.4131102383475733,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 613000,
+          "fileTimeSec": 613.00042804,
+          "confidence": 1.506852897219944,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 623000,
+          "fileTimeSec": 623.00042596,
+          "confidence": 4.64376186927775,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 633000,
+          "fileTimeSec": 633.00042392,
+          "confidence": 5.8807331347097556,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 643000,
+          "fileTimeSec": 643.00042188,
+          "confidence": 4.9867323333614211,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 653000,
+          "fileTimeSec": 653.00041992,
+          "confidence": 5.92422899930597,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 663000,
+          "fileTimeSec": 663.00041796,
+          "confidence": 5.7344720068806492,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 673000,
+          "fileTimeSec": 673.00041608,
+          "confidence": 5.4750995324634779,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 683000,
+          "fileTimeSec": 683.0004142,
+          "confidence": 4.6211063980089966,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 693000,
+          "fileTimeSec": 693.00041232,
+          "confidence": 5.1416253433379069,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 703000,
+          "fileTimeSec": 703.00041052,
+          "confidence": 5.1441366488606128,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 713000,
+          "fileTimeSec": 713.00040876,
+          "confidence": 4.9975052585124358,
+          "threshold": 1.5,
+          "success": true
+        }
+      ],
+      "reconstructedNhDecisionsVerified": 72,
+      "finiteS4Updates": 114,
+      "finiteS4WithNonLongIn60sWindow": 0,
+      "affectedS4UpdateFileTimeSec": []
+    },
+    {
+      "mode": "tf800",
+      "longIntervals": [
+        {
+          "long": false,
+          "firstEpoch": 1,
+          "lastEpoch": 3000,
+          "durationMs": 3000,
+          "firstFileTimeSec": 0.00061932,
+          "endFileTimeSec": 3.00061804
+        },
+        {
+          "long": true,
+          "firstEpoch": 3001,
+          "lastEpoch": 613000,
+          "durationMs": 610000,
+          "firstFileTimeSec": 3.00061804,
+          "endFileTimeSec": 613.00042804
+        },
+        {
+          "long": false,
+          "firstEpoch": 613001,
+          "lastEpoch": 616000,
+          "durationMs": 3000,
+          "firstFileTimeSec": 613.00042804,
+          "endFileTimeSec": 616.0004274
+        },
+        {
+          "long": true,
+          "firstEpoch": 616001,
+          "lastEpoch": 715000,
+          "durationMs": 99000,
+          "firstFileTimeSec": 616.0004274,
+          "endFileTimeSec": 715.0004084
+        }
+      ],
+      "nhEvents": [
+        {
+          "epoch": 3000,
+          "fileTimeSec": 3.00061804,
+          "confidence": 5.2660867689775577,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 13000,
+          "fileTimeSec": 13.00061392,
+          "confidence": 5.3306426698568954,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 23000,
+          "fileTimeSec": 23.00060984,
+          "confidence": 5.2610668928279711,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 33000,
+          "fileTimeSec": 33.0006058,
+          "confidence": 6.1506271294335715,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 43000,
+          "fileTimeSec": 43.0006018,
+          "confidence": 5.7531346147973945,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 53000,
+          "fileTimeSec": 53.0005978,
+          "confidence": 5.576203017944521,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 63000,
+          "fileTimeSec": 63.00059384,
+          "confidence": 5.6103823573102645,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 73000,
+          "fileTimeSec": 73.00058992,
+          "confidence": 5.6991837599603947,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 83000,
+          "fileTimeSec": 83.00058604,
+          "confidence": 5.4476731212728629,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 93000,
+          "fileTimeSec": 93.0005822,
+          "confidence": 6.1742544336421323,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 103000,
+          "fileTimeSec": 103.0005784,
+          "confidence": 6.0861603304343035,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 113000,
+          "fileTimeSec": 113.0005746,
+          "confidence": 6.0469097561727283,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 123000,
+          "fileTimeSec": 123.00057084,
+          "confidence": 5.4279560126092754,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 133000,
+          "fileTimeSec": 133.00056712,
+          "confidence": 5.3576091464409261,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 143000,
+          "fileTimeSec": 143.00056344,
+          "confidence": 5.7111604855589064,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 153000,
+          "fileTimeSec": 153.0005598,
+          "confidence": 5.430117427021135,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 163000,
+          "fileTimeSec": 163.0005562,
+          "confidence": 6.0099972419781267,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 173000,
+          "fileTimeSec": 173.0005526,
+          "confidence": 6.0197683778121762,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 183000,
+          "fileTimeSec": 183.00054904,
+          "confidence": 5.61515199880321,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 193000,
+          "fileTimeSec": 193.00054552,
+          "confidence": 5.5257483809485226,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 203000,
+          "fileTimeSec": 203.00054204,
+          "confidence": 6.0491491930609769,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 213000,
+          "fileTimeSec": 213.0005386,
+          "confidence": 5.6993106325553056,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 223000,
+          "fileTimeSec": 223.0005352,
+          "confidence": 5.9997123465974944,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 233000,
+          "fileTimeSec": 233.0005318,
+          "confidence": 5.9699986302547075,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 243000,
+          "fileTimeSec": 243.00052844,
+          "confidence": 5.6262715547478042,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 253000,
+          "fileTimeSec": 253.00052512,
+          "confidence": 5.9883740129416392,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 263000,
+          "fileTimeSec": 263.00052184,
+          "confidence": 5.4592937889741551,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 273000,
+          "fileTimeSec": 273.0005186,
+          "confidence": 5.2828291164074663,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 283000,
+          "fileTimeSec": 283.0005154,
+          "confidence": 5.6919486935805823,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 293000,
+          "fileTimeSec": 293.0005122,
+          "confidence": 5.3148729646294637,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 303000,
+          "fileTimeSec": 303.00050904,
+          "confidence": 5.5055968078880824,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 313000,
+          "fileTimeSec": 313.00050592,
+          "confidence": 5.0587043829902889,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 323000,
+          "fileTimeSec": 323.00050284,
+          "confidence": 5.4339127364338964,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 333000,
+          "fileTimeSec": 333.0004998,
+          "confidence": 5.4585191648620164,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 343000,
+          "fileTimeSec": 343.0004968,
+          "confidence": 5.8092678149842358,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 353000,
+          "fileTimeSec": 353.0004938,
+          "confidence": 5.1232088884524343,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 363000,
+          "fileTimeSec": 363.00049088,
+          "confidence": 5.6016643856646455,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 373000,
+          "fileTimeSec": 373.00048796,
+          "confidence": 5.4541894026286464,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 383000,
+          "fileTimeSec": 383.00048508,
+          "confidence": 5.6020994223499816,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 393000,
+          "fileTimeSec": 393.0004822,
+          "confidence": 4.91383078431905,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 403000,
+          "fileTimeSec": 403.0004794,
+          "confidence": 5.0356704519963165,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 413000,
+          "fileTimeSec": 413.00047664,
+          "confidence": 4.426361216810049,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 423000,
+          "fileTimeSec": 423.00047388,
+          "confidence": 5.3687349221866443,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 433000,
+          "fileTimeSec": 433.00047116,
+          "confidence": 5.3723293166159225,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 443000,
+          "fileTimeSec": 443.00046848,
+          "confidence": 6.2151907188199509,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 453000,
+          "fileTimeSec": 453.00046584,
+          "confidence": 6.2003955883506423,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 463000,
+          "fileTimeSec": 463.0004632,
+          "confidence": 4.7165111219502993,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 473000,
+          "fileTimeSec": 473.00046064,
+          "confidence": 5.7675314191848992,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 483000,
+          "fileTimeSec": 483.00045808,
+          "confidence": 5.1843860682876377,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 493000,
+          "fileTimeSec": 493.00045556,
+          "confidence": 5.1882318313677995,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 503000,
+          "fileTimeSec": 503.00045308,
+          "confidence": 5.531784099544641,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 513000,
+          "fileTimeSec": 513.00045064,
+          "confidence": 5.79196594568191,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 523000,
+          "fileTimeSec": 523.00044824,
+          "confidence": 5.8667800919470237,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 533000,
+          "fileTimeSec": 533.00044584,
+          "confidence": 5.9523178137125363,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 543000,
+          "fileTimeSec": 543.00044352,
+          "confidence": 5.6527957722987763,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 553000,
+          "fileTimeSec": 553.0004412,
+          "confidence": 4.8514439515156838,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 563000,
+          "fileTimeSec": 563.00043892,
+          "confidence": 5.5523689306983846,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 573000,
+          "fileTimeSec": 573.00043668,
+          "confidence": 5.5623089101478422,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 583000,
+          "fileTimeSec": 583.00043448,
+          "confidence": 5.36620334965675,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 593000,
+          "fileTimeSec": 593.00043228,
+          "confidence": 5.8349516343802,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 603000,
+          "fileTimeSec": 603.00043012,
+          "confidence": 5.4155536427375539,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 613000,
+          "fileTimeSec": 613.00042804,
+          "confidence": 1.0044320026816012,
+          "threshold": 1.5,
+          "success": false
+        },
+        {
+          "epoch": 616000,
+          "fileTimeSec": 616.0004274,
+          "confidence": 6.0494412121568075,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 626000,
+          "fileTimeSec": 626.00042532,
+          "confidence": 5.964310472433251,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 636000,
+          "fileTimeSec": 636.00042328,
+          "confidence": 5.5103059306926641,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 646000,
+          "fileTimeSec": 646.00042128,
+          "confidence": 5.623664598596,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 656000,
+          "fileTimeSec": 656.00041932,
+          "confidence": 5.7621565185220183,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 666000,
+          "fileTimeSec": 666.0004174,
+          "confidence": 3.7496808062705496,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 676000,
+          "fileTimeSec": 676.00041548,
+          "confidence": 5.9126538782802021,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 686000,
+          "fileTimeSec": 686.00041364,
+          "confidence": 5.7601854540896795,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 696000,
+          "fileTimeSec": 696.0004118,
+          "confidence": 5.788529309739018,
+          "threshold": 1.5,
+          "success": true
+        },
+        {
+          "epoch": 706000,
+          "fileTimeSec": 706.00041,
+          "confidence": 5.2452320885637453,
+          "threshold": 1.5,
+          "success": true
+        }
+      ],
+      "reconstructedNhDecisionsVerified": 72,
+      "finiteS4Updates": 114,
+      "finiteS4WithNonLongIn60sWindow": 13,
+      "affectedS4UpdateFileTimeSec": [
+        615.0004276,
+        620.00042656,
+        625.00042552,
+        630.00042452,
+        635.00042352,
+        640.00042248,
+        645.00042148,
+        650.00042052,
+        655.00041952,
+        660.00041856,
+        665.0004176,
+        670.00041664,
+        675.00041568
+      ]
+    }
+  ],
+  "commonS4UsingCnoSupportOnly": 112,
+  "commonS4WithFull60sLongSupport": 100,
+  "meanS4DifferenceFull60s": 0.00050245312113283069,
+  "rmsS4DifferenceFull60s": 0.0029693366652375317,
+  "maximumAbsoluteS4DifferenceFull60s": 0.015194201342362507,
+  "meanRawS4DifferenceFull60s": -0.00019306268438478935,
+  "excludedPairedS4FileTimeSec": [
+    620.00042656,
+    625.00042552,
+    630.00042452,
+    635.00042352,
+    640.00042248,
+    645.00042148,
+    650.00042052,
+    655.00041952,
+    660.00041856,
+    665.0004176,
+    670.00041664,
+    675.00041568
+  ],
+  "notes": "NH confidence reconstructed from archived pilot and preceding recovered NH phase; every decision checked against next recorded state. Full 60-s LONG support is a sensitivity screen, not an exact finite support bound on IIR detrending memory or an S4 truth test.",
+  "scriptHash": "d48089877b823250ef461dc72e5964b0364d26fa9dfa5ab7ba296c0ce14b6179"
+}

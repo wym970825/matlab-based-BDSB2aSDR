@@ -1,0 +1,72 @@
+[
+  {
+    "name": "test_tf_frontend/testFormatRateBandwidthCombinations",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 4.3419987
+  },
+  {
+    "name": "test_tf_frontend/testQuietIdentityAndThresholdTie",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.1964
+  },
+  {
+    "name": "test_tf_frontend/testImpulseAndSingleSidedFrequency",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0439655
+  },
+  {
+    "name": "test_tf_frontend/testExplicitOverrideAndValidation",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0951095
+  },
+  {
+    "name": "test_tf_frontend/testLegacyOffAndPbNumericCompatibility",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.1460691
+  },
+  {
+    "name": "test_tf_frontend/testInvalidOffsetsAndIncompleteIq",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0343582
+  },
+  {
+    "name": "test_tf_frontend/testInitOverridesPrecedeDurationCap",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.0359256
+  },
+  {
+    "name": "test_tf_frontend/testAcquisitionOriginPropagation",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.010849
+  },
+  {
+    "name": "test_tf_frontend/testMetadataChunkRoundTrip",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 0.1734393
+  },
+  {
+    "name": "test_tf_frontend/testJsonFrontendSelectionIsPreserved",
+    "passed": true,
+    "failed": false,
+    "incomplete": false,
+    "duration": 1.5092658
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "softwareVersion": "0.2.0",
+  "startedAt": "01-Oct-2026 08:25:01",
+  "caseIndex": 4,
+  "configPath": "F:\\matlab-GNSSsdr\\BDS\\B2a\\docs\\semiphysical_recompute\\configs\\04_2700_n50dBm.json",
+  "originalConfigHash": "46f39c51db7390f85c0d6fd3fae92a49c888e3b55a2f76a08e46f3f54d1f7090",
+  "prn": 11,
+  "durationMs": 715000,
+  "modes": [
+    "tf800"
+  ],
+  "status": "complete",
+  "runs": [
+    {
+      "mode": "tf800",
+      "outDir": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_vs_tf800\\run_03\\full\\tf800",
+      "pipelineOk": true,
+      "recordedMs": 715000,
+      "complete": true,
+      "reacqMs": 0,
+      "longStateFraction": 0.99160839160839165,
+      "firstSample": 15483,
+      "lastSample": 1.787498521E+10,
+      "frontendMode": "tf_v1",
+      "frontendConfigHash": "69a8e2cfeb733c4fd3e0a65ed46666c9c16bc73a08c86049b66318b7aeb337bf",
+      "meanWeight": 0.17506298384977084,
+      "finiteS4": 114,
+      "medianPilotCNo": 45.835502403724675,
+      "medianTotalCNo": 48.910579565717384,
+      "maxNormalTimelineErrorSamples": 0,
+      "elapsedSec": 2618.8540196
+    }
+  ],
+  "outputRoot": "F:\\matlab-GNSSsdr\\BDS\\B2a\\results\\tf600_vs_tf800\\run_03\\full",
+  "gitHead": "6da29789613cc85c31eb91f42155dff66c57d1a3",
+  "matlabVersion": "26.1.0.3203278 (R2026a)",
+  "computer": "PCWIN64",
+  "inputFile": {
+    "path": "F:\\Data\\DME_BDSB2a\\Spirent2026\\new_atc5000\\720_2700_50_1176_25_37p5_17p5.dat",
+    "bytes": 7.200024E+10,
+    "modified": "21-Apr-2026 11:05:04"
+  },
+  "finishedAt": "01-Oct-2026 09:08:41"
+}
