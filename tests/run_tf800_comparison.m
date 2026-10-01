@@ -28,6 +28,7 @@ function state=run_tf800_comparison(outputRoot,baselineDir)
         assert(isempty(changed),'TF800:ReceiverChanged','Tracking/frontend differs from 600-kHz baseline.');
         state.receiverMatchesBaseline=true;
         state.phase='frontend_tests'; checkpoint();
+        testResults=[]; % Declare before evalc in this nested-function workspace.
         captured=evalc("testResults=runtests(fullfile(root,'tests','test_tf_frontend.m'));");
         writeText(fullfile(outputRoot,'frontend_tests.log'),captured);
         rows=arrayfun(@(x) struct('name',x.Name,'passed',x.Passed, ...
