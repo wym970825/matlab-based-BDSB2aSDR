@@ -113,7 +113,8 @@ function summary=analyze_tf_parameter_grid(gridRoot,outputRoot)
         'notes','One file and PRN; differences are not truth errors; overlapping outputs are not independent trials. Availability is reported separately from common-window values.', ...
         'runs',{runs},'pairs',{pairs},'groups',{groups},'referencePairs',{referencePairs}, ...
         'scriptHash',frontendHash(fileread([mfilename('fullpath') '.m'])));
-    mkdir(outputRoot); writeJson(fullfile(outputRoot,'grid_analysis.json'),summary);
+    mkdir(outputRoot); summary.filterResponses=drawResponse(base,outputRoot);
+    writeJson(fullfile(outputRoot,'grid_analysis.json'),summary);
     save(fullfile(outputRoot,'grid_series.mat'),'series','summary','differences');
     drawOverview(summary,outputRoot);
     drawSeries(series,outputRoot);
@@ -260,6 +261,30 @@ end
 function writeJson(path,value)
     fid=fopen(path,'w','n','UTF-8'); assert(fid>=0); cleanup=onCleanup(@() fclose(fid));
     fprintf(fid,'%s\n',jsonencode(value,'PrettyPrint',true));
+end
+
+function rows=drawResponse(base,outputRoot)
+    f=figure('Visible','off','Position',[100 100 1150 800]); cleaner=onCleanup(@() close(f));
+    tiledlayout(2,1); frequency=linspace(-1.2e6,.4e6,16001); rows={};
+    for fs=[25e6 30.69e6]
+        nexttile; hold on;
+        for bandwidth=[400e3 600e3 800e3]
+            cfg=base; cfg.samplingFreq=fs; cfg.Frontend.TF.stopbandWidthHz=bandwidth;
+            tf=TFBlankerV1(cfg); response=freqz(tf.Notch,1,2*pi*frequency/fs);
+            gain0=20*log10(abs(sum(tf.Notch)));
+            rows{end+1}=struct('samplingFreq',fs,'bandwidthHz',bandwidth, ...
+                'taps',tf.Config.effectiveTaps,'coefficientHash',tf.Info.coefficientHash, ...
+                'worstStopbandDbOn4001PointGrid',tf.Info.worstStopbandDbOnGrid, ...
+                'branchMagnitudeAtDigitalZeroDb',gain0); %#ok<AGROW>
+            plot(frequency/1e3,20*log10(max(abs(response),1e-7)), ...
+                'DisplayName',sprintf('%g kHz',bandwidth/1e3));
+        end
+        xline(0,':','Digital 0 Hz','HandleVisibility','off'); grid on;
+        ylim([-100 2]); xlim([-1200 400]); legend('Location','best');
+        title(sprintf('Center -450 kHz; fs=%.2f MHz; %d taps',fs/1e6,tf.Config.effectiveTaps));
+        xlabel('Digital IQ frequency (kHz)'); ylabel('FIR branch magnitude (dB)');
+    end
+    exportgraphics(f,fullfile(outputRoot,'grid_filter_response.png'),'Resolution',150);
 end
 
 function result=blocks(time,value,seconds)
