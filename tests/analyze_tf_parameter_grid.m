@@ -36,9 +36,12 @@ function summary=analyze_tf_parameter_grid(gridRoot,outputRoot)
         tr=trackResultsToStruct(archive.results.trackResults); tr=tr([tr.PRN]==11);
         assert(isscalar(tr) && cfg.longCoh_ms==1);
         resolved=resolveFrontendSettings(cfg); tf=resolved.Frontend.TF;
+        assert(strcmp(tr.frontendInfo.configHash,resolved.Frontend.configHash), ...
+            'Archived frontend does not match its saved validation configuration.');
         assert(tf.stopbandWidthHz==expectedBands(k) && tf.triangleSpanUs==expectedSpans(k), ...
             'Unexpected grid order or resolved parameters.');
         fs=cfg.samplingFreq; n=numel(tr.I_P); step=cfg.CNoInterval;
+        assert(n==cfg.msToProcess && n==715000);
         ends=step:step:n; starts=max(1,ends-2*step+1);
         normal=tr.trk_state~=9 & tr.frontendValidCount==tr.frontendSampleCount & ...
             tr.frontendSampleCount>0 & ~tr.frontendBoundaryFlag;
