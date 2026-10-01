@@ -2,7 +2,7 @@ function summary=analyze_tf600_edges(runDirs,outputRoot)
 %ANALYZE_TF600_EDGES Physical-time comparison with complete 60-s S4 screening.
 % Pass 3/6/9-us runs then archived 12-us reference. No interpolation or retuning.
     setupPaths(); assert(numel(runDirs)==4 && ~isfolder(outputRoot));
-    series=cell(1,4); runs=cell(1,4);
+    series=cell(1,4); runs=cell(1,4); expectedSpans=[3 6 9 12];
     for k=1:4
         rd=runDirs{k}; cfg=jsondecode(fileread(fullfile(rd,'validation_config.json')));
         report=jsondecode(fileread(fullfile(rd,'report.json'))); assert(report.ok);
@@ -10,6 +10,8 @@ function summary=analyze_tf600_edges(runDirs,outputRoot)
         tr=trackResultsToStruct(archive.results.trackResults); tr=tr([tr.PRN]==11);
         assert(isscalar(tr) && cfg.longCoh_ms==1);
         resolved=resolveFrontendSettings(cfg); tf=resolved.Frontend.TF;
+        assert(tf.stopbandWidthHz==600e3 && tf.triangleSpanUs==expectedSpans(k), ...
+            'Expected ordered 3/6/9/12-us runs with fixed 600-kHz bandwidth.');
         fs=cfg.samplingFreq; n=numel(tr.I_P); step=cfg.CNoInterval;
         ends=step:step:n; starts=max(1,ends-2*step+1);
         normal=tr.trk_state~=9 & tr.frontendValidCount==tr.frontendSampleCount & ...
