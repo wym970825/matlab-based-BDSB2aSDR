@@ -308,8 +308,9 @@ function localFinish(ax, plotTitle, yText, showLegend)
 end
 
 function localMarkEmpty(ax)
-    if isempty(findobj(ax, 'Type', 'line')) ...
-            && isempty(findobj(ax, 'Type', 'scatter'))
+    % Stair charts are not Type='line'. Check the shared data property so
+    % actual state traces never receive the empty-panel annotation.
+    if isempty(findobj(ax, '-property', 'YData'))
         text(ax, 0.5, 0.5, 'No saved data', 'Units', 'normalized', ...
             'HorizontalAlignment', 'center', 'Color', [0.4 0.4 0.4]);
     end

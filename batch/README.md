@@ -97,3 +97,13 @@ stage/heartbeat progress:
 The HTML distinguishes finite navigation solutions from quality-screened
 trajectory points. It reports raw GGA height statistics and extreme candidates
 without deleting raw results or treating unverified coordinates as truth.
+`experiment_summary.csv` also records full-length channel counts, early-ended
+PRNs, the static threshold, IF, gain and figure counts. Full-length recording
+includes re-acquisition intervals and is not a continuous-lock claim.
+After the dated batch completes, `finalize_data1020_figures.m` re-exports
+readable all-PRN acquisition plots and per-channel tracking plots, records the
+exact navigation plot filter counts, and audits duplicate/backward sample
+steps. It does not rerun tracking or change numerical results. Regenerate the
+HTML index after this finalization.
+`export_data1020_offline_maps(outputRoot)` also regenerates longitude/latitude
+tracks without online basemap tiles, avoiding saved "Loading" placeholders.
