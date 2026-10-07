@@ -31,6 +31,11 @@ function run_data1020_experiments(action, outputRoot, indices)
             cfg.numberOfChannels = 4;
             cfg.doNavigation = false;
             cfg.doNmea = false;
+        elseif strcmp(action,'tail')
+            offsetSeconds=round(.75*item.durationSeconds);
+            cfg.skipNumberOfBytes=offsetSeconds*cfg.samplingFreq*4;
+            cfg.msToProcess=cfg.msToProcess-offsetSeconds*1000;
+            cfg.useParallelAcquisition=true;
         else
             assert(strcmp(action,'full'),'Expected prepare, smoke, or full.');
             cfg.useParallelAcquisition=true;

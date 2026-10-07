@@ -69,6 +69,15 @@ minus the receiver's required one-second tail reserve. The full runner enables
 fine acquisition kernel independently per PRN. This option defaults to off in
 other callers; `verify_data1020_parallel_acquisition` checks exact equality of
 every serial/parallel result field on both zero-IF and nonzero-IF real inputs.
+Tracking likewise partitions only active channels while retaining the original
+reserved output slots. `verify_data1020_active_scheduling(outputRoot)` compares
+six channels against the earlier saved first-case output, including raw
+correlators, sample indices, loop values, states and PB duty.
+
+`run_data1020_experiments('tail', outputRoot, 1)` independently restarts the
+first file at 75% of its duration, using the same static threshold and a fresh
+1:63 search. Its products are kept separately; this is not a seamless splice
+or a claim of continuous lock across an outage.
 
 Per-run products include replayable configuration, effective settings, captured
 PRN metrics, per-PRN tracking statistics, native tracking MAT files, navigation,
@@ -78,3 +87,13 @@ items and refuse to overwrite incomplete directories. `pipelineOk` denotes
 successful execution; navigation fix counts and tracking coverage must still
 be inspected separately. The dated `launch_data1020_*.m` scripts reproduce the
 2026-10-08 run; use a new output root for a new experiment.
+
+Create an offline HTML index (standard-library Python only), or inspect live
+stage/heartbeat progress:
+
+    python batch/data1020_report.py results/data1020/20261008_static_pb_run02
+    python batch/data1020_report.py results/data1020/20261008_static_pb_run02 --status
+
+The HTML distinguishes finite navigation solutions from quality-screened
+trajectory points. It reports raw GGA height statistics and extreme candidates
+without deleting raw results or treating unverified coordinates as truth.

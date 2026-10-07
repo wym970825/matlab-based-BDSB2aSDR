@@ -64,24 +64,26 @@ function [Tres, Ch] = tracking2_v6_fix2(fid, Ch, settings)
         fprintf(['tracking2: parfor multi-SV  active=%d  workers=%d  ' ...
             'cap=%d  msToProcess=%d\n'], nActive, nWorkers, parMaxWorkers, ...
             settings.msToProcess);
-        trCell = cell(1, nCh);
-        chCell = cell(1, nCh);
+        activeIdx = find(activeMask);
+        trCell = cell(1, nActive);
+        chCell = cell(1, nActive);
         ChSnap = Ch;  % broadcast copy
-        % Slice by channel index; each worker opens its own IF file.
-        parfor c_i = 1:nCh
-            if ChSnap(c_i).PRN ~= 0
-                [trCell{c_i}, chCell{c_i}] = trackOneChannel( ...
-                    ChSnap(c_i), settings, c_i, TrkedNr, true);
-            end
+        % Partition actual work only. Empty reserved channel slots otherwise
+        % skew parfor chunk sizes, leaving workers idle behind one long chunk.
+        parfor activeNr = 1:nActive
+            c_i = activeIdx(activeNr);
+            [trCell{activeNr}, chCell{activeNr}] = trackOneChannel( ...
+                ChSnap(c_i), settings, c_i, TrkedNr, true);
         end
-        for c_i = 1:nCh
-            if ~isempty(trCell{c_i})
-                stored = load(char(trCell{c_i}), 'finalTRes');
+        for activeNr = 1:nActive
+            c_i = activeIdx(activeNr);
+            if ~isempty(trCell{activeNr})
+                stored = load(char(trCell{activeNr}), 'finalTRes');
                 Tres(c_i) = TrackResults2.fromStruct(stored.finalTRes);
                 clear stored
             end
-            if ~isempty(chCell{c_i})
-                Ch(c_i) = mergeChannelStruct(Ch(c_i), chCell{c_i});
+            if ~isempty(chCell{activeNr})
+                Ch(c_i) = mergeChannelStruct(Ch(c_i), chCell{activeNr});
             end
         end
     else
