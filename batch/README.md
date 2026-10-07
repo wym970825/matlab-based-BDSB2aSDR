@@ -39,3 +39,42 @@ batch-dir-ForOneSettings.m is retained for discoverability, but MATLAB
 cannot invoke a hyphenated script with run. Define inputDir,
 settingsSource, and optional batchOptions before running the underscore
 script.
+
+## DATA1020 seven-file experiment
+
+`run_data1020_experiments` handles the seven selected 2022 Beijing recordings,
+including the two files whose RF center is 1175.4 MHz (digital IF +1.05 MHz).
+It reads little-endian interleaved int16 IQ at 20 MHz. All outputs are isolated
+from the input recordings and existing results.
+
+    setupPaths
+    outputRoot = 'F:/matlab-GNSSsdr/BDS/B2a/results/data1020/my_new_run';
+    run_data1020_experiments('prepare', outputRoot);
+    run_data1020_experiments('smoke', outputRoot, [1 6 7]);
+    verify_data1020_parallel_acquisition(outputRoot);
+    run_data1020_experiments('full', outputRoot, 1:7);
+
+Preparation samples 21 ten-millisecond windows across each recording, applies
+the receiver's adaptive complex-PB threshold formula with Pfa=1e-4, and freezes
+the median estimate as an explicit ADC amplitude for both acquisition and
+tracking. No adaptive threshold updates occur during the actual runs.
+The probes retain per-window threshold estimates, blanking duty and clipping
+statistics. The given gain values are retained; ADC thresholds avoid dependence
+on the conflicting gain metadata in old UI configurations.
+
+Smoke uses four known candidate PRNs and five seconds. Full runs search PRN
+1:63 with 63 available channels, then track all detections for the file duration
+minus the receiver's required one-second tail reserve. The full runner enables
+`useParallelAcquisition`: up to six process workers call the unchanged coarse/
+fine acquisition kernel independently per PRN. This option defaults to off in
+other callers; `verify_data1020_parallel_acquisition` checks exact equality of
+every serial/parallel result field on both zero-IF and nonzero-IF real inputs.
+
+Per-run products include replayable configuration, effective settings, captured
+PRN metrics, per-PRN tracking statistics, native tracking MAT files, navigation,
+NMEA, acquisition/tracking/navigation PNGs, logs and validation JSON. The batch
+summary is updated after every completed item. Repeated calls skip completed
+items and refuse to overwrite incomplete directories. `pipelineOk` denotes
+successful execution; navigation fix counts and tracking coverage must still
+be inspected separately. The dated `launch_data1020_*.m` scripts reproduce the
+2026-10-08 run; use a new output root for a new experiment.

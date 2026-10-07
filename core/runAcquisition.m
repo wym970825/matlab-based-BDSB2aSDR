@@ -42,8 +42,12 @@ function acqResults = runAcquisition(fid, settings, dataAdaptCoeff)
 
     fprintf('   Acquiring satellites (list = %s)...\n', ...
         mat2str(settings.acqSatelliteList));
-    acqResults = acquisition_robust_v2fft(data, settings, ...
-        'STA', 'INIT', 'USEFFT', false);
+    if isfield(settings,'useParallelAcquisition') && settings.useParallelAcquisition
+        acqResults = acquisitionParallel(data,settings);
+    else
+        acqResults = acquisition_robust_v2fft(data, settings, ...
+            'STA', 'INIT', 'USEFFT', false);
+    end
     acqResults.acqInputStartAbs = inputStart;
     acqResults.acqInputCount = numel(data);
     acqResults.frontendInfo = source.Info;
