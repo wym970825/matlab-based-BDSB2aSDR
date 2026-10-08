@@ -319,7 +319,30 @@ def common_method_text():
             '谱峰及站距支持候选关联，不能唯一识别发射台；不同采集增益下不直接比较绝对 ADC 功率。</p>'
             '<p>全长记录表示保存记录数覆盖请求时长，允许中途失锁及重捕。≥180 s 筛选另根据原始采样位置检查连续物理时间，'
             '区分无重捕与更严格 LONG 状态；仰角筛选要求双方同一共同时间段内均 >30°。未知仰角及数据间断不视为满足条件。'
-            '地图使用接收机原有 500 m/s 跳点过滤，原始解保留；地图范围由两方法轨迹与匹配参考站共同边界扩展，紫→橘表示时间推进。</p>')
+            '地图使用接收机原有 500 m/s 跳点过滤，原始解保留；地图范围由两方法轨迹与匹配参考站共同边界扩展，紫→橘表示时间推进。</p>'
+            '<p>有限定位历元仅表示产生有限坐标的次数，不等于可信定位，更不等于定位精度。未提供独立参考轨迹；'
+            'PB/TF 位置差只能衡量两方法一致性，不能据此声称绝对精度提高。</p>')
+
+
+def tracking_figure_notes(root):
+    audit_path=root/"analysis/tracking_figure_verification.json"
+    audit=read_json(audit_path)
+    if not audit:
+        return ""
+    links="".join(link(root/path,label,root) for path,label in [
+        ("analysis/tracking_figure_verification.json","跟踪图单位与源文件核验"),
+        ("analysis/acquisition_figure_verification.json","63 PRN 捕获图核验"),
+        ("postprocessing_complete.json","绘图后处理完成记录")])
+    return ('<div class="notice"><strong>跟踪图的时间轴与单位</strong>'
+            '<p>跟踪图保留“名义跟踪时间”横轴，即记录行索引 × 积分时间；C/N₀ 按名义 CNoInterval 间距显示。'
+            '重捕后，该横轴不一定等于原始采样文件的物理时间。180 s 筛选采用 absoluteSample / samplingFreq '
+            '及实际每段采样数，不能从图上名义横轴的跨度直接认定。</p>'
+            '<p>PLL 使用双纵轴：左轴为保存的相位鉴别误差（cycles），右轴为载波 NCO（Hz）；'
+            'DLL 左轴为无量纲 (E−L)/(E+L)，右轴为码 NCO（chips/s）。NCO 频率输出不是相位误差，'
+            '不能将旧变量名 pllDiscrFilt / dllDiscrFilt 当作同单位的“滤波后误差”。</p>'
+            '<p>状态图保留全部状态转换点，包括短暂的 REACQ。重捕期间相关器、鉴别器和 NCO 的零值占位保留，'
+            '不表示实际误差为零。后处理仅从保存的 MAT 重画，未重跑接收机；源 MAT 的大小和修改时间核验见记录。</p>'
+            '<div class="links">'+links+'</div></div>')
 
 
 def build_brief(root, data, comparison, generated):
@@ -329,7 +352,7 @@ def build_brief(root, data, comparison, generated):
             '<div class="links">' + link(root/"index.html", "返回完整图册", root) +
             link(root/"comparison/comparison_report.json", "机器可读完整对比", root) +
             link(root/"comparison/comparison_brief.html", "数值审计明细", root) + '</div></div>',
-            '<section><h2>实验设计与边界</h2>', common_method_text(),
+            '<section><h2>实验设计与边界</h2>', common_method_text(), tracking_figure_notes(root),
             '<p>原始 HUR 组已从本轮分析排除并删除对应实验结果；原始 <code>data_1020_HUR.bin</code> 暂保留。HUR_1 和 HUR_2 为独立实验，仍纳入。</p>',
             '<p class="notice">beiqijiatai 的 1181 MHz 频带仅高于局部背景约 0.55 dB，官庄为弱候选，前端频响也可能造成该凸起。'
             '其余五组 1170 MHz 明显谱结构与近怀柔路线一致。本站归因均为频谱与位置证据推断，未解码站台标识。</p></section>',
@@ -421,7 +444,7 @@ def main():
                 f'<a href="#experiment-{d["entry"]["experimentNumber"]}">{d["entry"]["experimentNumber"]:02d} {esc(d["entry"]["sourceId"])}</a>' for d in data) + '</nav>',
             '<section id="overview"><h2>实验总表</h2>', summary_table(data),
             '<p class="muted">成对数字为 PB / TF。“全长记录”允许中途重捕；持续无重捕须查看独立 180 s 清单。空缺显示 — 或 pending，绝不作为零结果。</p></section>',
-            '<section id="criteria"><h2>方法、条件与质量边界</h2>', common_method_text(),
+            '<section id="criteria"><h2>方法、条件与质量边界</h2>', common_method_text(), tracking_figure_notes(root),
             '<p class="notice">原始 HUR 组已排除，仅对应实验结果删除；raw bin 暂保留。HUR_1、HUR_2 继续参与。'
             'beiqijiatai→官庄是弱候选，约 0.55 dB 凸起也可能由前端频响造成；其余五组支持怀柔 1170 MHz 候选关联。</p></section>',
             '<section id="lists"><h2>完整对比与卫星清单</h2>', checklist_links(root),

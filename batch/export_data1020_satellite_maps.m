@@ -170,11 +170,16 @@ function [fig,points] = localFigure(entry,method,trk,stations,colors,mosaic, ...
     ax.YDir='normal'; ax.Layer='top'; ax.Box='on';
     % Exact limits and plot-box dimensions match Web Mercator geometry.
     daspect(ax,[1 1 1]);
-    lonTicks = linspace(localLongitude(xLimits(1)),localLongitude(xLimits(2)),5);
+    longitudeTickCount=5;
+    if mapWidth<500, longitudeTickCount=3; end
+    lonTicks = linspace(localLongitude(xLimits(1)),localLongitude(xLimits(2)),longitudeTickCount);
     latTicks = linspace(localLatitude(yLimits(1)),localLatitude(yLimits(2)),5);
     xticks(ax,localX(lonTicks)); yticks(ax,localY(latTicks));
-    xticklabels(ax,compose('%.3f° E',lonTicks));
-    yticklabels(ax,compose('%.3f° N',latTicks));
+    longitudeFormat='%.3f° E'; latitudeFormat='%.3f° N';
+    if min(diff(lonTicks))<0.002, longitudeFormat='%.4f° E'; end
+    if min(diff(latTicks))<0.002, latitudeFormat='%.4f° N'; end
+    xticklabels(ax,compose(longitudeFormat,lonTicks));
+    yticklabels(ax,compose(latitudeFormat,latTicks));
     xlabel(ax,'Longitude (WGS 84)'); ylabel(ax,'Latitude (WGS 84)');
     colormap(ax,colors); clim(ax,[0 max(1,double(entry.requestedMs)/1000)]);
     cb = colorbar(ax,'Position',[(mapLeft+mapWidth+25)/figureWidth,122/figureHeight, ...

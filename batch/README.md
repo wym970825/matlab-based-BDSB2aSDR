@@ -163,3 +163,33 @@ are reported separately from PB's full-band blanking fraction.
 This updates the offline gallery and brief using actual completed outputs;
 unfinished TF cases remain visibly pending. Navigation availability, residuals
 and PB/TF disagreement are not absolute accuracy without an external reference.
+
+`launch_data1020_tf_finalize.m` operates only on completed saved results. It
+exports all twelve acquisition figures at 1800 x 1000 pixels and redraws each
+tracking figure with separate PLL phase-error / carrier-NCO axes and DLL-error /
+code-NCO axes. Tracking plots retain explicitly labelled nominal tick time;
+the 180-s selection still uses physical source-sample time. Short state changes
+are retained when plotting. Each source MAT is checked for unchanged size and
+modification time, with figure audits written under `analysis`.
+
+After the full launcher and MATLAB finalization finish, run:
+
+    python batch/verify_data1020_comparison.py results/data1020/20261009_pb_tf_comparison/comparison
+    python batch/report_data1020_pb_tf.py results/data1020/20261009_pb_tf_comparison
+    python batch/validate_data1020_pb_tf.py results/data1020/20261009_pb_tf_comparison
+
+The independent comparison check recomputes interval intersections and list
+qualifications from exported JSON/CSV. The package audit checks all twelve
+runs, conditions, maps, plots, links and raw-file sampled fingerprints. The
+fingerprints cover first/middle/last 64-KiB blocks, size and modification time;
+they are not whole-file checksums. `--allow-pending` allows an intermediate
+package audit to exit successfully but never marks an incomplete package as
+complete.
+
+`finish_data1020_tf_queue.ps1 -ReceiverProcessId <actual-MATLAB-engine-PID>`
+waits for the specified receiver process before launching the saved-result
+finalizer and the three Python steps above. Start it with a hidden PowerShell
+window. It records explicit success/failure under the result root and refuses
+to proceed without full receiver and comparison completion records.
+`python batch/data1020_live_status.py` reads progress JSON/logs without loading
+MAT or IQ data.
