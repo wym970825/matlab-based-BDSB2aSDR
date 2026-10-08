@@ -351,7 +351,9 @@ def build_brief(root, data, comparison, generated):
             f'<p class="lead">配对审计 {ready}/{len(data)} 组。生成时间 {esc(generated)}。</p>',
             '<div class="links">' + link(root/"index.html", "返回完整图册", root) +
             link(root/"comparison/comparison_report.json", "机器可读完整对比", root) +
-            link(root/"comparison/comparison_brief.html", "数值审计明细", root) + '</div></div>',
+            link(root/"comparison/comparison_brief.html", "数值审计明细", root) +
+            link(root/"source_manifest.json", "启动时源码证据", root) +
+            link(root/"final_source_manifest.json", "最终源码溯源与变更", root) + '</div></div>',
             '<section><h2>实验设计与边界</h2>', common_method_text(), tracking_figure_notes(root),
             '<p>原始 HUR 组已从本轮分析排除并删除对应实验结果；原始 <code>data_1020_HUR.bin</code> 暂保留。HUR_1 和 HUR_2 为独立实验，仍纳入。</p>',
             '<p class="notice">beiqijiatai 的 1181 MHz 频带仅高于局部背景约 0.55 dB，官庄为弱候选，前端频响也可能造成该凸起。'
@@ -439,7 +441,8 @@ def main():
             f'<p>PB 完成 {sum(d["pb"]["complete"] for d in data)}/{len(data)}；TF 完成 {complete}/{len(data)}。生成时间 {esc(generated)}。</p>',
             '<div class="links">' + ''.join(link(root/path,label,root) for path,label in [
                 ('comparison_brief.html','实验对比简报'),('manifest.json','实验条件与站匹配'),
-                ('analysis/fft_station_analysis.json','FFT 分析完整证据'),('comparison/comparison_summary.csv','对比汇总 CSV')]) + '</div></div>',
+                ('analysis/fft_station_analysis.json','FFT 分析完整证据'),('comparison/comparison_summary.csv','对比汇总 CSV'),
+                ('source_manifest.json','启动时源码证据'),('final_source_manifest.json','最终源码溯源与变更')]) + '</div></div>',
             '<nav class="topnav"><a href="#overview">总表</a><a href="#criteria">方法与条件</a><a href="#lists">卫星清单</a>' + ''.join(
                 f'<a href="#experiment-{d["entry"]["experimentNumber"]}">{d["entry"]["experimentNumber"]:02d} {esc(d["entry"]["sourceId"])}</a>' for d in data) + '</nav>',
             '<section id="overview"><h2>实验总表</h2>', summary_table(data),

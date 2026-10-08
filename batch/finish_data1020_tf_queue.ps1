@@ -15,7 +15,9 @@ try {
     }
     & 'C:\Program Files\MATLAB\R2024b\bin\matlab.exe' -wait -singleCompThread -batch "run('F:/matlab-GNSSsdr/BDS/B2a/batch/launch_data1020_tf_finalize.m')" -logfile (Join-Path $resultRoot 'finalize_launch.log')
     if ($LASTEXITCODE -ne 0) { throw "Saved-result MATLAB finalization failed: $LASTEXITCODE" }
-    & python 'batch\verify_data1020_comparison.py' (Join-Path $resultRoot 'comparison') *> $logPath
+    & python 'batch\finalize_data1020_provenance.py' $resultRoot *> $logPath
+    if ($LASTEXITCODE -ne 0) { throw 'Final source provenance verification failed.' }
+    & python 'batch\verify_data1020_comparison.py' (Join-Path $resultRoot 'comparison') *>> $logPath
     if ($LASTEXITCODE -ne 0) { throw 'Independent comparison verification failed.' }
     & python 'batch\report_data1020_pb_tf.py' $resultRoot *>> $logPath
     if ($LASTEXITCODE -ne 0) { throw 'HTML report generation or link verification failed.' }

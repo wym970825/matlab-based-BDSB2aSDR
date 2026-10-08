@@ -335,6 +335,48 @@ def validate_figure_postprocessing(audit,root,entries,runs):
                     image["height"]==r.get("heightPixels"))
 
 
+def validate_final_source_provenance(audit,root,project):
+    path=root/"final_source_manifest.json"
+    final=read_json(path)
+    if not audit.check("final source provenance manifest exists",bool(final),pending=True):
+        return
+    numerical=final.get("numericalSources",{})
+    audit.check("final source provenance complete",final.get("ok") is True and final.get("state")=="complete")
+    audit.check("final 69 numerical sources match PB and startup",numerical.get("sourceCount")==69 and
+                numerical.get("sameSourceSet") is True and numerical.get("matchPB") is True and
+                numerical.get("matchStartup") is True and len(numerical.get("files",{}))==69)
+    startup=final.get("startupEvidence",{})
+    startup_path=root/"source_manifest.json"
+    audit.check("startup manifest preserved in final provenance",startup.get("preservedWithoutModification") is True and
+                startup_path.is_file() and sha_match(startup_path,startup.get("sha256")))
+    batch=final.get("batchSources",{})
+    current_batch={p.relative_to(project).as_posix() for p in (project/"batch").iterdir()
+                   if p.is_file() and "data1020" in p.name.lower() and p.suffix.lower() in (".m",".py",".ps1")}
+    recorded_batch={name.replace("\\","/") for name in batch.get("files",{})}
+    audit.check("final batch provenance includes current MATLAB Python PowerShell sources",current_batch<=recorded_batch,
+                {"missingCurrentScripts":sorted(current_batch-recorded_batch)})
+    audit.check("final provenance includes automatic finishing script",
+                "batch/finish_data1020_tf_queue.ps1" in recorded_batch)
+    mismatches=[]; bad_paths=[]
+    for group,files in [("numerical",numerical.get("files",{})),("batch",batch.get("files",{}))]:
+        for name,digest in files.items():
+            source=(project/name.replace("\\","/")).resolve()
+            if not source.is_relative_to(project):
+                bad_paths.append(name); continue
+            if not source.is_file() or not sha_match(source,digest):
+                mismatches.append({"group":group,"path":name})
+    audit.check("final provenance working-tree source bytes reproduce",not mismatches and not bad_paths,
+                {"changedOrMissingSources":mismatches,"outsideProjectPaths":bad_paths,
+                 "scope":"Source file SHA256 only; generated result HTML/JSON/MAT, timestamps, git status, and worktree cleanliness are not compared."})
+    post=batch.get("postprocessingFiles",{})
+    audit.check("final postprocessing hashes agree with batch hashes",bool(post) and
+                all(batch.get("files",{}).get(name)==digest for name,digest in post.items()))
+
+
+def sha_match(path,expected):
+    return isinstance(expected,str) and hash_file(path)==expected.lower()
+
+
 def validate_comparison(audit,root,entries,runs):
     path=root/"comparison/comparison_report.json"
     report=read_json(path)
@@ -464,6 +506,7 @@ def main():
     completion=read_json(root/"tf_full_completion.json")
     audit.check("full TF queue completion recorded",bool(completion) and prns(completion.get("indices"))==list(range(1,7)),pending=not bool(completion))
     validate_maps(audit,root,entries); validate_figure_postprocessing(audit,root,entries,runs)
+    validate_final_source_provenance(audit,root,project)
     validate_comparison(audit,root,entries,runs)
     link_count=validate_html(audit,root)
     failed=[r for r in audit.checks if r["status"]=="failed"]; pending=[r for r in audit.checks if r["status"]=="pending"]

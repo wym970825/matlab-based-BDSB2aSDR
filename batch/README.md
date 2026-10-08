@@ -174,6 +174,7 @@ modification time, with figure audits written under `analysis`.
 
 After the full launcher and MATLAB finalization finish, run:
 
+    python batch/finalize_data1020_provenance.py results/data1020/20261009_pb_tf_comparison
     python batch/verify_data1020_comparison.py results/data1020/20261009_pb_tf_comparison/comparison
     python batch/report_data1020_pb_tf.py results/data1020/20261009_pb_tf_comparison
     python batch/validate_data1020_pb_tf.py results/data1020/20261009_pb_tf_comparison
@@ -186,9 +187,20 @@ they are not whole-file checksums. `--allow-pending` allows an intermediate
 package audit to exit successfully but never marks an incomplete package as
 complete.
 
+The provenance step preserves the startup `source_manifest.json` and writes
+`final_source_manifest.json` only after all six TF runs and saved-result
+postprocessing complete. It records the current Git HEAD and working-tree
+source hashes, compares all 69 receiver source/MEX files with both PB and the
+TF startup manifests, and lists changed/added DATA1020 batch `.m`, `.py`, and
+`.ps1` scripts. `--inspect` prints a read-only preview while work is pending;
+the formal command exits with code 2 without writing if completion is missing.
+The package audit rechecks the recorded source bytes, not generated reports or
+working-tree cleanliness, so regenerating HTML/JSON output does not invalidate
+source provenance. Rerun provenance if source code changes after its capture.
+
 `finish_data1020_tf_queue.ps1 -ReceiverProcessId <actual-MATLAB-engine-PID>`
 waits for the specified receiver process before launching the saved-result
-finalizer and the three Python steps above. Start it with a hidden PowerShell
+finalizer and the four Python steps above. Start it with a hidden PowerShell
 window. It records explicit success/failure under the result root and refuses
 to proceed without full receiver and comparison completion records.
 `python batch/data1020_live_status.py` reads progress JSON/logs without loading
