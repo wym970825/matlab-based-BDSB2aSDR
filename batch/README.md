@@ -107,3 +107,59 @@ steps. It does not rerun tracking or change numerical results. Regenerate the
 HTML index after this finalization.
 `export_data1020_offline_maps(outputRoot)` also regenerates longitude/latitude
 tracks without online basemap tiles, avoiding saved "Loading" placeholders.
+
+## DATA1020 six-pair PB / TF comparison (2026-10-09)
+
+The six valid recordings exclude the original `HUR` recording (but retain
+`HUR_1` and `HUR_2`). They are ordered by their first valid GGA / ZDA UTC:
+beiqijiatai, HUR_1, HUR_2, 103330, 103801, 111407. The dated output root is
+`results/data1020/20261009_pb_tf_comparison`; `manifest.json` maps original
+names, renamed PB directories and matching `-TF` directories.
+
+`analyze_data1020_dme(manifestPath)` reads 61 evenly spaced 50-ms raw IQ
+windows per recording and exports full-band Welch spectra, high-energy-frame
+spectra, time/frequency plots and station-distance evidence. A second argument
+of zero only redraws already saved spectral data. The 1181-MHz Guanzhuang
+association for beiqijiatai is a weak candidate; the other five cases show
+strong 1170-MHz evidence near Huairou. Frequency and distance do not uniquely
+identify a transmitter. The user-supplied N/E coordinate prefixes determine
+latitude/longitude, despite the reversed original table column headings.
+
+`prepare_data1020_comparison.py` writes the checked relocation plan and final
+manifest; it does not move or delete files. Directory relocation uses explicit
+PowerShell LiteralPath operations. `rebase_data1020_pb_metadata` updates only
+lightweight UI/replay paths and keeps the scientific MAT archives intact.
+
+`run_data1020_tf_pairs(manifestPath,'smoke',[1 4 6])` verifies the three digital
+notch centers. The `full` action searches PRN 1:63 and uses the corresponding
+saved PB settings. The treatment is `TFBlankerV1`, 800-kHz stopband and 3-us
+triangle span, with the same frozen ADC detector threshold. Digital center is
+station RF frequency minus recording RF center (not minus B2a RF frequency).
+Every run checks a direct-convolution reference. Full runs also compare both
+pre-run and saved effective settings: only the frontend, its derived EnablePB
+flag, output metadata and the resource-only two-worker cap may differ.
+
+Use MATLAB `-batch -singleCompThread`; all figures are invisible. The dated
+`launch_data1020_tf_preflight.m` and `launch_data1020_tf_full.m` scripts perform
+smoke/self-comparison and the six full runs respectively. Files are processed
+sequentially. The full launcher closes its worker pool before final plotting
+and comparison to reduce memory use.
+
+`export_data1020_satellite_maps` caches Esri World Imagery tiles and renders
+offline satellite maps, common PB/TF geographic bounds, the matched station,
+and the exact purple/orange CIELAB palette from the supplied reference script.
+No map-loading placeholder or visible browser is required.
+
+`compare_data1020_pb_tf` writes the comparison brief and per-PRN interval CSVs.
+It distinguishes continuous non-REACQ intervals from continuous LONG states,
+uses actual saved sample counts, and matches elevation to PRN in the original
+navigation channel slots. It reports both separately qualifying PB/TF intervals
+and the stricter common physical interval of at least 180 s above 30 degrees.
+Missing/rejected navigation epochs are not bridged or extrapolated. TF weights
+are reported separately from PB's full-band blanking fraction.
+
+    python batch/report_data1020_pb_tf.py results/data1020/20261009_pb_tf_comparison
+
+This updates the offline gallery and brief using actual completed outputs;
+unfinished TF cases remain visibly pending. Navigation availability, residuals
+and PB/TF disagreement are not absolute accuracy without an external reference.
