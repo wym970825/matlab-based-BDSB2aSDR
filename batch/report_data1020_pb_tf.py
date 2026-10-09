@@ -259,8 +259,20 @@ def findings(data):
 
 
 def run_links(run, root):
-    names = ["ui_config.json", "effective_settings.json", "validation.json", "report.json", "acquisition_summary.csv", "tracking_summary.csv", "pvt.nmea", "matlab.log"]
+    names = ["ui_config.json", "effective_settings.json", "validation.json", "report.json", "acquisition_summary.csv", "tracking_summary.csv", "pvt.nmea"]
     links = [link(run["path"]/name, name, root) for name in names]
+    recovery = read_json(run["path"]/"recovery_plan.json")
+    links.append(link(run["path"]/"matlab.log", "崩溃前运行日志" if recovery else "matlab.log", root))
+    if recovery:
+        number = int(recovery["experimentNumber"])
+        links += [link(run["path"]/name, label, root) for name, label in [
+            ("recovery_plan.json", "逐星恢复计划"),
+            ("recovery_condition_check.json", "恢复参数核验"),
+            ("recovery_state.mat", "恢复参数与通道映射 MAT")]]
+        paths = [root/f"recovery_prepare_{number:02d}.log"]
+        paths += sorted(root.glob(f"recovery_track_{number:02d}_prn*.log"))
+        paths.append(root/f"recovery_finish_{number:02d}.log")
+        links += [link(path, path.name, root) for path in paths]
     links += [link(p, "完整结果 MAT", root) for p in sorted(run["path"].glob("run_B2a_*.mat"))]
     return '<div class="links">' + "".join(x for x in links if x) + "</div>"
 
@@ -343,7 +355,8 @@ def recovery_notes(root):
             '<code>useParfor=false</code>、<code>useParallelAcquisition=false</code>、'
             '<code>parMaxWorkers=1</code>。第 5 组的 8 份既有 final 来自原两 worker 运行，'
             '保存的最终资源配置描述恢复阶段；接收机数值源码、源数据和科学参数保持原条件。'
-            '资源调度调整不作为干扰抑制效果，恢复完成状态仍以各组验证结果为准。</p>'
+            '资源调度调整不作为干扰抑制效果，恢复完成状态仍以各组验证结果为准。'
+            '第 5 组耗时字段仅统计恢复工作，不用于与未中断运行作耗时比较。</p>'
             +replay_note+'<div class="links">'+link(audit_path,"恢复范围与复用文件审计",root)+
             link(evidence_path,"PRN 25 首分段数值一致性证据",root)+'</div></div>')
 

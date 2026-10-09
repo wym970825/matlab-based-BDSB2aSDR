@@ -217,8 +217,15 @@ function localSkyPlot(ax,sky)
         radius=90*cosd(elevation);
         plot(ax,radius*sin(theta),radius*cos(theta),':','Color',[0.65 0.65 0.65], ...
             'HandleVisibility','off');
-        text(ax,0,radius,[num2str(elevation) '\circ'],'BackgroundColor','w', ...
-            'HorizontalAlignment','center','FontSize',9);
+        labelX=0; labelAlignment='center';
+        if elevation==0
+            % The cosine projection places the 0/15-degree rings close
+            % together. Move only the horizon text clear of the 15-degree
+            % label's white background; do not alter grid/data geometry.
+            labelX=-12; labelAlignment='right';
+        end
+        text(ax,labelX,radius,[num2str(elevation) '\circ'],'BackgroundColor','w', ...
+            'HorizontalAlignment',labelAlignment,'FontSize',9);
     end
     for azimuth=0:30:330
         plot(ax,[0 90*sind(azimuth)],[0 90*cosd(azimuth)],':', ...

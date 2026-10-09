@@ -247,3 +247,19 @@ receiver's numerical files unchanged. `record_data1020_recovery.py ROOT`
 records the eight preserved final-file SHA256 values; `--verify` checks them
 after all six runs finish. Experiment 5's recovery elapsed time excludes its
 pre-crash work and outage, so it is not an uninterrupted runtime benchmark.
+
+`verify_data1020_recovered_chunk.py` compares completed v7.3 chunk fields
+through the HDF5 library without starting MATLAB. The archived and recovered
+PRN 25 first chunks agree in all 83 numeric/logical fields and 8 character
+fields. This only verifies those first 60,000 saved records. Different MAT
+container hashes, including creation timestamps, are not numeric differences.
+The recovery audit rechecks each source file against its own recorded hash.
+
+`export_data1020_navigation_figures` reads navigation results and exports
+five offline figures one at a time with explicit `Visible='off'`. It retains
+the existing track filtering, ENU reference and velocity definitions; sky
+labels match PRN, azimuth and elevation by original channel slot and epoch.
+The recovery postprocessor redraws all twelve PB/TF navigation sets this way
+before the cached satellite maps replace the labelled offline LLA previews.
+The navigation figure audit records source size/timestamp stability, output
+dimensions and display-only changes. Final visual QA follows that redraw.
