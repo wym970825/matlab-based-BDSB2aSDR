@@ -279,6 +279,89 @@ def validate_maps(audit,root,entries):
                     b.get("pairedBoundsIncludePB") and b.get("pairedBoundsIncludeTF"),pending=not bool(a and b))
 
 
+def validate_navigation_figures(audit, root, entries, runs):
+    nav = read_json(root/"analysis/navigation_figure_verification.json")
+    complete = nav.get("ok") is True
+    if not audit.check("navigation display audit exists", bool(nav), pending=True):
+        return
+    records = rows(nav.get("records"))
+    expected = {(e["experimentNumber"], mode) for e in entries for mode in ["PB", "TF"]}
+    actual = {(r.get("experimentNumber"), r.get("method")) for r in records}
+    audit.check("twelve navigation display audit records", complete and
+                nav.get("expectedRuns") == nav.get("completedRuns") == len(records) == 12 and
+                actual == expected, pending=not complete)
+    audit.check("navigation source audit scope is size and timestamp",
+                nav.get("sourceCheck") == "File size and modification timestamp before/after each export")
+    by_number = {e["experimentNumber"]: e for e in entries}
+    names = {"enu_displacement.png", "enu_velocity.png", "dop.png", "sky_plot.png", "lla_geobasemap.png"}
+    post_complete = read_json(root/"postprocessing_complete.json").get("ok") is True
+    for record in records:
+        key = (record.get("experimentNumber"), record.get("method"))
+        prefix = f'{key[0]} {key[1]} navigation display'
+        if not audit.check(prefix+" belongs to manifest", key in expected):
+            continue
+        entry = by_number[key[0]]
+        run = Path(entry["pbDir"] if key[1] == "PB" else entry["tfDir"])
+        source, output = run/"ui_results.mat", run/"figures/navResult"
+        audit.check(prefix+" input and output identities",
+                    canonical(record.get("runDir", "")) == canonical(run) and
+                    canonical(record.get("sourceMat", "")) == canonical(source))
+        audit.check(prefix+" source unchanged during export",
+                    record.get("sourceUnchanged") is True and source.is_file() and
+                    source.stat().st_size == record.get("sourceBytes") == record.get("sourceAfterBytes") and
+                    record.get("sourceDatenum") == record.get("sourceAfterDatenum"))
+        fig = record.get("figureAudit", {})
+        local = read_json(output/"navigation_figure_verification.json")
+        audit.check(prefix+" per-run audit agrees with aggregate", bool(local) and local == fig)
+        audit.check(prefix+" offline sequential presentation only",
+                    fig.get("ok") is True and fig.get("skippedReason") == "" and
+                    fig.get("visible") is False and fig.get("maxSimultaneousFigures") == 1 and
+                    fig.get("onlineBasemap") is False and fig.get("navigationDataModified") is False and
+                    fig.get("navigationRecomputed") is False and
+                    fig.get("sourceDefinition") == "plotNavPost + navTrackTimeOrder" and
+                    canonical(fig.get("saveDir", "")) == canonical(output))
+        paths = fig.get("figureFiles", [])
+        audit.check(prefix+" five expected navigation outputs", len(paths) == 5 and
+                    {canonical(p) for p in paths} == {canonical(output/n) for n in names})
+        outputs = rows(fig.get("figureOutputs"))
+        audit.check(prefix+" five measured image dimensions", len(outputs) == 5 and
+                    {r.get("fileName") for r in outputs} == names)
+        for image in outputs:
+            name = image.get("fileName", "")
+            lla = name == "lla_geobasemap.png"
+            width, height = (1000, 1000) if name == "sky_plot.png" else (1400, 950)
+            audit.check(prefix+" export stage "+name,
+                        name in names and canonical(image.get("path", "")) == canonical(output/name) and
+                        image.get("width") == width and image.get("height") == height and
+                        image.get("renderStage") == "offline_navigation" and
+                        image.get("subsequentlyReplacedBySatelliteMap") is lla)
+            if not lla:
+                info = png_header(output/name)
+                audit.check(prefix+" final dimensions "+name, bool(info) and
+                            info["width"] == width and info["height"] == height)
+        indices = prns(fig.get("retainedEpochIndices"))
+        run_info = runs[(entry["sourceId"], key[1])]
+        audit.check(prefix+" retained epoch bookkeeping", len(indices) == len(set(indices)) ==
+                    fig.get("retainedFixes") and bool(indices) and indices[0] >= 1 and
+                    (not run_info["complete"] or len(indices) <= run_info["nFixes"]) and
+                    fig.get("removedJumpFixes", -1) >= 0)
+        sky = fig.get("sky", {})
+        slots = rows(sky.get("slotRecords"))
+        audit.check(prefix+" sky uses original slot and epoch",
+                    sky.get("mapping") == "PRN / az / el are paired by original channel slot and epoch" and
+                    sky.get("projection") == "radius = 90*cos(elevation in degrees)" and
+                    sky.get("missingFields") is False and bool(slots) and
+                    len({r.get("PRN") for r in slots}) == len({r.get("slot") for r in slots}) == len(slots) and
+                    all(r.get("PRN") in EXPECTED_PRNS and r.get("slot") in EXPECTED_PRNS and
+                        r.get("finitePairedPoints", -1) == r.get("displayedPoints", 0)+r.get("outsideVisibleHemisphere", 0)
+                        for r in slots) and
+                    sky.get("omittedOutsideVisibleHemisphere") == sum(r.get("outsideVisibleHemisphere", 0) for r in slots))
+        final_map, alias = output/"lla_satellite_dme.png", output/"lla_geobasemap.png"
+        audit.check(prefix+" offline LLA preview replaced by final satellite map",
+                    final_map.is_file() and alias.is_file() and hash_file(final_map) == hash_file(alias),
+                    pending=not post_complete)
+
+
 def validate_figure_postprocessing(audit,root,entries,runs):
     completion=read_json(root/"postprocessing_complete.json")
     complete=truth(completion.get("ok")) and completion.get("receiverRerun") is False
@@ -560,7 +643,8 @@ def main():
                 float(weak.get("stationEvidence",{}).get("meanBandContrastDb",99))<1.5)
     completion=read_json(root/"tf_full_completion.json")
     audit.check("full TF queue completion recorded",bool(completion) and prns(completion.get("indices"))==list(range(1,7)),pending=not bool(completion))
-    validate_maps(audit,root,entries); validate_figure_postprocessing(audit,root,entries,runs)
+    validate_maps(audit,root,entries); validate_navigation_figures(audit,root,entries,runs)
+    validate_figure_postprocessing(audit,root,entries,runs)
     validate_final_source_provenance(audit,root,project)
     validate_comparison(audit,root,entries,runs)
     validate_recovery(audit,root,manifest,runs)

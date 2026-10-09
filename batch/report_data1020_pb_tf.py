@@ -348,6 +348,20 @@ def recovery_notes(root):
             link(evidence_path,"PRN 25 首分段数值一致性证据",root)+'</div></div>')
 
 
+def navigation_figure_notes(root):
+    audit_path = root/"analysis/navigation_figure_verification.json"
+    audit = read_json(audit_path)
+    if not audit:
+        return ""
+    completed = audit.get("completedRuns", 0)
+    return (f'<div class="notice"><strong>导航图显示层核验：{esc(completed)}/12 组</strong>'
+            '<p>PB/TF 导航图统一从已保存的导航结果逐图离线导出，保持原轨迹过滤、ENU 参考和速度定义；'
+            '天空图按原通道槽位与历元匹配 PRN 和方位/仰角，仅显示 0–90° 仰角。'
+            '此步骤不重新定位、不修改导航数组；源 MAT 的大小和修改时间在导出前后核验。'
+            '临时离线轨迹预览随后由最终卫星底图与 DME 站址图覆盖。</p>'
+            '<div class="links">'+link(audit_path,"12 组导航图显示层核验",root)+'</div></div>')
+
+
 def tracking_figure_notes(root):
     audit_path=root/"analysis/tracking_figure_verification.json"
     audit=read_json(audit_path)
@@ -378,7 +392,7 @@ def build_brief(root, data, comparison, generated):
             link(root/"comparison/comparison_brief.html", "数值审计明细", root) +
             link(root/"source_manifest.json", "启动时源码证据", root) +
             link(root/"final_source_manifest.json", "最终源码溯源与变更", root) + '</div></div>',
-            '<section><h2>实验设计与边界</h2>', common_method_text(), recovery_notes(root), tracking_figure_notes(root),
+            '<section><h2>实验设计与边界</h2>', common_method_text(), recovery_notes(root), navigation_figure_notes(root), tracking_figure_notes(root),
             '<p>原始 HUR 组已从本轮分析排除并删除对应实验结果；原始 <code>data_1020_HUR.bin</code> 暂保留。HUR_1 和 HUR_2 为独立实验，仍纳入。</p>',
             '<p class="notice">beiqijiatai 的 1181 MHz 频带仅高于局部背景约 0.55 dB，官庄为弱候选，前端频响也可能造成该凸起。'
             '其余五组 1170 MHz 明显谱结构与近怀柔路线一致。本站归因均为频谱与位置证据推断，未解码站台标识。</p></section>',
@@ -471,7 +485,7 @@ def main():
                 f'<a href="#experiment-{d["entry"]["experimentNumber"]}">{d["entry"]["experimentNumber"]:02d} {esc(d["entry"]["sourceId"])}</a>' for d in data) + '</nav>',
             '<section id="overview"><h2>实验总表</h2>', summary_table(data),
             '<p class="muted">成对数字为 PB / TF。“全长记录”允许中途重捕；持续无重捕须查看独立 180 s 清单。空缺显示 — 或 pending，绝不作为零结果。</p></section>',
-            '<section id="criteria"><h2>方法、条件与质量边界</h2>', common_method_text(), recovery_notes(root), tracking_figure_notes(root),
+            '<section id="criteria"><h2>方法、条件与质量边界</h2>', common_method_text(), recovery_notes(root), navigation_figure_notes(root), tracking_figure_notes(root),
             '<p class="notice">原始 HUR 组已排除，仅对应实验结果删除；raw bin 暂保留。HUR_1、HUR_2 继续参与。'
             'beiqijiatai→官庄是弱候选，约 0.55 dB 凸起也可能由前端频响造成；其余五组支持怀柔 1170 MHz 候选关联。</p></section>',
             '<section id="lists"><h2>完整对比与卫星清单</h2>', checklist_links(root),

@@ -129,11 +129,15 @@ function report = finalize_data1020_saved_run(manifestPath, experimentIndex)
         end
         if doPlot && ~isempty(navSolutions)
             report.stage='plot'; localJson(reportPath,report);
-            navigationFigures=plotNavPost(navSolutions,settings, ...
-                'saveDir',navFigDir,'doLegacy',false, ...
-                'openBaiduMap',false,'openBaiduBrowser',false);
-            localCloseFigureStruct(navigationFigures); clear navigationFigures;
-            drawnow;
+            % Display-only recovery helper: one explicitly invisible figure
+            % at a time, no online basemap, GUI fallback, or browser. The
+            % original PVT/ENU/velocity definitions are preserved; final
+            % cached satellite maps replace its labelled offline preview.
+            navigationReport=export_data1020_navigation_figures(navSolutions,settings,navFigDir);
+            assert(navigationReport.ok,'data1020:RecoveryNavigationPlot','Navigation figure export failed.');
+            report.navigationFigures=navigationReport.figureFiles;
+            report.recovery.navigationFigureAudit=fullfile(navFigDir,'navigation_figure_verification.json');
+            clear navigationReport;
         end
         if ~isempty(navSolutions) && isfield(navSolutions,'latitude')
             valid=isfinite(navSolutions.latitude)&isfinite(navSolutions.longitude);
@@ -193,14 +197,6 @@ function localJson(path,value)
     fid=fopen(path,'w','n','UTF-8'); assert(fid>0,'Cannot write %s',path);
     cleanup=onCleanup(@() fclose(fid)); %#ok<NASGU>
     fprintf(fid,'%s\n',jsonencode(value,'PrettyPrint',true));
-end
-function localCloseFigureStruct(figures)
-    if ~isstruct(figures), return; end
-    names=fieldnames(figures);
-    for k=1:numel(names)
-        handle=figures.(names{k});
-        if ~isempty(handle) && all(isgraphics(handle)), close(handle); end
-    end
 end
 function localCloseNewFigures(previousFigures)
     currentFigures=findall(groot,'Type','figure');
