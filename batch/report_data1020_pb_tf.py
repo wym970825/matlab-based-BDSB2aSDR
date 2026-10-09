@@ -239,6 +239,17 @@ def findings(data):
         out.append(f'{e["experimentNumber"]:02d} {e["sourceId"]}：' + "；".join(changes) +
                    f'。共同时间 ≥180 s、双方仰角始终 >30° 的 PRN：'
                    + ("、".join(str(p) for p in prns(c.get("commonHighElevation180Prns"))) or "无") + "。")
+        pb_tracks = {int(t["PRN"]): t for t in rows(d["pb"]["validation"].get("tracks", []))}
+        tf_tracks = {int(t["PRN"]): t for t in rows(d["tf"]["validation"].get("tracks", []))}
+        duration_changes = []
+        for prn in sorted(pb_tracks.keys() & tf_tracks.keys()):
+            before = finite(pb_tracks[prn].get("recordedMs"))
+            after = finite(tf_tracks[prn].get("recordedMs"))
+            if before is not None and after is not None and abs(after-before) >= 1000:
+                duration_changes.append(f'PRN {prn:02d} {before/1000:.3f}→{after/1000:.3f} s')
+        if duration_changes:
+            out.append('保存记录时长相差至少 1 s 的卫星（PB→TF）：' + '；'.join(duration_changes) +
+                       '。这些记录可包含失锁和重捕，不代表连续锁定时长。')
         delta_cno = [finite(r.get("deltaCommonHighElevationMedianCnoDbHz")) for r in d.get("satellitePairs", [])
                      if r.get("commonHighElevation180")]
         delta_cno = [x for x in delta_cno if x is not None]
