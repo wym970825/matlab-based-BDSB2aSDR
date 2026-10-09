@@ -328,6 +328,13 @@ def recovery_notes(root):
     audit_path = root/"recovery_audit.json"
     if not read_json(audit_path):
         return ""
+    evidence_path = root/"analysis/recovered_prn25_chunk001_verification.json"
+    evidence = read_json(evidence_path)
+    replay_note = ""
+    if evidence.get("ok") is True:
+        replay_note = ('<p>PRN 25 归档分段与串行重算的第 1 个分段（首 60000 条保存记录）逐字段比较一致：'
+                       '83 项数值/逻辑数据集和 8 项字符元数据。此证据仅覆盖该分段，不外推至全部历元或其他卫星；'
+                       '两个 MAT 容器的文件哈希可以不同，数值一致性以逐字段比较为据。</p>')
     return ('<div class="notice"><strong>崩溃后的恢复范围</strong>'
             '<p>第 5 组的恢复方案保留崩溃前已保存的 8 份逐星 final（其中 2 颗已提前结束），'
             'PRN 25 和 30 按整颗从原始数据重新计算；不将 PRN 25 的部分分段拼接为续跟踪。'
@@ -337,7 +344,8 @@ def recovery_notes(root):
             '<code>parMaxWorkers=1</code>。第 5 组的 8 份既有 final 来自原两 worker 运行，'
             '保存的最终资源配置描述恢复阶段；接收机数值源码、源数据和科学参数保持原条件。'
             '资源调度调整不作为干扰抑制效果，恢复完成状态仍以各组验证结果为准。</p>'
-            '<div class="links">'+link(audit_path,"恢复范围与复用文件审计",root)+'</div></div>')
+            +replay_note+'<div class="links">'+link(audit_path,"恢复范围与复用文件审计",root)+
+            link(evidence_path,"PRN 25 首分段数值一致性证据",root)+'</div></div>')
 
 
 def tracking_figure_notes(root):

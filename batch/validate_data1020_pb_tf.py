@@ -19,6 +19,7 @@ from pathlib import Path
 import re
 import struct
 from urllib.parse import unquote, urlsplit
+from record_data1020_recovery import verify_replayed_chunk
 
 
 ALLOWED_SETTING_CHANGES = {
@@ -455,6 +456,51 @@ def validate_html(audit,root):
     return checked
 
 
+def validate_recovery(audit, root, manifest, runs):
+    """Check recovery provenance without loading MAT arrays or rehashing big finals."""
+    recovery = read_json(root/"recovery_audit.json")
+    if not audit.check("crash-recovery audit exists", bool(recovery)):
+        return
+    entries = manifest["entries"]
+    entry = next(e for e in entries if e["experimentNumber"] == 5)
+    finals = rows(recovery.get("preservedFinals"))
+    expected_prns = {24, 27, 28, 32, 33, 38, 39, 41}
+    audit.check("eight pre-crash final identities recorded",
+                len(finals) == 8 and {r.get("PRN") for r in finals} == expected_prns and
+                all(canonical(r.get("path", "")) == canonical(Path(entry["tfDir"])/"temp"/
+                    f'Trk_Prn_{r["PRN"]:02d}_final.mat') and
+                    bool(re.fullmatch(r"[0-9a-f]{64}", str(r.get("sha256", ""))))
+                    for r in finals))
+    audit.check("recovery restarted complete PRN25 and PRN30 channels without splicing",
+                recovery.get("interruptedExperiment") == 5 and
+                recovery.get("completedBeforeCrash") == [1, 2, 3, 4] and
+                recovery.get("restartWholeChannels") == [25, 30] and
+                recovery.get("loopStateCheckpointAvailable") is False and
+                recovery.get("splicingOldAndRestartedTracking") is False)
+    execution = recovery.get("execution", {})
+    audit.check("recovery execution is serial and single thread",
+                execution.get("matlabVersion") == "R2024b" and
+                execution.get("singleComputationalThread") is True and
+                execution.get("oneProcessPerStage") is True and
+                execution.get("parallelPool") is False and
+                execution.get("useParfor") is False and
+                execution.get("useParallelAcquisition") is False and
+                execution.get("parMaxWorkers") == 1)
+    all_tf_complete = all(runs[(e["sourceId"], "TF")]["complete"] for e in entries)
+    audit.check("recovery finalized with eight unchanged final hashes and all six TF runs",
+                recovery.get("recoveryComplete") is True and
+                recovery.get("preservedFinalsUnchanged") is True and
+                recovery.get("changedOrMissingFinals") == [] and
+                recovery.get("completedTfExperiments") == list(range(1, 7)) and
+                bool(recovery.get("verifiedUtc")), pending=not all_tf_complete)
+    chunk = verify_replayed_chunk(root, manifest)
+    audit.check("PRN25 chunk001 evidence identity and source hashes",
+                chunk["ok"] and chunk["sourceHashesVerified"], chunk)
+    recorded_chunk = recovery.get("replayedChunkVerification")
+    audit.check("recovery audit links the verified PRN25 chunk001 evidence",
+                recorded_chunk == chunk, pending=not all_tf_complete and not recorded_chunk)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root",type=Path); parser.add_argument("--allow-pending",action="store_true")
@@ -517,6 +563,7 @@ def main():
     validate_maps(audit,root,entries); validate_figure_postprocessing(audit,root,entries,runs)
     validate_final_source_provenance(audit,root,project)
     validate_comparison(audit,root,entries,runs)
+    validate_recovery(audit,root,manifest,runs)
     link_count=validate_html(audit,root)
     failed=[r for r in audit.checks if r["status"]=="failed"]; pending=[r for r in audit.checks if r["status"]=="pending"]
     result={"generatedUtc":dt.datetime.now(dt.timezone.utc).isoformat(),"ok":not failed and not pending,
