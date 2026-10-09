@@ -137,13 +137,35 @@ triangle span, with the same frozen ADC detector threshold. Digital center is
 station RF frequency minus recording RF center (not minus B2a RF frequency).
 Every run checks a direct-convolution reference. Full runs also compare both
 pre-run and saved effective settings: only the frontend, its derived EnablePB
-flag, output metadata and the resource-only two-worker cap may differ.
+flag, output metadata and resource scheduling may differ. Resource-only fields
+are `parMaxWorkers`, `useParfor`, and `useParallelAcquisition`.
 
 Use MATLAB `-batch -singleCompThread`; all figures are invisible. The dated
 `launch_data1020_tf_preflight.m` and `launch_data1020_tf_full.m` scripts perform
 smoke/self-comparison and the six full runs respectively. Files are processed
 sequentially. The full launcher closes its worker pool before final plotting
 and comparison to reduce memory use.
+
+After the host crash in TF case 5, recovery retains its eight already saved
+per-PRN final files (six full-length and two naturally ended early). PRN 25 and
+30 are recomputed from the beginning of their source data; PRN 25's two saved
+60,000-record chunks are not spliced into a resumed track. These chunks contain
+output records, not complete loop/state-machine checkpoints. Case 6 is run one
+satellite at a time. Both recovery stages use one R2024b process with
+`-singleCompThread`, no pool, `useParfor=false`,
+`useParallelAcquisition=false`, and `parMaxWorkers=1`. Cases 1--4 retain their
+original parallel flags and at most two workers. Case 5's final resource flags
+describe recovery; its eight reused final files still originate from the
+earlier two-worker run. `recovery_audit.json` records this mixed execution
+provenance and is linked from both report pages when present.
+
+This changes execution scheduling, not the receiver numerical sources, source
+samples, requested duration, acquisition/tracking parameters, frozen threshold,
+or TF filter configuration. It does not establish bitwise equivalence between
+serial and parallel execution, and scheduling is not an interference-treatment
+effect. Comparison conclusions continue to use saved per-satellite results,
+physical sample times, and independent final validation. Missing results remain
+pending until all required per-PRN files and navigation outputs are validated.
 
 `export_data1020_satellite_maps` caches Esri World Imagery tiles and renders
 offline satellite maps, common PB/TF geographic bounds, the matched station,
@@ -205,3 +227,23 @@ window. It records explicit success/failure under the result root and refuses
 to proceed without full receiver and comparison completion records.
 `python batch/data1020_live_status.py` reads progress JSON/logs without loading
 MAT or IQ data.
+
+For the 2026-10-09 crash recovery, `resume_data1020_tf_queue.ps1` runs one
+R2024b `-batch -singleCompThread` process per stage and waits for it to exit
+before starting the next. It resumes experiments 5 and 6 only, then performs
+the common maps, comparison, figure finalization and package audits. Do not
+start a second queue while the recorded `recovery_runner_process.json`
+process is active. An optional `-PrepareProcessId` waits for an already
+running manual preparation stage.
+
+`run_data1020_recovery_stage(manifestPath,index,action[,prn])` supports
+`prepare`, `track` and `finish`. Preparation saves exact acquisition and
+63-slot channel metadata in `recovery_state.mat`. Complete satellite files
+are reused; incomplete channel chunks are archived and the whole channel is
+recomputed from its acquisition origin. Chunks do not preserve complete loop
+state and are never spliced to cold-started tracking. The independent
+`finalize_data1020_saved_run` and `audit_data1020_tf_run` helpers keep the
+receiver's numerical files unchanged. `record_data1020_recovery.py ROOT`
+records the eight preserved final-file SHA256 values; `--verify` checks them
+after all six runs finish. Experiment 5's recovery elapsed time excludes its
+pre-crash work and outage, so it is not an uninterrupted runtime benchmark.

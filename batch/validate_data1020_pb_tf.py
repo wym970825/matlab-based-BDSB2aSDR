@@ -22,7 +22,8 @@ from urllib.parse import unquote, urlsplit
 
 
 ALLOWED_SETTING_CHANGES = {
-    "Frontend", "EnablePB", "parMaxWorkers", "tag", "outDir", "resultRoot", "tempdataSvPth",
+    "Frontend", "EnablePB", "parMaxWorkers", "useParfor", "useParallelAcquisition",
+    "tag", "outDir", "resultRoot", "tempdataSvPth",
 }
 EXPECTED_IDS = {"beiqijiatai", "HUR_1", "HUR_2", "103330", "103801", "111407"}
 EXPECTED_PRNS = list(range(1, 64))
@@ -174,6 +175,14 @@ def validate_settings(audit, prefix, settings, entry, mode):
         wrong = {k:{"expected":v,"actual":tf.get(k)} for k,v in expected.items() if not close(tf.get(k),v)}
         audit.check(prefix+" resolved TF parameters", not wrong, wrong)
         audit.check(prefix+" worker limit", 0 <= settings.get("parMaxWorkers", 99) <= 2)
+        serial_recovery = entry["experimentNumber"] in (5, 6)
+        resource_expected = {"useParfor": not serial_recovery,
+                             "useParallelAcquisition": not serial_recovery}
+        if serial_recovery:
+            resource_expected["parMaxWorkers"] = 1
+        resource_wrong = {k: {"expected": v, "actual": settings.get(k)}
+                          for k, v in resource_expected.items() if settings.get(k) != v}
+        audit.check(prefix+" scheduled resource settings", not resource_wrong, resource_wrong)
 
 
 def validate_run(audit, entry, mode):
