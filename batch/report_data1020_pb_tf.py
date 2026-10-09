@@ -361,6 +361,38 @@ def recovery_notes(root):
             link(evidence_path,"PRN 25 首分段数值一致性证据",root)+'</div></div>')
 
 
+def reacq_timing_notes(root):
+    observations, links = [], []
+    for method in ["PB", "TF"]:
+        path = root/"analysis"/f'{method.lower()}06_reacq_timing_diagnostic.json'
+        diagnostic = read_json(path)
+        if diagnostic.get("ok") is not True or diagnostic.get("method") != method:
+            continue
+        window = next((w for w in rows(diagnostic.get("densestEpisodeStartWindows"))
+                       if w.get("windowSeconds") == 2), {})
+        if not window:
+            continue
+        if window.get("eventCount") == 0:
+            observations.append(f'<p><strong>{method}：</strong>完整捕获卫星集合的保存记录中未出现 REACQ 状态。</p>')
+            links.append(link(path, f"第 6 组 {method} 重捕时序诊断", root))
+            continue
+        observations.append(
+            f'<p><strong>{method}：</strong>{esc(diagnostic.get("satelliteCount", "—"))} 颗卫星共记录 '
+            f'{esc(diagnostic.get("totalReacqEpisodes", "—"))} 次 REACQ；最密集的 2 秒窗口内，'
+            f'{esc(window.get("distinctPrnCount", "—"))} 颗卫星的重捕起点位于源时间 '
+            f'{fmt(window.get("firstEventStartSeconds"), 6)}–{fmt(window.get("lastEventStartSeconds"), 6)} s，'
+            f'实际起点跨度 {fmt(window.get("actualStartSpreadSeconds"), 6)} s。PRN：'
+            f'{prn_text(window.get("PRNs"))}。</p>')
+        links.append(link(path, f"第 6 组 {method} 重捕时序诊断", root))
+    if not observations:
+        return ""
+    return ('<div class="notice"><strong>第 6 组重捕时间分布</strong>'+"".join(observations)+
+            '<p>上述时间由已保存的 <code>trk_state=9</code> 与 <code>absoluteSample/Fs</code> 提取，'
+            '描述记录内的重捕起点分布；时间接近不能确定原始断流、DME 干扰或接收机算法原因。'
+            '此诊断不替代正式的连续 180 秒无重捕及共同区间仰角筛选，也不以日志中的运算耗时作为源时间。</p>'
+            '<div class="links">'+"".join(links)+'</div></div>')
+
+
 def navigation_figure_notes(root):
     audit_path = root/"analysis/navigation_figure_verification.json"
     audit = read_json(audit_path)
@@ -405,7 +437,7 @@ def build_brief(root, data, comparison, generated):
             link(root/"comparison/comparison_brief.html", "数值审计明细", root) +
             link(root/"source_manifest.json", "启动时源码证据", root) +
             link(root/"final_source_manifest.json", "最终源码溯源与变更", root) + '</div></div>',
-            '<section><h2>实验设计与边界</h2>', common_method_text(), recovery_notes(root), navigation_figure_notes(root), tracking_figure_notes(root),
+            '<section><h2>实验设计与边界</h2>', common_method_text(), recovery_notes(root), reacq_timing_notes(root), navigation_figure_notes(root), tracking_figure_notes(root),
             '<p>原始 HUR 组已从本轮分析排除并删除对应实验结果；原始 <code>data_1020_HUR.bin</code> 暂保留。HUR_1 和 HUR_2 为独立实验，仍纳入。</p>',
             '<p class="notice">beiqijiatai 的 1181 MHz 频带仅高于局部背景约 0.55 dB，官庄为弱候选，前端频响也可能造成该凸起。'
             '其余五组 1170 MHz 明显谱结构与近怀柔路线一致。本站归因均为频谱与位置证据推断，未解码站台标识。</p></section>',
@@ -498,7 +530,7 @@ def main():
                 f'<a href="#experiment-{d["entry"]["experimentNumber"]}">{d["entry"]["experimentNumber"]:02d} {esc(d["entry"]["sourceId"])}</a>' for d in data) + '</nav>',
             '<section id="overview"><h2>实验总表</h2>', summary_table(data),
             '<p class="muted">成对数字为 PB / TF。“全长记录”允许中途重捕；持续无重捕须查看独立 180 s 清单。空缺显示 — 或 pending，绝不作为零结果。</p></section>',
-            '<section id="criteria"><h2>方法、条件与质量边界</h2>', common_method_text(), recovery_notes(root), navigation_figure_notes(root), tracking_figure_notes(root),
+            '<section id="criteria"><h2>方法、条件与质量边界</h2>', common_method_text(), recovery_notes(root), reacq_timing_notes(root), navigation_figure_notes(root), tracking_figure_notes(root),
             '<p class="notice">原始 HUR 组已排除，仅对应实验结果删除；raw bin 暂保留。HUR_1、HUR_2 继续参与。'
             'beiqijiatai→官庄是弱候选，约 0.55 dB 凸起也可能由前端频响造成；其余五组支持怀柔 1170 MHz 候选关联。</p></section>',
             '<section id="lists"><h2>完整对比与卫星清单</h2>', checklist_links(root),
