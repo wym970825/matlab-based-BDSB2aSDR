@@ -46,6 +46,7 @@ See [docs/architecture.md](docs/architecture.md).
 
 - [Product catalog and result layout](docs/product_catalog.md)
 - [MATLAB quick guide: tests, PVT replay, visualization](docs/quickguide.m)
+- [Windows x64 migration: environment, MEX rebuild, headless execution and validation](docs/WINDOWS_X64_MIGRATION.md)
 - [Pre-v0.1.6 legacy archive](legacy/BeforeV0_1_6/README.md)
 
 ## Directory batch processing
